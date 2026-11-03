@@ -3,7 +3,7 @@ import express from 'express';
 import helmet from 'helmet';
 import { env } from '../config/env.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
-import { platformClinicsRouter, clinicContextRouter } from '../modules/clinics/clinics.routes.js';
+import { platformTenantsRouter, tenantRouter } from '../modules/tenancy/tenancy.routes.js';
 import { ZodError } from 'zod';
 
 export const app = express();
@@ -18,8 +18,8 @@ app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 app.use(`${env.API_PREFIX}/auth`, authRouter);
-app.use(`${env.API_PREFIX}/platform/clinics`, platformClinicsRouter);
-app.use(`${env.API_PREFIX}/clinic`, clinicContextRouter);
+app.use(`${env.API_PREFIX}/platform/tenants`, platformTenantsRouter);
+app.use(`${env.API_PREFIX}/tenant`, tenantRouter);
 
 app.get(`${env.API_PREFIX}/health`, (_req, res) => {
   res.status(200).json({
