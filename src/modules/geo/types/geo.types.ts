@@ -2,7 +2,7 @@ export const GEO_RESOURCES = ['countries', 'governorates', 'cities', 'districts'
 export type GeoResource = (typeof GEO_RESOURCES)[number];
 
 export interface GeoEntryInput {
-  name: string;
+  nameEn: string;
   name_ar?: string | null;
   code?: string | null;
   country_id?: string;
@@ -18,7 +18,7 @@ export interface GeoListQuery {
 }
 export interface GeoEntryResponse {
   id: string;
-  name_en: string;
+  nameEn: string;
   name_ar: string | null;
   code: string | null;
   country_id?: string;
