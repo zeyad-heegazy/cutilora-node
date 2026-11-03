@@ -37,6 +37,17 @@ export const geoRepository = {
     }
     return models[resource].deleteOne({ _id: id });
   },
+  async validateClinicLocation(location: { countryId?: string; governorateId?: string; cityId?: string; districtId?: string }) {
+    const { countryId, governorateId, cityId, districtId } = location;
+    const invalid = (message: string) => Object.assign(new Error(message), { code: 'INVALID_GEO_HIERARCHY', status: 422 });
+    if ((governorateId || cityId || districtId) && !countryId) throw invalid('countryId is required when a lower geographic level is selected.');
+    if ((cityId || districtId) && !governorateId) throw invalid('governorateId is required when a city or district is selected.');
+    if (districtId && !cityId) throw invalid('cityId is required when a district is selected.');
+    if (countryId && !await Country.exists({ _id: countryId })) throw invalid('Country not found.');
+    if (governorateId && !await Governorate.exists({ _id: governorateId, countryId })) throw invalid('Governorate does not belong to the selected country.');
+    if (cityId && !await City.exists({ _id: cityId, governorateId })) throw invalid('City does not belong to the selected governorate.');
+    if (districtId && !await District.exists({ _id: districtId, cityId })) throw invalid('District does not belong to the selected city.');
+  },
   parentExists(resource: GeoResource, parentId: string) {
     const field = parentFields[resource];
     if (!field) return Promise.resolve(true);
