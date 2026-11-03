@@ -121,7 +121,7 @@ async function seedSaudiArabia() {
       const cityName = englishName(cityData);
       const city = await City.findOneAndUpdate(
         cityCode ? { governorateId: governorate._id, code: cityCode } : { governorateId: governorate._id, nameEn: cityName },
-        { $set: { governorateId: governorate._id, name: cityName, nameAr: arabicName(cityData), code: cityCode } },
+        { $set: { governorateId: governorate._id, nameEn: cityName, nameAr: arabicName(cityData), code: cityCode } },
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
       if (!city) throw new Error(`Unable to create or load Saudi city: ${cityName}`);
