@@ -46,6 +46,7 @@ export const geoService = {
   },
   async remove(resource: GeoResource, id: string) {
     if (!await geoRepository.find(resource, id)) return false;
+    if (await geoRepository.hasClinicReferences(resource, id)) throw Object.assign(new Error('This geo record is assigned to one or more clinics.'), { code: 'GEO_RECORD_IN_USE', status: 409 });
     await geoRepository.delete(resource, id);
     return true;
   },
