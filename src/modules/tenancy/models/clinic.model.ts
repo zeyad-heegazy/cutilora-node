@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models, type Model } from 'mongoose';
 
 const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
@@ -13,4 +13,4 @@ const schema = new Schema({
   settings: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true });
 schema.index({ tenantId: 1, slug: 1 }, { unique: true });
-export const Clinic = models.Clinic || model('Clinic', schema);
+export const Clinic = (models.Clinic || model('Clinic', schema)) as Model<any>;
