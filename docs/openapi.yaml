@@ -355,32 +355,22 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
-  /platform/geo/{resource}:
+  /platform/geo/countries:
     get:
       tags: [Geo]
-      summary: List geographic records
-      description: Platform administrator only. Supports parent filtering and pagination.
+      summary: List countries
+      description: Platform administrator only. Supports pagination.
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/GeoResource'
         - name: page
           in: query
           schema: { type: integer, minimum: 1, default: 1 }
         - name: per_page
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
-        - name: country_id
-          in: query
-          schema: { type: string }
-        - name: governorate_id
-          in: query
-          schema: { type: string }
-        - name: city_id
-          in: query
-          schema: { type: string }
       responses:
         '200':
-          description: Paginated geographic records
+          description: Paginated countries
           content:
             application/json:
               schema:
@@ -393,18 +383,16 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
     post:
       tags: [Geo]
-      summary: Create geographic record
+      summary: Create country
       security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: '#/components/parameters/GeoResource'
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GeoEntryInput' }
+            schema: { $ref: '#/components/schemas/CountryInput' }
       responses:
         '201':
-          description: Geographic record created
+          description: Country created
           content:
             application/json:
               schema:
@@ -415,20 +403,19 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '422': { $ref: '#/components/responses/ValidationError' }
-  /platform/geo/{resource}/{entry}:
+  /platform/geo/countries/{countryId}:
     parameters:
-      - $ref: '#/components/parameters/GeoResource'
-      - name: entry
+      - name: countryId
         in: path
         required: true
         schema: { type: string }
     get:
       tags: [Geo]
-      summary: Get geographic record
+      summary: Get country by ID
       security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Geographic record
+          description: Country details
           content:
             application/json:
               schema:
@@ -441,16 +428,16 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
     patch:
       tags: [Geo]
-      summary: Update geographic record
+      summary: Update country
       security: [{ bearerAuth: [] }]
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GeoEntryUpdate' }
+            schema: { $ref: '#/components/schemas/CountryUpdate' }
       responses:
         '200':
-          description: Geographic record updated
+          description: Country updated
           content:
             application/json:
               schema:
@@ -464,11 +451,356 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Geo]
-      summary: Delete geographic record
+      summary: Delete country
       security: [{ bearerAuth: [] }]
       responses:
         '200':
-          description: Geographic record deleted
+          description: Country deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string, example: Geo entry deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /platform/geo/governorates:
+    get:
+      tags: [Geo]
+      summary: List governorates
+      description: Platform administrator only. Supports pagination and filtering by country_id.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: country_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated governorates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/GeoEntry' } }
+                  meta: { $ref: '#/components/schemas/Pagination' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Geo]
+      summary: Create governorate
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GovernorateInput' }
+      responses:
+        '201':
+          description: Governorate created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /platform/geo/governorates/{governorateId}:
+    parameters:
+      - name: governorateId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Geo]
+      summary: Get governorate by ID
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Governorate details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Geo]
+      summary: Update governorate
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GovernorateUpdate' }
+      responses:
+        '200':
+          description: Governorate updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Geo]
+      summary: Delete governorate
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Governorate deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string, example: Geo entry deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /platform/geo/cities:
+    get:
+      tags: [Geo]
+      summary: List cities
+      description: Platform administrator only. Supports pagination and filtering by governorate_id.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: governorate_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated cities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/GeoEntry' } }
+                  meta: { $ref: '#/components/schemas/Pagination' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Geo]
+      summary: Create city
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CityInput' }
+      responses:
+        '201':
+          description: City created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /platform/geo/cities/{cityId}:
+    parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Geo]
+      summary: Get city by ID
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: City details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Geo]
+      summary: Update city
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CityUpdate' }
+      responses:
+        '200':
+          description: City updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Geo]
+      summary: Delete city
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: City deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string, example: Geo entry deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /platform/geo/districts:
+    get:
+      tags: [Geo]
+      summary: List districts
+      description: Platform administrator only. Supports pagination and filtering by city_id.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: city_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated districts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: '#/components/schemas/GeoEntry' } }
+                  meta: { $ref: '#/components/schemas/Pagination' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Geo]
+      summary: Create district
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DistrictInput' }
+      responses:
+        '201':
+          description: District created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /platform/geo/districts/{districtId}:
+    parameters:
+      - name: districtId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Geo]
+      summary: Get district by ID
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: District details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Geo]
+      summary: Update district
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DistrictUpdate' }
+      responses:
+        '200':
+          description: District updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: '#/components/schemas/GeoEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Geo]
+      summary: Delete district
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: District deleted
           content:
             application/json:
               schema:
@@ -584,25 +916,61 @@ components:
         cityId: { type: string, nullable: true }
         timezone: { type: string }
         status: { type: string }
-    GeoEntryInput:
+    CountryInput:
       type: object
       required: [nameEn]
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255 }
-        name_ar: { type: string, nullable: true, maxLength: 255 }
-        code: { type: string, nullable: true, maxLength: 64, description: Country code must be two uppercase letters when resource=countries. }
-        country_id: { type: string, description: Required for governorates. }
-        governorate_id: { type: string, description: Required for cities. }
-        city_id: { type: string, description: Required for districts. }
-    GeoEntryUpdate:
+        nameEn: { type: string, minLength: 1, maxLength: 255, example: Egypt }
+        name_ar: { type: string, nullable: true, maxLength: 255, example: مصر }
+        code: { type: string, minLength: 2, maxLength: 2, pattern: '^[A-Z]{2}$', example: EG }
+    CountryUpdate:
       type: object
       description: All fields are optional for PATCH.
       properties:
         nameEn: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
-        code: { type: string, nullable: true, maxLength: 64 }
+        code: { type: string, minLength: 2, maxLength: 2, pattern: '^[A-Z]{2}$' }
+    GovernorateInput:
+      type: object
+      required: [nameEn, country_id]
+      properties:
+        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_ar: { type: string, nullable: true, maxLength: 255 }
+        country_id: { type: string, description: Parent country MongoDB ObjectId }
+    GovernorateUpdate:
+      type: object
+      description: All fields are optional for PATCH.
+      properties:
+        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_ar: { type: string, nullable: true, maxLength: 255 }
         country_id: { type: string }
+    CityInput:
+      type: object
+      required: [nameEn, governorate_id]
+      properties:
+        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_ar: { type: string, nullable: true, maxLength: 255 }
+        governorate_id: { type: string, description: Parent governorate MongoDB ObjectId }
+    CityUpdate:
+      type: object
+      description: All fields are optional for PATCH.
+      properties:
+        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_ar: { type: string, nullable: true, maxLength: 255 }
         governorate_id: { type: string }
+    DistrictInput:
+      type: object
+      required: [nameEn, city_id]
+      properties:
+        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_ar: { type: string, nullable: true, maxLength: 255 }
+        city_id: { type: string, description: Parent city MongoDB ObjectId }
+    DistrictUpdate:
+      type: object
+      description: All fields are optional for PATCH.
+      properties:
+        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_ar: { type: string, nullable: true, maxLength: 255 }
         city_id: { type: string }
     GeoEntry:
       type: object
