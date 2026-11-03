@@ -120,7 +120,7 @@ async function seedSaudiArabia() {
       const cityCode = sourceCode(cityData, ['city_id', 'code', 'id']);
       const cityName = englishName(cityData);
       const city = await City.findOneAndUpdate(
-        cityCode ? { governorateId: governorate._id, code: cityCode } : { governorateId: governorate._id, name: cityName },
+        cityCode ? { governorateId: governorate._id, code: cityCode } : { governorateId: governorate._id, nameEn: cityName },
         { $set: { governorateId: governorate._id, nameEn: cityName, nameAr: arabicName(cityData), code: cityCode } },
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
