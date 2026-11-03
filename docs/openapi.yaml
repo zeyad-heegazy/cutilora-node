@@ -26,12 +26,12 @@ paths:
       tags: [Health]
       summary: Health check
       responses:
-        '200':
+        "200":
           description: API is healthy
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/HealthResponse'
+                $ref: "#/components/schemas/HealthResponse"
   /auth/login:
     post:
       tags: [Authentication]
@@ -45,10 +45,12 @@ paths:
               type: object
               required: [email, password]
               properties:
-                email: { type: string, format: email, example: admin@example.com }
-                password: { type: string, format: password, example: 'your-password' }
+                email:
+                  { type: string, format: email, example: admin@example.com }
+                password:
+                  { type: string, format: password, example: "your-password" }
       responses:
-        '200':
+        "200":
           description: Login successful
           content:
             application/json:
@@ -61,19 +63,20 @@ paths:
                     properties:
                       access_token: { type: string }
                       token_type: { type: string, example: Bearer }
-                      user: { $ref: '#/components/schemas/UserSummary' }
+                      user: { $ref: "#/components/schemas/UserSummary" }
                       memberships:
                         type: array
-                        items: { $ref: '#/components/schemas/MembershipSummary' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                        items:
+                          { $ref: "#/components/schemas/MembershipSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /auth/me:
     get:
       tags: [Authentication]
       summary: Get current user
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: Current user and active memberships
           content:
             application/json:
@@ -84,9 +87,13 @@ paths:
                   data:
                     type: object
                     properties:
-                      user: { type: object, description: User record (password hash is not exposed) }
+                      user:
+                        {
+                          type: object,
+                          description: User record (password hash is not exposed),
+                        }
                       memberships: { type: array, items: { type: object } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        "401": { $ref: "#/components/responses/Unauthorized" }
   /auth/dev/bootstrap-admin:
     post:
       tags: [Authentication]
@@ -104,7 +111,7 @@ paths:
                 email: { type: string, format: email }
                 password: { type: string, format: password, minLength: 12 }
       responses:
-        '201':
+        "201":
           description: Platform admin created
           content:
             application/json:
@@ -117,15 +124,15 @@ paths:
                     properties:
                       id: { type: string }
                       email: { type: string, format: email }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /platform/tenants:
     get:
       tags: [Platform - Tenants]
       summary: List tenants
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: Tenant list
           content:
             application/json:
@@ -133,9 +140,13 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: array, items: { $ref: '#/components/schemas/Tenant' } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/Tenant" },
+                    }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Platform - Tenants]
       summary: Create tenant
@@ -150,7 +161,7 @@ paths:
               required: [name, slug, owner]
               properties:
                 name: { type: string, minLength: 2 }
-                slug: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+                slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
                 owner:
                   type: object
                   required: [name, email, password]
@@ -163,9 +174,10 @@ paths:
                   required: [name, slug]
                   properties:
                     name: { type: string, minLength: 2 }
-                    slug: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+                    slug:
+                      { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
       responses:
-        '201':
+        "201":
           description: Tenant created
           content:
             application/json:
@@ -173,11 +185,11 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/Tenant' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/Tenant" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "409": { $ref: "#/components/responses/Conflict" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /platform/tenants/{tenantId}/status:
     patch:
       tags: [Platform - Tenants]
@@ -198,7 +210,7 @@ paths:
               properties:
                 status: { type: string, enum: [active, suspended] }
       responses:
-        '200':
+        "200":
           description: Tenant status updated
           content:
             application/json:
@@ -206,22 +218,22 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/Tenant' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/Tenant" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /tenant/context:
     get:
       tags: [Tenant Context]
       summary: Resolve active tenant, clinic, and branch context
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
-        - $ref: '#/components/parameters/BranchId'
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/ClinicId"
+        - $ref: "#/components/parameters/BranchId"
       responses:
-        '200':
+        "200":
           description: Resolved context and access scope
           content:
             application/json:
@@ -235,21 +247,21 @@ paths:
                       tenant: { type: object, nullable: true }
                       clinic: { type: object, nullable: true }
                       branch: { type: object, nullable: true }
-                      access: { $ref: '#/components/schemas/TenantAccess' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+                      access: { $ref: "#/components/schemas/TenantAccess" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /tenant/clinics:
     get:
       tags: [Clinics]
       summary: List clinics in current tenant
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
-        - $ref: '#/components/parameters/BranchId'
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/ClinicId"
+        - $ref: "#/components/parameters/BranchId"
       responses:
-        '200':
+        "200":
           description: Clinic list
           content:
             application/json:
@@ -257,17 +269,21 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: array, items: { $ref: '#/components/schemas/Clinic' } }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/Clinic" },
+                    }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Clinics]
       summary: Create clinic
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
-        - $ref: '#/components/parameters/BranchId'
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/ClinicId"
+        - $ref: "#/components/parameters/BranchId"
       requestBody:
         required: true
         content:
@@ -277,14 +293,14 @@ paths:
               required: [name, slug]
               properties:
                 name: { type: string, minLength: 2 }
-                slug: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+                slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
                 timezone: { type: string, default: Africa/Cairo }
                 countryId: { type: string }
                 governorateId: { type: string }
                 cityId: { type: string }
                 districtId: { type: string }
       responses:
-        '201':
+        "201":
           description: Clinic created
           content:
             application/json:
@@ -292,11 +308,11 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/Clinic' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/Clinic" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /tenant/branches:
     get:
       tags: [Branches]
@@ -304,11 +320,11 @@ paths:
       description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch.
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicIdRequired'
-        - $ref: '#/components/parameters/BranchId'
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/ClinicIdRequired"
+        - $ref: "#/components/parameters/BranchId"
       responses:
-        '200':
+        "200":
           description: Branch list
           content:
             application/json:
@@ -316,18 +332,22 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: array, items: { $ref: '#/components/schemas/Branch' } }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/Branch" },
+                    }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Branches]
       summary: Create branch in current clinic
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicIdRequired'
-        - $ref: '#/components/parameters/BranchId'
+        - $ref: "#/components/parameters/TenantId"
+        - $ref: "#/components/parameters/ClinicIdRequired"
+        - $ref: "#/components/parameters/BranchId"
       requestBody:
         required: true
         content:
@@ -337,12 +357,12 @@ paths:
               required: [name, slug]
               properties:
                 name: { type: string, minLength: 2 }
-                slug: { type: string, pattern: '^[a-z0-9]+(?:-[a-z0-9]+)*$' }
+                slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
                 address: { type: string }
                 cityId: { type: string }
                 timezone: { type: string, default: Africa/Cairo }
       responses:
-        '201':
+        "201":
           description: Branch created
           content:
             application/json:
@@ -350,11 +370,11 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/Branch' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/Branch" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /platform/geo/countries:
     get:
       tags: [Geo]
@@ -369,7 +389,7 @@ paths:
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
       responses:
-        '200':
+        "200":
           description: Paginated countries
           content:
             application/json:
@@ -377,10 +397,14 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: array, items: { $ref: '#/components/schemas/GeoEntry' } }
-                  meta: { $ref: '#/components/schemas/Pagination' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/GeoEntry" },
+                    }
+                  meta: { $ref: "#/components/schemas/Pagination" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Geo]
       summary: Create country
@@ -389,9 +413,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CountryInput' }
+            schema: { $ref: "#/components/schemas/CountryInput" }
       responses:
-        '201':
+        "201":
           description: Country created
           content:
             application/json:
@@ -399,10 +423,10 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /platform/geo/countries/{countryId}:
     parameters:
       - name: countryId
@@ -414,7 +438,7 @@ paths:
       summary: Get country by ID
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: Country details
           content:
             application/json:
@@ -422,10 +446,10 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Geo]
       summary: Update country
@@ -434,9 +458,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CountryUpdate' }
+            schema: { $ref: "#/components/schemas/CountryUpdate" }
       responses:
-        '200':
+        "200":
           description: Country updated
           content:
             application/json:
@@ -444,17 +468,17 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     delete:
       tags: [Geo]
       summary: Delete country
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: Country deleted
           content:
             application/json:
@@ -463,10 +487,10 @@ paths:
                 properties:
                   success: { type: boolean }
                   message: { type: string, example: Geo entry deleted. }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /platform/geo/governorates:
     get:
       tags: [Geo]
@@ -484,7 +508,7 @@ paths:
           in: query
           schema: { type: string }
       responses:
-        '200':
+        "200":
           description: Paginated governorates
           content:
             application/json:
@@ -492,10 +516,14 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: array, items: { $ref: '#/components/schemas/GeoEntry' } }
-                  meta: { $ref: '#/components/schemas/Pagination' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/GeoEntry" },
+                    }
+                  meta: { $ref: "#/components/schemas/Pagination" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Geo]
       summary: Create governorate
@@ -504,9 +532,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GovernorateInput' }
+            schema: { $ref: "#/components/schemas/GovernorateInput" }
       responses:
-        '201':
+        "201":
           description: Governorate created
           content:
             application/json:
@@ -514,10 +542,10 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /platform/geo/governorates/{governorateId}:
     parameters:
       - name: governorateId
@@ -529,7 +557,7 @@ paths:
       summary: Get governorate by ID
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: Governorate details
           content:
             application/json:
@@ -537,10 +565,10 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Geo]
       summary: Update governorate
@@ -549,9 +577,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/GovernorateUpdate' }
+            schema: { $ref: "#/components/schemas/GovernorateUpdate" }
       responses:
-        '200':
+        "200":
           description: Governorate updated
           content:
             application/json:
@@ -559,17 +587,17 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     delete:
       tags: [Geo]
       summary: Delete governorate
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: Governorate deleted
           content:
             application/json:
@@ -578,10 +606,10 @@ paths:
                 properties:
                   success: { type: boolean }
                   message: { type: string, example: Geo entry deleted. }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /platform/geo/cities:
     get:
       tags: [Geo]
@@ -599,7 +627,7 @@ paths:
           in: query
           schema: { type: string }
       responses:
-        '200':
+        "200":
           description: Paginated cities
           content:
             application/json:
@@ -607,10 +635,14 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: array, items: { $ref: '#/components/schemas/GeoEntry' } }
-                  meta: { $ref: '#/components/schemas/Pagination' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/GeoEntry" },
+                    }
+                  meta: { $ref: "#/components/schemas/Pagination" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Geo]
       summary: Create city
@@ -619,9 +651,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CityInput' }
+            schema: { $ref: "#/components/schemas/CityInput" }
       responses:
-        '201':
+        "201":
           description: City created
           content:
             application/json:
@@ -629,10 +661,10 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /platform/geo/cities/{cityId}:
     parameters:
       - name: cityId
@@ -644,7 +676,7 @@ paths:
       summary: Get city by ID
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: City details
           content:
             application/json:
@@ -652,10 +684,10 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Geo]
       summary: Update city
@@ -664,9 +696,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/CityUpdate' }
+            schema: { $ref: "#/components/schemas/CityUpdate" }
       responses:
-        '200':
+        "200":
           description: City updated
           content:
             application/json:
@@ -674,17 +706,17 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     delete:
       tags: [Geo]
       summary: Delete city
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: City deleted
           content:
             application/json:
@@ -693,10 +725,10 @@ paths:
                 properties:
                   success: { type: boolean }
                   message: { type: string, example: Geo entry deleted. }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
   /platform/geo/districts:
     get:
       tags: [Geo]
@@ -714,7 +746,7 @@ paths:
           in: query
           schema: { type: string }
       responses:
-        '200':
+        "200":
           description: Paginated districts
           content:
             application/json:
@@ -722,10 +754,14 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: array, items: { $ref: '#/components/schemas/GeoEntry' } }
-                  meta: { $ref: '#/components/schemas/Pagination' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "#/components/schemas/GeoEntry" },
+                    }
+                  meta: { $ref: "#/components/schemas/Pagination" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
     post:
       tags: [Geo]
       summary: Create district
@@ -734,9 +770,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/DistrictInput' }
+            schema: { $ref: "#/components/schemas/DistrictInput" }
       responses:
-        '201':
+        "201":
           description: District created
           content:
             application/json:
@@ -744,10 +780,10 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "422": { $ref: "#/components/responses/ValidationError" }
   /platform/geo/districts/{districtId}:
     parameters:
       - name: districtId
@@ -759,7 +795,7 @@ paths:
       summary: Get district by ID
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: District details
           content:
             application/json:
@@ -767,10 +803,10 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
     patch:
       tags: [Geo]
       summary: Update district
@@ -779,9 +815,9 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: '#/components/schemas/DistrictUpdate' }
+            schema: { $ref: "#/components/schemas/DistrictUpdate" }
       responses:
-        '200':
+        "200":
           description: District updated
           content:
             application/json:
@@ -789,17 +825,17 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: '#/components/schemas/GeoEntry' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '422': { $ref: '#/components/responses/ValidationError' }
+                  data: { $ref: "#/components/schemas/GeoEntry" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "422": { $ref: "#/components/responses/ValidationError" }
     delete:
       tags: [Geo]
       summary: Delete district
       security: [{ bearerAuth: [] }]
       responses:
-        '200':
+        "200":
           description: District deleted
           content:
             application/json:
@@ -808,10 +844,10 @@ paths:
                 properties:
                   success: { type: boolean }
                   message: { type: string, example: Geo entry deleted. }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
 components:
   securitySchemes:
     bearerAuth:
@@ -918,65 +954,75 @@ components:
         status: { type: string }
     CountryInput:
       type: object
-      required: [nameEn]
+      required: [name_en]
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255, example: Egypt }
+        name_en: { type: string, minLength: 1, maxLength: 255, example: Egypt }
         name_ar: { type: string, nullable: true, maxLength: 255, example: مصر }
-        code: { type: string, minLength: 2, maxLength: 2, pattern: '^[A-Z]{2}$', example: EG }
+        code:
+          {
+            type: string,
+            minLength: 2,
+            maxLength: 2,
+            pattern: "^[A-Z]{2}$",
+            example: EG,
+          }
     CountryUpdate:
       type: object
       description: All fields are optional for PATCH.
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_en: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
-        code: { type: string, minLength: 2, maxLength: 2, pattern: '^[A-Z]{2}$' }
+        code:
+          { type: string, minLength: 2, maxLength: 2, pattern: "^[A-Z]{2}$" }
     GovernorateInput:
       type: object
-      required: [nameEn, country_id]
+      required: [name_en, country_id]
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_en: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
-        country_id: { type: string, description: Parent country MongoDB ObjectId }
+        country_id:
+          { type: string, description: Parent country MongoDB ObjectId }
     GovernorateUpdate:
       type: object
       description: All fields are optional for PATCH.
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_en: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
         country_id: { type: string }
     CityInput:
       type: object
-      required: [nameEn, governorate_id]
+      required: [name_en, governorate_id]
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_en: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
-        governorate_id: { type: string, description: Parent governorate MongoDB ObjectId }
+        governorate_id:
+          { type: string, description: Parent governorate MongoDB ObjectId }
     CityUpdate:
       type: object
       description: All fields are optional for PATCH.
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_en: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
         governorate_id: { type: string }
     DistrictInput:
       type: object
-      required: [nameEn, city_id]
+      required: [name_en, city_id]
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_en: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
         city_id: { type: string, description: Parent city MongoDB ObjectId }
     DistrictUpdate:
       type: object
       description: All fields are optional for PATCH.
       properties:
-        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_en: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
         city_id: { type: string }
     GeoEntry:
       type: object
       properties:
         id: { type: string }
-        nameEn: { type: string }
+        name_en: { type: string }
         name_ar: { type: string, nullable: true }
         code: { type: string, nullable: true }
         country_id: { type: string }
@@ -1006,29 +1052,29 @@ components:
       description: Bad request or invalid identifier/context
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema: { $ref: "#/components/schemas/ApiError" }
     Unauthorized:
       description: Missing or invalid bearer token
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema: { $ref: "#/components/schemas/ApiError" }
     Forbidden:
       description: Authenticated user lacks required access
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema: { $ref: "#/components/schemas/ApiError" }
     NotFound:
       description: Resource not found
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema: { $ref: "#/components/schemas/ApiError" }
     Conflict:
       description: Duplicate resource or resource is in use
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema: { $ref: "#/components/schemas/ApiError" }
     ValidationError:
       description: Request validation failed
       content:
         application/json:
-          schema: { $ref: '#/components/schemas/ApiError' }
+          schema: { $ref: "#/components/schemas/ApiError" }
