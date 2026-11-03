@@ -55,6 +55,7 @@ async function seedEgypt() {
     { $set: { name: 'Egypt', nameAr: 'مصر', code: 'EG' } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
+  if (!country) throw new Error('Unable to create or load Egypt country record.');
   stats.countries++;
   for (const governorateData of dataset.data ?? []) {
     const governorateName = englishName(governorateData);
@@ -64,6 +65,7 @@ async function seedEgypt() {
       { $set: { countryId: country._id, name: governorateName, nameAr: arabicName(governorateData), code: governorateCode } },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
+    if (!governorate) throw new Error(`Unable to create or load governorate: ${governorateName}`);
     stats.governorates++;
     for (const cityData of governorateData.district ?? []) {
       const cityName = englishName(cityData);
@@ -73,6 +75,7 @@ async function seedEgypt() {
         { $set: { governorateId: governorate._id, name: cityName, nameAr: arabicName(cityData), code: cityCode } },
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
+      if (!city) throw new Error(`Unable to create or load city: ${cityName}`);
       stats.cities++;
       for (const districtData of cityData.shiyakha ?? []) {
         await upsertChild(District, 'cityId', city._id, districtData, ['code', 'id', 'shiyakha_id']);
@@ -91,6 +94,7 @@ async function seedSaudiArabia() {
     { $set: { name: 'Saudi Arabia', nameAr: 'المملكة العربية السعودية', code: 'SA' } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
+  if (!country) throw new Error('Unable to create or load Saudi Arabia country record.');
   stats.countries++;
   const citiesByRegion = new Map<string, Row[]>();
   for (const city of cities) {
@@ -110,6 +114,7 @@ async function seedSaudiArabia() {
       { $set: { countryId: country._id, name: regionName, nameAr: arabicName(region), code: regionCode } },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
+    if (!governorate) throw new Error(`Unable to create or load Saudi region: ${regionName}`);
     stats.governorates++;
     for (const cityData of citiesByRegion.get(String(regionCode)) ?? []) {
       const cityCode = sourceCode(cityData, ['city_id', 'code', 'id']);
@@ -119,6 +124,7 @@ async function seedSaudiArabia() {
         { $set: { governorateId: governorate._id, name: cityName, nameAr: arabicName(cityData), code: cityCode } },
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
+      if (!city) throw new Error(`Unable to create or load Saudi city: ${cityName}`);
       stats.cities++;
       for (const districtData of districtsByCity.get(String(cityCode)) ?? []) {
         await upsertChild(District, 'cityId', city._id, districtData, ['district_id', 'code', 'id']);
