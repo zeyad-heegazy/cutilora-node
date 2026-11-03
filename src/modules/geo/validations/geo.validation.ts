@@ -9,7 +9,7 @@ export const geoListSchema = z.object({
   city_id: z.string().optional(),
 });
 export const geoCreateSchema = z.object({
-  name: z.string().trim().min(1).max(255),
+  nameEn: z.string().trim().min(1).max(255),
   name_ar: z.string().trim().max(255).nullable().optional(),
   code: z.string().trim().max(64).nullable().optional(),
   country_id: z.string().optional(),
