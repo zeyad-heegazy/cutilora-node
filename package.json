@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed:geo": "tsx src/modules/geo/geo.seed.ts"
+    "seed:geo": "tsx src/modules/geo/seeds/geo.seed.ts"
   },
   "engines": {
     "node": ">=22"
