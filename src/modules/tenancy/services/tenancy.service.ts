@@ -1,5 +1,5 @@
 import { hashPassword } from '../../auth/services/auth.security.js';
-import { geoService } from '../../geo/geo.service.js';
+import { geoService } from '../../geo/services/geo.service.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
 
 export const tenancyService = {
