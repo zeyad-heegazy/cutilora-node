@@ -21,6 +21,7 @@ function transform(resource: GeoResource, doc: any) {
 function inputError(code: string, message: string) { return Object.assign(new Error(message), { code, status: 422 }); }
 
 export const geoService = {
+  validateClinicLocation(location: { countryId?: string; governorateId?: string; cityId?: string; districtId?: string }) { return geoRepository.validateClinicLocation(location); },
   async list(resource: GeoResource, query: { page: number; per_page: number; country_id?: string; governorate_id?: string; city_id?: string }) {
     const filter: Record<string, unknown> = {};
     const parent = parentForResource[resource];
