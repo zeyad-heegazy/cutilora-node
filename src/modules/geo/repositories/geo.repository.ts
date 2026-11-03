@@ -11,7 +11,7 @@ const parentFields: Partial<Record<GeoResource, string>> = { governorates: 'coun
 
 export const geoRepository = {
   list(resource: GeoResource, filter: Record<string, unknown>, skip: number, limit: number) {
-    return Promise.all([models[resource].find(filter).sort({ name: 1 }).skip(skip).limit(limit).lean(), models[resource].countDocuments(filter)]);
+    return Promise.all([models[resource].find(filter).sort({ nameEn: 1 }).skip(skip).limit(limit).lean(), models[resource].countDocuments(filter)]);
   },
   find(resource: GeoResource, id: string) { return models[resource].findById(id).lean(); },
   create(resource: GeoResource, data: Record<string, unknown>) { return models[resource].create(data); },
