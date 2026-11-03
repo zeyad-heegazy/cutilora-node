@@ -4,7 +4,7 @@ import { Governorate } from '../models/governorate.model.js';
 import { City } from '../models/city.model.js';
 import { District } from '../models/district.model.js';
 import { Clinic } from '../../tenancy/models/clinic.model.js';
-import type { GeoResource } from '../geo.types.js';
+import type { GeoResource } from '../types/geo.types.js';
 
 const models: Record<GeoResource, Model<any>> = { countries: Country, governorates: Governorate, cities: City, districts: District };
 const parentFields: Partial<Record<GeoResource, string>> = { governorates: 'countryId', cities: 'governorateId', districts: 'cityId' };
