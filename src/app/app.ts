@@ -2,9 +2,9 @@ import cors from 'cors';
 import express from 'express';
 import helmet from 'helmet';
 import { env } from '../config/env.js';
-import { authRouter } from '../modules/auth/auth.routes.js';
-import { platformTenantsRouter, tenantRouter } from '../modules/tenancy/tenancy.routes.js';
-import { errorHandler } from '../middleware/error-handler.js';
+import { authRouter } from '../modules/auth/routes/auth.routes.js';
+import { platformTenantsRouter, tenantRouter } from '../modules/tenancy/routes/tenancy.routes.js';
+import { errorHandler } from '../shared/middleware/error-handler.js';
 
 export const app = express();
 app.disable('x-powered-by');
