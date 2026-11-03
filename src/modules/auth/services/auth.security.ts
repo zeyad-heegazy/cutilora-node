@@ -1,6 +1,6 @@
 import { createHmac, randomBytes, scrypt as scryptCallback, timingSafeEqual } from 'node:crypto';
 import { promisify } from 'node:util';
-import { env } from '../../config/env.js';
+import { env } from '../../../config/env.js';
 const scrypt = promisify(scryptCallback);
 
 export async function hashPassword(password: string): Promise<string> {

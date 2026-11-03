@@ -1,8 +1,8 @@
-import { Tenant } from '../../models/tenant.model.js';
-import { Clinic } from '../../models/clinic.model.js';
-import { Branch } from '../../models/branch.model.js';
-import { TenantMembership } from '../../models/tenant-membership.model.js';
-import { User } from '../../models/user.model.js';
+import { Tenant } from '../models/tenant.model.js';
+import { Clinic } from '../models/clinic.model.js';
+import { Branch } from '../models/branch.model.js';
+import { TenantMembership } from '../models/tenant-membership.model.js';
+import { User } from '../../auth/models/user.model.js';
 
 export const tenancyRepository = {
   listTenants() { return Tenant.find().sort({ createdAt: -1 }); },
@@ -22,7 +22,7 @@ export const tenancyRepository = {
     return Promise.all([
       Tenant.findById(tenantId).select('name slug status plan settings'),
       clinicId ? Clinic.findOne({ _id: clinicId, tenantId }).select('name slug status timezone') : null,
-      branchId ? Branch.findOne({ _id: branchId, tenantId }).select('name slug status timezone') : null,
+      branchId ? Branch.findOne({ _id: branchId, tenantId, clinicId }).select('name slug status timezone') : null,
     ]);
   },
   findMembership(userId: string, tenantId: string, clinicId: string | null) {

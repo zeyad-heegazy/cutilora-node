@@ -1,5 +1,5 @@
-import { hashPassword } from '../auth/auth.security.js';
-import { tenancyRepository } from './tenancy.repository.js';
+import { hashPassword } from '../../auth/services/auth.security.js';
+import { tenancyRepository } from '../repositories/tenancy.repository.js';
 
 export const tenancyService = {
   listTenants() { return tenancyRepository.listTenants(); },

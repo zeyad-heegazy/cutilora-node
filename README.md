@@ -16,29 +16,50 @@ The backend follows this request flow:
 
 Route → Middleware → Controller → Service → Repository → Model/Database
 
+Each business module owns its implementation and organizes it by responsibility:
+
 - **Routes:** HTTP methods, paths, middleware and controller handlers only.
-- **Middleware:** Authentication, tenant-context resolution, authorization and error handling. Persistence lookups are delegated to repositories.
+- **Middleware:** Module-specific authentication, tenant-context resolution and authorization.
 - **Controllers:** Parse/validate request input, invoke services and translate results into HTTP responses.
 - **Services:** Business rules and orchestration; no Mongoose queries.
 - **Repositories:** All database reads and writes.
-- **Models:** Mongoose schemas and indexes only.
+- **Models:** Mongoose schemas and indexes owned by the relevant domain module.
+- **Validations/types:** Module-specific request schemas and TypeScript contracts.
+- **Shared:** Cross-module infrastructure such as the global error handler.
 - **Config/database:** Environment and database connection setup.
 
 ```text
 src/
-  app/                 Express application
-  config/              Environment configuration
-  database/            MongoDB connection
-  middleware/          Authentication, tenant context, authorization, errors
-  models/              Mongoose models and indexes
+  app/                         Express application
+  config/                      Environment configuration
+  database/                    MongoDB connection
   modules/
-    auth/              Routes, controller, service, repository, validation, security
-    tenancy/           Routes, controller, service, repository, validation
-    geo/               Geo domain module
+    auth/
+      controllers/
+      middleware/
+      models/
+      repositories/
+      routes/
+      services/
+      types/
+      validations/
+    tenancy/
+      controllers/
+      middleware/
+      models/
+      repositories/
+      routes/
+      services/
+      types/
+      validations/
+    geo/
+    clinics/                    Deprecated compatibility module
+  shared/
+    middleware/                 Shared error handling
   server.ts
 ```
 
-Do not put database queries in routes, controllers or middleware. Do not bypass repositories from services. Tenant-owned repository queries must use trusted tenant/clinic/branch context, never identifiers from request bodies or query strings.
+Do not put database queries in routes, controllers or middleware. Do not bypass repositories from services. Tenant-owned repository queries must use trusted tenant/clinic/branch context, never identifiers from request bodies or query strings. Cross-module dependencies must use explicit imports from the owning module.
 
 ## Setup
 

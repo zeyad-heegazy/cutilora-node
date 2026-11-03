@@ -1,16 +1,12 @@
 import type { Request, Response, NextFunction } from 'express';
-import { tenancyService } from './tenancy.service.js';
-import { createBranchSchema, createClinicSchema, createTenantSchema, tenantStatusSchema } from './tenancy.validation.js';
+import { tenancyService } from '../services/tenancy.service.js';
+import { createBranchSchema, createClinicSchema, createTenantSchema, tenantStatusSchema } from '../validations/tenancy.validation.js';
 
 export const tenancyController = {
-  async listTenants(_req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await tenancyService.listTenants() }); } catch (error) { next(error); }
-  },
+  async listTenants(_req: Request, res: Response, next: NextFunction) { try { res.json({ success: true, data: await tenancyService.listTenants() }); } catch (error) { next(error); } },
   async createTenant(req: Request, res: Response, next: NextFunction) {
-    try {
-      const input = createTenantSchema.parse(req.body);
-      res.status(201).json({ success: true, data: await tenancyService.createTenant(input) });
-    } catch (error) { next(error); }
+    try { const input = createTenantSchema.parse(req.body); res.status(201).json({ success: true, data: await tenancyService.createTenant(input) }); }
+    catch (error) { next(error); }
   },
   async updateTenantStatus(req: Request, res: Response, next: NextFunction) {
     try {
@@ -21,20 +17,15 @@ export const tenancyController = {
     } catch (error) { next(error); }
   },
   async context(req: Request, res: Response, next: NextFunction) {
-    try {
-      const [tenant, clinic, branch] = await tenancyService.getContext(req.tenantContext!);
-      res.json({ success: true, data: { tenant, clinic, branch, access: req.tenantContext } });
-    } catch (error) { next(error); }
-  },
-  async listClinics(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await tenancyService.listClinics(req.tenantContext!.tenantId) }); }
+    try { const [tenant, clinic, branch] = await tenancyService.getContext(req.tenantContext!); res.json({ success: true, data: { tenant, clinic, branch, access: req.tenantContext } }); }
     catch (error) { next(error); }
   },
+  async listClinics(req: Request, res: Response, next: NextFunction) {
+    try { res.json({ success: true, data: await tenancyService.listClinics(req.tenantContext!.tenantId) }); } catch (error) { next(error); }
+  },
   async createClinic(req: Request, res: Response, next: NextFunction) {
-    try {
-      const input = createClinicSchema.parse(req.body);
-      res.status(201).json({ success: true, data: await tenancyService.createClinic(input, req.tenantContext!.tenantId) });
-    } catch (error) { next(error); }
+    try { const input = createClinicSchema.parse(req.body); res.status(201).json({ success: true, data: await tenancyService.createClinic(input, req.tenantContext!.tenantId) }); }
+    catch (error) { next(error); }
   },
   async listBranches(req: Request, res: Response, next: NextFunction) {
     try {

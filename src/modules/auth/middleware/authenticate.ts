@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
-import { authRepository } from '../modules/auth/auth.repository.js';
-import { verifyAccessToken } from '../modules/auth/auth.security.js';
+import { authRepository } from '../repositories/auth.repository.js';
+import { verifyAccessToken } from '../services/auth.security.js';
 
 export async function authenticate(req: Request, res: Response, next: NextFunction) {
   try {
