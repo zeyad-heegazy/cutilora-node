@@ -595,9 +595,15 @@ components:
         governorate_id: { type: string, description: Required for cities. }
         city_id: { type: string, description: Required for districts. }
     GeoEntryUpdate:
-      allOf:
-        - $ref: '#/components/schemas/GeoEntryInput'
+      type: object
       description: All fields are optional for PATCH.
+      properties:
+        nameEn: { type: string, minLength: 1, maxLength: 255 }
+        name_ar: { type: string, nullable: true, maxLength: 255 }
+        code: { type: string, nullable: true, maxLength: 64 }
+        country_id: { type: string }
+        governorate_id: { type: string }
+        city_id: { type: string }
     GeoEntry:
       type: object
       properties:
