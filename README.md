@@ -16,50 +16,26 @@ The backend follows this request flow:
 
 Route → Middleware → Controller → Service → Repository → Model/Database
 
-Each business module owns its implementation and organizes it by responsibility:
-
-- **Routes:** HTTP methods, paths, middleware and controller handlers only.
-- **Middleware:** Module-specific authentication, tenant-context resolution and authorization.
-- **Controllers:** Parse/validate request input, invoke services and translate results into HTTP responses.
-- **Services:** Business rules and orchestration; no Mongoose queries.
-- **Repositories:** All database reads and writes.
-- **Models:** Mongoose schemas and indexes owned by the relevant domain module.
-- **Validations/types:** Module-specific request schemas and TypeScript contracts.
-- **Shared:** Cross-module infrastructure such as the global error handler.
-- **Config/database:** Environment and database connection setup.
+Each business module owns its implementation and organizes it by responsibility. Shared infrastructure lives in `src/shared`.
 
 ```text
 src/
-  app/                         Express application
-  config/                      Environment configuration
-  database/                    MongoDB connection
+  app/
+  config/
+  database/
   modules/
     auth/
-      controllers/
-      middleware/
-      models/
-      repositories/
-      routes/
-      services/
-      types/
-      validations/
+      controllers/ middleware/ models/ repositories/ routes/ services/ types/ validations/
     tenancy/
-      controllers/
-      middleware/
-      models/
-      repositories/
-      routes/
-      services/
-      types/
-      validations/
+      controllers/ middleware/ models/ repositories/ routes/ services/ types/ validations/
     geo/
-    clinics/                    Deprecated compatibility module
+      controllers/ data/ models/ repositories/ routes/ services/ validations/
   shared/
-    middleware/                 Shared error handling
+    middleware/
   server.ts
 ```
 
-Do not put database queries in routes, controllers or middleware. Do not bypass repositories from services. Tenant-owned repository queries must use trusted tenant/clinic/branch context, never identifiers from request bodies or query strings. Cross-module dependencies must use explicit imports from the owning module.
+Do not put database queries in routes, controllers or middleware. Do not bypass repositories from services. Tenant-owned repository queries must use trusted tenant/clinic/branch context, never identifiers from request bodies or query strings.
 
 ## Setup
 
@@ -79,13 +55,30 @@ npm run typecheck
 npm test
 npm run build
 npm start
+npm run seed:geo
 ```
 
 ## Domain model
 
 The domain hierarchy is **Tenant → Clinic → Branch**. A tenant is the SaaS customer/account and the isolation boundary. Clinics and branches are operating entities within that tenant. A global user identity can hold memberships in multiple tenants and scopes.
 
-## Current API
+## Geo domain
+
+The geographic hierarchy mirrors the Laravel application: **Country → Governorate → City → District**. Each record stores an English name, optional Arabic name, optional source code, parent reference and timestamps. The starter data includes Egypt and Saudi Arabia and is imported from the same Laravel JSON datasets.
+
+Run `npm run seed:geo` after configuring `.env`. The seeder is repeatable and upserts records by source code within their parent, falling back to name when a source code is unavailable.
+
+Geo management routes are platform-admin-only:
+
+| Method | Endpoint | Purpose |
+|---|---|---|
+| GET | `/api/v1/platform/geo/:resource` | Paginated list; supports `page`, `per_page` and the relevant parent ID filter |
+| POST | `/api/v1/platform/geo/:resource` | Create a country, governorate, city or district |
+| GET | `/api/v1/platform/geo/:resource/:entry` | Get one record |
+| PATCH | `/api/v1/platform/geo/:resource/:entry` | Update a record |
+| DELETE | `/api/v1/platform/geo/:resource/:entry` | Delete a record and its descendants |
+
+Supported resources: `countries`, `governorates`, `cities`, `districts`. Child records require their parent ID: `country_id`, `governorate_id`, or `city_id`.
 
 ### Authentication
 
