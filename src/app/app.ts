@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import { env } from '../config/env.js';
 import { authRouter } from '../modules/auth/routes/auth.routes.js';
 import { platformTenantsRouter, tenantRouter } from '../modules/tenancy/routes/tenancy.routes.js';
+import { geoRouter } from '../modules/geo/routes/geo.routes.js';
 import { errorHandler } from '../shared/middleware/error-handler.js';
 
 export const app = express();
@@ -16,5 +17,6 @@ app.get(`${env.API_PREFIX}/health`, (_req, res) => res.status(200).json({ succes
 app.use(`${env.API_PREFIX}/auth`, authRouter);
 app.use(`${env.API_PREFIX}/platform/tenants`, platformTenantsRouter);
 app.use(`${env.API_PREFIX}/tenant`, tenantRouter);
+app.use(`${env.API_PREFIX}/platform/geo`, geoRouter);
 app.use((_req, res) => res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'The requested resource was not found.' } }));
 app.use(errorHandler);
