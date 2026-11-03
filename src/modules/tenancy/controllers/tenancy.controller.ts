@@ -11,7 +11,7 @@ export const tenancyController = {
   async updateTenantStatus(req: Request, res: Response, next: NextFunction) {
     try {
       const { status } = tenantStatusSchema.parse(req.body);
-      const tenant = await tenancyService.updateTenantStatus(req.params.tenantId, status);
+      const tenant = await tenancyService.updateTenantStatus(String(req.params.tenantId ?? ''), status);
       if (!tenant) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant not found.' } });
       res.json({ success: true, data: tenant });
     } catch (error) { next(error); }

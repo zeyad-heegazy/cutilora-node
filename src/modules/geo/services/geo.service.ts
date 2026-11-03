@@ -1,8 +1,8 @@
 import { geoRepository } from '../repositories/geo.repository.js';
 import type { GeoResource } from '../types/geo.types.js';
 
-const parentApiFields: Record<string, string> = { country_id: 'countryId', governorate_id: 'governorateId', city_id: 'cityId' };
-const parentForResource: Partial<Record<GeoResource, string>> = { governorates: 'country_id', cities: 'governorate_id', districts: 'city_id' };
+const parentApiFields = { country_id: 'countryId', governorate_id: 'governorateId', city_id: 'cityId' } as const;
+const parentForResource: Partial<Record<GeoResource, keyof typeof parentApiFields>> = { governorates: 'country_id', cities: 'governorate_id', districts: 'city_id' };
 function toDb(data: Record<string, unknown>) {
   const result: Record<string, unknown> = {};
   if (data.nameEn !== undefined) result.nameEn = data.nameEn;
@@ -25,7 +25,7 @@ export const geoService = {
   async list(resource: GeoResource, query: { page: number; per_page: number; country_id?: string; governorate_id?: string; city_id?: string }) {
     const filter: Record<string, unknown> = {};
     const parent = parentForResource[resource];
-    if (parent && query[parent as keyof typeof query]) filter[parentApiFields[parent]] = query[parent as keyof typeof query];
+    if (parent) { const parentValue = query[parent]; if (parentValue) filter[parentApiFields[parent]] = parentValue; }
     const [rows, total] = await geoRepository.list(resource, filter, (query.page - 1) * query.per_page, query.per_page);
     return { data: rows.map(row => transform(resource, row)), meta: { current_page: query.page, per_page: query.per_page, total, last_page: Math.max(1, Math.ceil(total / query.per_page)) } };
   },

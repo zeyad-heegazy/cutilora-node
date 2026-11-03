@@ -44,15 +44,15 @@ function sourceCode(row: Row, keys: string[]): string | null {
 async function upsertChild(model: Model<any>, parentField: string, parentId: unknown, row: Row, codeKeys: string[]) {
   const name = englishName(row);
   const code = sourceCode(row, codeKeys);
-  const identity = code ? { [parentField]: parentId, code } : { [parentField]: parentId, name };
-  await model.updateOne(identity, { $set: { [parentField]: parentId, name, nameAr: arabicName(row), code } }, { upsert: true, setDefaultsOnInsert: true });
+  const identity = code ? { [parentField]: parentId, code } : { [parentField]: parentId, nameEn: name };
+  await model.updateOne(identity, { $set: { [parentField]: parentId, nameEn: name, nameAr: arabicName(row), code } }, { upsert: true, setDefaultsOnInsert: true });
 }
 
 async function seedEgypt() {
   const dataset = readDataset<{ data: Row[] }>('egypt.json');
   const country = await Country.findOneAndUpdate(
     { code: 'EG' },
-    { $set: { name: 'Egypt', nameAr: 'مصر', code: 'EG' } },
+    { $set: { nameEn: 'Egypt', nameAr: 'مصر', code: 'EG' } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   if (!country) throw new Error('Unable to create or load Egypt country record.');
@@ -61,8 +61,8 @@ async function seedEgypt() {
     const governorateName = englishName(governorateData);
     const governorateCode = sourceCode(governorateData, ['code', 'id', 'governorate_id']);
     const governorate = await Governorate.findOneAndUpdate(
-      governorateCode ? { countryId: country._id, code: governorateCode } : { countryId: country._id, name: governorateName },
-      { $set: { countryId: country._id, name: governorateName, nameAr: arabicName(governorateData), code: governorateCode } },
+      governorateCode ? { countryId: country._id, code: governorateCode } : { countryId: country._id, nameEn: governorateName },
+      { $set: { countryId: country._id, nameEn: governorateName, nameAr: arabicName(governorateData), code: governorateCode } },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
     if (!governorate) throw new Error(`Unable to create or load governorate: ${governorateName}`);
@@ -71,8 +71,8 @@ async function seedEgypt() {
       const cityName = englishName(cityData);
       const cityCode = sourceCode(cityData, ['code', 'id', 'district_id']);
       const city = await City.findOneAndUpdate(
-        cityCode ? { governorateId: governorate._id, code: cityCode } : { governorateId: governorate._id, name: cityName },
-        { $set: { governorateId: governorate._id, name: cityName, nameAr: arabicName(cityData), code: cityCode } },
+        cityCode ? { governorateId: governorate._id, code: cityCode } : { governorateId: governorate._id, nameEn: cityName },
+        { $set: { governorateId: governorate._id, nameEn: cityName, nameAr: arabicName(cityData), code: cityCode } },
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
       if (!city) throw new Error(`Unable to create or load city: ${cityName}`);
@@ -91,7 +91,7 @@ async function seedSaudiArabia() {
   const districts = readDataset<Row[]>('saudi-districts.json');
   const country = await Country.findOneAndUpdate(
     { code: 'SA' },
-    { $set: { name: 'Saudi Arabia', nameAr: 'المملكة العربية السعودية', code: 'SA' } },
+    { $set: { nameEn: 'Saudi Arabia', nameAr: 'المملكة العربية السعودية', code: 'SA' } },
     { upsert: true, new: true, setDefaultsOnInsert: true },
   );
   if (!country) throw new Error('Unable to create or load Saudi Arabia country record.');
@@ -110,8 +110,8 @@ async function seedSaudiArabia() {
     const regionCode = sourceCode(region, ['region_id', 'code', 'id']);
     const regionName = englishName(region);
     const governorate = await Governorate.findOneAndUpdate(
-      regionCode ? { countryId: country._id, code: regionCode } : { countryId: country._id, name: regionName },
-      { $set: { countryId: country._id, name: regionName, nameAr: arabicName(region), code: regionCode } },
+      regionCode ? { countryId: country._id, code: regionCode } : { countryId: country._id, nameEn: regionName },
+      { $set: { countryId: country._id, nameEn: regionName, nameAr: arabicName(region), code: regionCode } },
       { upsert: true, new: true, setDefaultsOnInsert: true },
     );
     if (!governorate) throw new Error(`Unable to create or load Saudi region: ${regionName}`);
@@ -120,8 +120,8 @@ async function seedSaudiArabia() {
       const cityCode = sourceCode(cityData, ['city_id', 'code', 'id']);
       const cityName = englishName(cityData);
       const city = await City.findOneAndUpdate(
-        cityCode ? { governorateId: governorate._id, code: cityCode } : { governorateId: governorate._id, name: cityName },
-        { $set: { governorateId: governorate._id, name: cityName, nameAr: arabicName(cityData), code: cityCode } },
+        cityCode ? { governorateId: governorate._id, code: cityCode } : { governorateId: governorate._id, nameEn: cityName },
+        { $set: { governorateId: governorate._id, nameEn: cityName, nameAr: arabicName(cityData), code: cityCode } },
         { upsert: true, new: true, setDefaultsOnInsert: true },
       );
       if (!city) throw new Error(`Unable to create or load Saudi city: ${cityName}`);

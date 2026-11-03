@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models, type Model } from 'mongoose';
 
 const schema = new Schema({
   name: { type: String, required: true, trim: true },
@@ -8,4 +8,4 @@ const schema = new Schema({
   isActive: { type: Boolean, default: true, required: true },
 }, { timestamps: true });
 
-export const User = models.User || model('User', schema);
+export const User = (models.User || model('User', schema)) as Model<any>;

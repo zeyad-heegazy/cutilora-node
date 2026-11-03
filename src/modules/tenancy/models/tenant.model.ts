@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models, type Model } from 'mongoose';
 
 const schema = new Schema({
   name: { type: String, required: true, trim: true },
@@ -8,4 +8,4 @@ const schema = new Schema({
   settings: { type: Schema.Types.Mixed, default: {} },
 }, { timestamps: true });
 
-export const Tenant = models.Tenant || model('Tenant', schema);
+export const Tenant = (models.Tenant || model('Tenant', schema)) as Model<any>;

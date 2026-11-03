@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models, type Model } from 'mongoose';
 
 const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
@@ -12,4 +12,4 @@ const schema = new Schema({
 }, { timestamps: true });
 schema.index({ clinicId: 1, slug: 1 }, { unique: true });
 schema.index({ tenantId: 1, clinicId: 1, status: 1 });
-export const Branch = models.Branch || model('Branch', schema);
+export const Branch = (models.Branch || model('Branch', schema)) as Model<any>;

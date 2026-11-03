@@ -27,12 +27,13 @@ export function signAccessToken(userId: string): string {
 }
 export function verifyAccessToken(token: string): TokenPayload {
   const parts = token.split('.');
-  if (parts.length !== 3) throw new Error('Invalid token');
-  const input = `${parts[0]}.${parts[1]}`;
+  const [header, payloadPart, signature] = parts;
+  if (parts.length !== 3 || !header || !payloadPart || !signature) throw new Error('Invalid token');
+  const input = `${header}.${payloadPart}`;
   const expected = createHmac('sha256', secret).update(input).digest();
-  const actual = Buffer.from(parts[2], 'base64url');
+  const actual = Buffer.from(signature, 'base64url');
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new Error('Invalid token');
-  const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString()) as TokenPayload;
+  const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString()) as TokenPayload;
   if (!payload.sub || payload.exp <= Math.floor(Date.now() / 1000)) throw new Error('Expired token');
   return payload;
 }

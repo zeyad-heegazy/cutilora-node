@@ -12,12 +12,12 @@ export const authService = {
     return {
       access_token: signAccessToken(user.id), token_type: 'Bearer',
       user: { id: user.id, name: user.name, email: user.email, platform_role: user.platformRole },
-      memberships: memberships.filter(m => m.tenantId).map(m => ({ tenant: m.tenantId, clinic: m.clinicId, branch_ids: m.branchIds, scope: m.scope, role: m.role })),
+      memberships: memberships.filter((m: any) => m.tenantId).map((m: any) => ({ tenant: m.tenantId, clinic: m.clinicId, branch_ids: m.branchIds, scope: m.scope, role: m.role })),
     };
   },
   async me(userId: string) {
     const [user, memberships] = await Promise.all([authRepository.findUserById(userId), authRepository.findActiveMemberships(userId)]);
-    return { user, memberships: memberships.filter(m => m.tenantId) };
+    return { user, memberships: memberships.filter((m: any) => m.tenantId) };
   },
   async bootstrapAdmin(input: { name: string; email: string; password: string }) {
     if (await authRepository.hasPlatformAdmin()) throw new AuthError('BOOTSTRAP_ALREADY_USED', 'A platform admin already exists.', 409);
