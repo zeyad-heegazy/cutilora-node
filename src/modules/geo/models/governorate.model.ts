@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+import { Schema, model, models, type Model } from 'mongoose';
 const schema = new Schema({
   countryId: { type: Schema.Types.ObjectId, ref: 'Country', required: true, index: true },
   nameEn: { type: String, required: true, trim: true },
@@ -7,4 +7,4 @@ const schema = new Schema({
 }, { timestamps: true });
 schema.index({ countryId: 1, nameEn: 1 }, { unique: true });
 schema.index({ countryId: 1, code: 1 }, { unique: true, partialFilterExpression: { code: { $type: 'string' } } });
-export const Governorate = models.Governorate || model('Governorate', schema);
+export const Governorate = (models.Governorate || model('Governorate', schema)) as Model<any>;
