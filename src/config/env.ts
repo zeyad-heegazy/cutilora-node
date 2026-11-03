@@ -6,7 +6,6 @@ const envSchema = z.object({
   PORT: z.coerce.number().int().positive().default(3000),
   API_PREFIX: z.string().default('/api/v1'),
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
-  CORS_ORIGINS: z.string().default('http://localhost:5173'),
   JWT_SECRET: z.string().min(32, 'JWT_SECRET must contain at least 32 characters'),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
 });
@@ -20,5 +19,4 @@ if (!parsed.success) {
 
 export const env = {
   ...parsed.data,
-  corsOrigins: parsed.data.CORS_ORIGINS.split(',').map((origin) => origin.trim()).filter(Boolean),
 };
