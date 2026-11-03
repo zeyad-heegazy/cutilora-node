@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import { env } from '../config/env.js';
 import { authRouter } from '../modules/auth/routes/auth.routes.js';
 import { platformTenantsRouter, tenantRouter } from '../modules/tenancy/routes/tenancy.routes.js';
-import { geoRouter } from '../modules/geo/geo.routes.js';
+import { geoRouter } from '../modules/geo/routes/geo.routes.js';
 import { errorHandler } from '../shared/middleware/error-handler.js';
 
 export const app = express();
