@@ -33,7 +33,12 @@ export const platformTenantService = {
       tenancyRepository.listClinics(id),
       tenancyRepository.findSubscriptionByTenantId(id),
     ]);
-    return { ...tenant.toObject(), clinics, subscription };
+    const paymentHistory = subscription ? await tenancyRepository.listSubscriptionPayments(id) : [];
+    return {
+      ...tenant.toObject(),
+      clinics,
+      subscription: subscription ? { ...subscription.toObject(), paymentHistory } : null,
+    };
   },
   async createTenant(input: any) {
     const slug = await generateUniqueTenantSlug(input.name);
@@ -87,6 +92,7 @@ export const platformTenantService = {
       await Promise.all([
         tenancyRepository.deleteTenantMemberships(String(tenant._id)),
         tenancyRepository.deleteTenantClinics(String(tenant._id)),
+        tenancyRepository.deleteTenantSubscriptionPayments(String(tenant._id)),
         tenancyRepository.deleteTenantSubscription(String(tenant._id)),
         tenancyRepository.deleteTenant(String(tenant._id)),
       ]);
