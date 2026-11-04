@@ -318,6 +318,10 @@ components:
         address: { $ref: "#/components/schemas/BusinessAddress" }
         timezone: { type: string }
         preferences: { $ref: "#/components/schemas/TenantPreferences" }
+        countryId: { type: string, description: Optional legacy top-level location field accepted by PATCH }
+        governorateId: { type: string }
+        cityId: { type: string }
+        districtId: { type: string }
         operatingHours: { type: array, items: { type: object, additionalProperties: true } }
         branding: { $ref: "#/components/schemas/BrandingInput" }
         bookingSettings: { type: object, additionalProperties: true }
