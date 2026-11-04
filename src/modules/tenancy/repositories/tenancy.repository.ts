@@ -43,6 +43,7 @@ export const tenancyRepository = {
     return Clinic.findOne({ tenantId, slug, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).select('_id');
   },
   createClinic(data: Record<string, unknown>) { return Clinic.create(data); },
+  deleteClinic(id: string, tenantId: string) { return Clinic.deleteOne({ _id: id, tenantId }); },
   updateClinic(id: string, tenantId: string, data: Record<string, unknown>) {
     return Clinic.findOneAndUpdate({ _id: id, tenantId }, { $set: data }, { new: true, runValidators: true });
   },
@@ -51,7 +52,7 @@ export const tenancyRepository = {
   getTenantContext(tenantId: string, clinicId: string | null, branchId: string | null) {
     return Promise.all([
       Tenant.findById(tenantId).select('name displayName legalName slug businessType description industry status contact address branding preferences'),
-      clinicId ? Clinic.findOne({ _id: clinicId, tenantId }).select('name slug code status clinicType timezone contact address branding bookingSettings') : null,
+      clinicId ? Clinic.findOne({ _id: clinicId, tenantId }).select('name slug code status clinicType timezone preferences contact address branding bookingSettings') : null,
       branchId ? Branch.findOne({ _id: branchId, tenantId, clinicId }).select('name slug status timezone') : null,
     ]);
   },

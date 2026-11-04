@@ -1,7 +1,19 @@
 import { hashPassword } from '../../../auth/services/auth.security.js';
 import { tenancyRepository } from '../../../tenancy/repositories/tenancy.repository.js';
 import { geoService } from '../../../geo/services/geo.service.js';
-import { storeBrandingLogo, removeBrandingLogo } from '../../../../shared/storage/branding-image.storage.js';
+import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../../shared/storage/branding-image.storage.js';
+
+function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>): Record<string, any> {
+  const result = { ...defaults };
+  for (const [key, value] of Object.entries(provided ?? {})) {
+    const fallback = result[key];
+    result[key] = value && typeof value === 'object' && !Array.isArray(value) && fallback && typeof fallback === 'object' && !Array.isArray(fallback)
+      ? deepMerge(fallback, value) : value;
+  }
+  return result;
+}
+
+const DEFAULT_TENANT_PREFERENCES = { timezone: 'Africa/Cairo', locale: 'en', currency: 'EGP', dateFormat: 'YYYY-MM-DD', weekStartsOn: 6, supportedLanguages: ['en', 'ar'] };
 
 function slugify(value: string, fallback = 'tenant'): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -43,9 +55,11 @@ export const platformTenantService = {
   },
   async createTenant(input: any) {
     if (input.address) await geoService.validateClinicLocation(input.address);
-    const { logoBase64: tenantLogoBase64, ...tenantBranding } = input.branding ?? {};
+    const { logoBase64: tenantLogoBase64, coverImageBase64: tenantCoverBase64, ...tenantBranding } = input.branding ?? {};
     let storedTenantLogo = '';
+    let storedTenantCover = '';
     let storedClinicLogo = '';
+    let storedClinicCover = ''
     const slug = await generateUniqueTenantSlug(input.name);
     const tenant = await tenancyRepository.createTenant({
       name: input.name,
@@ -59,15 +73,19 @@ export const platformTenantService = {
       address: input.address,
       legal: input.legal,
       branding: tenantBranding,
-      preferences: input.preferences,
-      settings: input.settings,
+      preferences: deepMerge(DEFAULT_TENANT_PREFERENCES, input.preferences),
+      settings: deepMerge({}, input.settings),
     });
     try {
       if (tenantLogoBase64) {
         storedTenantLogo = await storeBrandingLogo(tenantLogoBase64, 'tenants', String(tenant._id));
         tenant.set('branding.logoUrl', storedTenantLogo);
-        await tenant.save();
       }
+      if (tenantCoverBase64) {
+        storedTenantCover = await storeBrandingCover(tenantCoverBase64, 'tenants', String(tenant._id));
+        tenant.set('branding.coverImageUrl', storedTenantCover);
+      }
+      if (storedTenantLogo || storedTenantCover) await tenant.save();
       let owner = await tenancyRepository.findUserByEmail(input.owner.email);
       if (!owner) owner = await tenancyRepository.createUser({
         name: input.owner.name,
@@ -87,9 +105,10 @@ export const platformTenantService = {
           cityId: initial.cityId ?? address.cityId,
           districtId: initial.districtId ?? address.districtId,
         });
-        const { logoBase64: clinicLogoBase64, ...clinicBranding } = initial.branding ?? {};
+        const { logoBase64: clinicLogoBase64, coverImageBase64: clinicCoverBase64, ...clinicBranding } = initial.branding ?? {};
         const clinic = await tenancyRepository.createClinic({
           ...initial,
+          preferences: deepMerge(DEFAULT_TENANT_PREFERENCES, initial.preferences),
           branding: clinicBranding,
           address: { ...address, countryId: initial.countryId ?? address.countryId, governorateId: initial.governorateId ?? address.governorateId, cityId: initial.cityId ?? address.cityId, districtId: initial.districtId ?? address.districtId },
           tenantId: tenant._id,
@@ -102,14 +121,20 @@ export const platformTenantService = {
         if (clinicLogoBase64) {
           storedClinicLogo = await storeBrandingLogo(clinicLogoBase64, 'clinics', String(clinic._id));
           clinic.set('branding.logoUrl', storedClinicLogo);
-          await clinic.save();
         }
+        if (clinicCoverBase64) {
+          storedClinicCover = await storeBrandingCover(clinicCoverBase64, 'clinics', String(clinic._id));
+          clinic.set('branding.coverImageUrl', storedClinicCover);
+        }
+        if (clinicLogoBase64 || clinicCoverBase64) await clinic.save();
       }
       return await platformTenantService.getTenantDetails(String(tenant._id));
     } catch (error) {
       await Promise.all([
-        removeBrandingLogo(storedTenantLogo),
-        removeBrandingLogo(storedClinicLogo),
+        removeBrandingImage(storedTenantLogo),
+        removeBrandingImage(storedTenantCover),
+        removeBrandingImage(storedClinicLogo),
+        removeBrandingImage(storedClinicCover),
         tenancyRepository.deleteTenantMemberships(String(tenant._id)),
         tenancyRepository.deleteTenantClinics(String(tenant._id)),
         tenancyRepository.deleteTenantSubscriptionPayments(String(tenant._id)),
@@ -125,20 +150,31 @@ export const platformTenantService = {
     const update: Record<string, unknown> = { ...input };
     if (typeof input.name === 'string') update.slug = await generateUniqueTenantSlug(input.name, id);
     let newLogoUrl = '';
+    let newCoverUrl = '';
     const oldLogoUrl = current.get('branding')?.logoUrl ?? '';
+    const oldCoverUrl = current.get('branding')?.coverImageUrl ?? '';
+    try {
     for (const key of ['contact', 'address', 'legal', 'branding', 'preferences', 'settings']) {
       if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
         const existingValue = current.get(key);
         const existingObject = existingValue?.toObject?.() ?? existingValue ?? {};
         if (key === 'branding') {
-          const { logoBase64, ...brandingFields } = input.branding;
+          const { logoBase64, coverImageBase64, ...brandingFields } = input.branding;
           update.branding = { ...existingObject, ...brandingFields };
           if (logoBase64) {
             newLogoUrl = await storeBrandingLogo(logoBase64, 'tenants', id);
             (update.branding as Record<string, unknown>).logoUrl = newLogoUrl;
           }
-        } else update[key] = { ...existingObject, ...input[key] };
+          if (coverImageBase64) {
+            newCoverUrl = await storeBrandingCover(coverImageBase64, 'tenants', id);
+            (update.branding as Record<string, unknown>).coverImageUrl = newCoverUrl;
+          }
+        } else update[key] = deepMerge(existingObject, input[key]);
       }
+    }
+    } catch (error) {
+      await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+      throw error;
     }
     let updated: Awaited<ReturnType<typeof tenancyRepository.updateTenant>>;
     try {
@@ -147,11 +183,12 @@ export const platformTenantService = {
       }
       updated = await tenancyRepository.updateTenant(id, update);
     } catch (error) {
-      await removeBrandingLogo(newLogoUrl);
+      await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
       throw error;
     }
-    if (!updated) { await removeBrandingLogo(newLogoUrl); return null; }
-    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingLogo(oldLogoUrl);
+    if (!updated) { await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]); return null; }
+    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingImage(oldLogoUrl);
+    if (newCoverUrl && oldCoverUrl && oldCoverUrl !== newCoverUrl) await removeBrandingImage(oldCoverUrl);
     return platformTenantService.getTenantDetails(id);
   },
   async updateTenantStatus(id: string, status: 'active' | 'suspended') {

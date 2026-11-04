@@ -38,6 +38,15 @@ const brandingSchema = new Schema({
   primaryColor: { type: String, trim: true, default: '#2563eb' },
 }, { _id: false });
 
+const preferencesSchema = new Schema({
+  timezone: { type: String, default: 'Africa/Cairo' },
+  locale: { type: String, default: 'en' },
+  currency: { type: String, uppercase: true, default: 'EGP' },
+  dateFormat: { type: String, default: 'YYYY-MM-DD' },
+  weekStartsOn: { type: Number, min: 0, max: 6, default: 6 },
+  supportedLanguages: { type: [String], default: ['en', 'ar'] },
+}, { _id: false });
+
 const bookingSettingsSchema = new Schema({
   allowOnlineBooking: { type: Boolean, default: false },
   requireAppointmentConfirmation: { type: Boolean, default: true },
@@ -62,6 +71,7 @@ const schema = new Schema({
   cityId: { type: Schema.Types.ObjectId, ref: 'City', default: null },
   districtId: { type: Schema.Types.ObjectId, ref: 'District', default: null },
   timezone: { type: String, default: 'Africa/Cairo' },
+  preferences: { type: preferencesSchema, default: () => ({}) },
   operatingHours: { type: [operatingHoursSchema], default: [] },
   branding: { type: brandingSchema, default: () => ({}) },
   bookingSettings: { type: bookingSettingsSchema, default: () => ({}) },

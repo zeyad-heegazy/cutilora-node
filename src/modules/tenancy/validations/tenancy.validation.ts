@@ -27,6 +27,7 @@ const addressSchema = z.object({
 });
 const brandingSchema = z.object({
   logoBase64: z.string().max(2_800_000).optional(),
+  coverImageBase64: z.string().max(2_800_000).optional(),
   coverImageUrl: z.string().trim().url().or(z.literal('')).optional(),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
@@ -47,6 +48,7 @@ const clinicFields = {
   contact: contactSchema.optional(),
   address: addressSchema.optional(),
   timezone: z.string().trim().min(1).max(100).default('Africa/Cairo'),
+  preferences: preferencesSchema.optional(),
   countryId: z.string().optional(),
   governorateId: z.string().optional(),
   cityId: z.string().optional(),
@@ -132,6 +134,7 @@ export const updateClinicSchema = z.object({
   contact: contactSchema.partial().optional(),
   address: addressSchema.partial().optional(),
   timezone: z.string().trim().min(1).max(100).optional(),
+  preferences: preferencesSchema.partial().optional(),
   countryId: z.string().optional(),
   governorateId: z.string().optional(),
   cityId: z.string().optional(),
