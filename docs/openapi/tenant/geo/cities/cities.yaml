@@ -3,6 +3,7 @@ paths:
   /tenant/geo/cities:
     get:
       tags: [Clinic - Geo]
+      x-apidog-folder: "Tenant/Geo/Cities"
       summary: List and search cities with governorate and country
       security: [{ bearerAuth: [] }]
       parameters:
