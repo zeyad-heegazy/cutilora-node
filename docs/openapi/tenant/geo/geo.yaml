@@ -1,0 +1,133 @@
+openapi: 3.0.3
+paths:
+  /tenant/geo/countries:
+    get:
+      tags: [Clinic - Geo]
+      summary: List and search countries
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+      responses:
+        '200':
+          description: Paginated countries
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeoListResponse' }
+        '401': { $ref: '../../../openapi.yaml#/components/responses/Unauthorized' }
+  /tenant/geo/governorates:
+    get:
+      tags: [Clinic - Geo]
+      summary: List and search governorates with their country
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - name: country_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated governorates with country parent
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeoListResponse' }
+        '401': { $ref: '../../../openapi.yaml#/components/responses/Unauthorized' }
+  /tenant/geo/cities:
+    get:
+      tags: [Clinic - Geo]
+      summary: List and search cities with governorate and country
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - name: country_id
+          in: query
+          schema: { type: string }
+        - name: governorate_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated cities with complete parent hierarchy
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeoListResponse' }
+        '401': { $ref: '../../../openapi.yaml#/components/responses/Unauthorized' }
+  /tenant/geo/districts:
+    get:
+      tags: [Clinic - Geo]
+      summary: List and search districts with city, governorate, and country
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/PerPage'
+        - $ref: '#/components/parameters/Search'
+        - name: country_id
+          in: query
+          schema: { type: string }
+        - name: governorate_id
+          in: query
+          schema: { type: string }
+        - name: city_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated districts with complete parent hierarchy
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/GeoListResponse' }
+        '401': { $ref: '../../../openapi.yaml#/components/responses/Unauthorized' }
+components:
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    PerPage:
+      name: per_page
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+    Search:
+      name: search
+      in: query
+      description: Case-insensitive match against English name, Arabic name, or code.
+      schema: { type: string, maxLength: 100 }
+  schemas:
+    GeoListResponse:
+      type: object
+      properties:
+        success: { type: boolean, example: true }
+        data:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string }
+              name_en: { type: string }
+              name_ar: { type: string, nullable: true }
+              code: { type: string, nullable: true }
+              country: { $ref: '#/components/schemas/GeoParent' }
+              governorate: { $ref: '#/components/schemas/GeoParent' }
+              city: { $ref: '#/components/schemas/GeoParent' }
+        meta:
+          type: object
+          properties:
+            current_page: { type: integer }
+            per_page: { type: integer }
+            total: { type: integer }
+            last_page: { type: integer }
+    GeoParent:
+      type: object
+      nullable: true
+      properties:
+        id: { type: string }
+        name_en: { type: string }
+        name_ar: { type: string, nullable: true }
+        code: { type: string, nullable: true }
+        country: { $ref: '#/components/schemas/GeoParent' }
+        governorate: { $ref: '#/components/schemas/GeoParent' }
