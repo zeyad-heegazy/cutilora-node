@@ -86,11 +86,6 @@ export const platformTenantService = {
           cityId: initial.cityId ?? address.cityId,
           districtId: initial.districtId ?? address.districtId,
         });
-        if (clinicLogoBase64) {
-          const clinicLogoUrl = await storeBrandingLogo(clinicLogoBase64, 'clinics', String(clinic._id));
-          clinic.set('branding.logoUrl', clinicLogoUrl);
-          await clinic.save();
-        }
         const { logoBase64: clinicLogoBase64, ...clinicBranding } = initial.branding ?? {};
         const clinic = await tenancyRepository.createClinic({
           ...initial,
@@ -103,6 +98,11 @@ export const platformTenantService = {
           cityId: initial.cityId ?? address.cityId,
           districtId: initial.districtId ?? address.districtId,
         });
+        if (clinicLogoBase64) {
+          const clinicLogoUrl = await storeBrandingLogo(clinicLogoBase64, 'clinics', String(clinic._id));
+          clinic.set('branding.logoUrl', clinicLogoUrl);
+          await clinic.save();
+        }
       }
       return await platformTenantService.getTenantDetails(String(tenant._id));
     } catch (error) {
