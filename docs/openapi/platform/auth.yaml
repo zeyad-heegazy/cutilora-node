@@ -36,7 +36,7 @@ paths:
     get:
       tags: [Platform - Authentication]
       summary: Get current platform administrator
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: Current platform identity
