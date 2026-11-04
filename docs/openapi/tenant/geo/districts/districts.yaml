@@ -3,6 +3,7 @@ paths:
   /tenant/geo/districts:
     get:
       tags: [Clinic - Geo]
+      x-apidog-folder: "Tenant/Geo/Districts"
       summary: List and search districts with city, governorate, and country
       security: [{ bearerAuth: [] }]
       parameters:
