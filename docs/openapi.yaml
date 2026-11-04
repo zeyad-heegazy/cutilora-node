@@ -14,7 +14,7 @@ servers:
     description: Local development (replace with deployed API URL)
 tags:
   - name: Health
-  - name: Authentication
+  - name: Clinic - Authentication
   - name: Platform - Authentication
   - name: Platform - Tenants
   - name: Platform - Geo
@@ -28,7 +28,7 @@ paths:
   /auth/login:
     $ref: "./openapi/clinic/auth.yaml#/paths/~1auth~1login"
   /auth/me:
-    $ref: "./openapi/auth/user.yaml#/paths/~1auth~1me"
+    $ref: "./openapi/clinic/auth.yaml#/paths/~1auth~1me"
   /auth/platform/login:
     $ref: "./openapi/platform/auth.yaml#/paths/~1auth~1platform~1login"
   /auth/platform/me:
