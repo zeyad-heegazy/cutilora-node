@@ -14,20 +14,18 @@ servers:
     description: Local development (replace with deployed API URL)
 tags:
   - name: Health
-  - name: Tenant - Authentication
-  - name: Platform - Authentication
-  - name: Platform - Tenants
-  - name: Platform - Geo
-  - name: Platform - Monitoring
-  - name: Tenant - Context
-  - name: Tenant - Geo
-  - name: Tenant - Clinics
-  - name: Tenant - Branches
+  - name: Portal Platform
+  - name: Authentication
+  - name: Tenant Context
+  - name: Clinics
+  - name: Branches
+  - name: Clinic - Geo
 paths:
   /health:
     get:
       tags:
         - Health
+      x-apidog-folder: Platform/System
       summary: Health check
       responses:
         '200':
@@ -39,7 +37,8 @@ paths:
   /auth/login:
     post:
       tags:
-        - Clinic - Authentication
+        - Authentication
+      x-apidog-folder: Tenant/Auth
       summary: Log in
       description: Returns an access token and the user's active tenant memberships.
       requestBody:
@@ -85,14 +84,40 @@ paths:
                         type: array
                         items:
                           $ref: '#/components/schemas/MembershipSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '422':
-          $ref: '#/components/responses/ValidationError'
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      x-apidog-folder: Tenant/Auth
+      summary: Log out current user
+      description: Revokes the current regular-user access token. Other sessions remain active.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logged out successfully.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /auth/me:
     get:
       tags:
-        - Clinic - Authentication
+        - Authentication
+      x-apidog-folder: Tenant/Auth
       summary: Get current user
       security:
         - bearerAuth: []
@@ -121,7 +146,8 @@ paths:
   /auth/platform/login:
     post:
       tags:
-        - Platform - Authentication
+        - Portal Platform
+      x-apidog-folder: Platform/Auth
       summary: Platform administrator login
       description: Issues a platform-audience access token only to an active platform administrator.
       requestBody:
@@ -164,10 +190,38 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+  /auth/platform/logout:
+    post:
+      tags:
+        - Portal Platform
+      x-apidog-folder: Platform/Auth
+      summary: Log out current platform administrator
+      description: Revokes the current platform access token. Other sessions remain active.
+      security:
+        - platformBearerAuth: []
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logged out successfully.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /auth/platform/me:
     get:
       tags:
-        - Platform - Authentication
+        - Portal Platform
+      x-apidog-folder: Platform/Auth
       summary: Get current platform administrator
       security:
         - platformBearerAuth: []
@@ -193,7 +247,8 @@ paths:
   /auth/platform/dev/bootstrap-admin:
     post:
       tags:
-        - Platform - Authentication
+        - Portal Platform
+      x-apidog-folder: Platform/Auth
       summary: Bootstrap the first platform administrator
       description: Development/test only. Route is not registered in production. Can be used only while no platform admin exists.
       requestBody:
@@ -235,14 +290,15 @@ paths:
                       email:
                         type: string
                         format: email
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '409':
           $ref: '#/components/responses/Conflict'
-        '422':
-          $ref: '#/components/responses/ValidationError'
   /platform/tenants:
     get:
       tags:
-        - Platform - Tenants
+        - Portal Platform
+      x-apidog-folder: Platform/Tenants
       summary: List tenants
       security:
         - platformBearerAuth: []
@@ -266,7 +322,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       tags:
-        - Platform - Tenants
+        - Portal Platform
+      x-apidog-folder: Platform/Tenants
       summary: Create tenant and owner
       description: Tenant and optional first clinic are created together. Slugs are generated by the server. Subscription is managed separately after tenant creation.
       security:
@@ -311,12 +368,9 @@ paths:
                 legal:
                   $ref: '#/components/schemas/TenantLegal'
                 branding:
-                  $ref: '#/components/schemas/Branding'
+                  $ref: '#/components/schemas/BrandingInput'
                 preferences:
                   $ref: '#/components/schemas/TenantPreferences'
-                settings:
-                  type: object
-                  additionalProperties: true
                 owner:
                   type: object
                   required:
@@ -350,6 +404,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/TenantDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -361,7 +417,8 @@ paths:
   /platform/tenants/{tenantId}:
     get:
       tags:
-        - Platform - Tenants
+        - Portal Platform
+      x-apidog-folder: Platform/Tenants
       summary: Get tenant details
       description: Returns tenant profile, all clinics, and its current subscription with payment history.
       security:
@@ -403,7 +460,8 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       tags:
-        - Platform - Tenants
+        - Portal Platform
+      x-apidog-folder: Platform/Tenants
       summary: Partially update tenant profile
       description: All supplied fields are updated. Nested objects are merged. Changing name regenerates the server-controlled slug.
       security:
@@ -432,6 +490,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/TenantDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -439,7 +499,8 @@ paths:
   /platform/tenants/{tenantId}/status:
     patch:
       tags:
-        - Platform - Tenants
+        - Portal Platform
+      x-apidog-folder: Platform/Tenants
       summary: Update tenant status
       security:
         - platformBearerAuth: []
@@ -475,6 +536,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/TenantDetails'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -482,7 +545,8 @@ paths:
   /platform/tenants/{tenantId}/subscription:
     put:
       tags:
-        - Platform - Tenants
+        - Portal Platform
+      x-apidog-folder: Platform/Subscriptions
       summary: Create or replace tenant subscription
       description: Stores the commercial subscription snapshot. No payment gateway is charged by this endpoint.
       security:
@@ -511,6 +575,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/Subscription'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -518,7 +584,8 @@ paths:
   /platform/tenants/{tenantId}/subscription/payments:
     post:
       tags:
-        - Platform - Tenants
+        - Portal Platform
+      x-apidog-folder: Platform/Payments
       summary: Record a subscription payment
       description: Appends a payment record to subscription history; this does not initiate a payment.
       security:
@@ -547,6 +614,8 @@ paths:
                     type: boolean
                   data:
                     $ref: '#/components/schemas/SubscriptionPayment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '422':
@@ -554,7 +623,8 @@ paths:
   /platform/geo/countries:
     get:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Countries
       summary: List countries
       description: Platform administrator only. Supports pagination and search by English name, Arabic name, or code.
       security:
@@ -601,7 +671,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Countries
       summary: Create country
       security:
         - platformBearerAuth: []
@@ -638,7 +709,8 @@ paths:
           type: string
     get:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Countries
       summary: Get country by ID
       security:
         - platformBearerAuth: []
@@ -662,7 +734,8 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Countries
       summary: Update country
       security:
         - platformBearerAuth: []
@@ -694,7 +767,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
     delete:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Countries
       summary: Delete country
       security:
         - platformBearerAuth: []
@@ -722,7 +796,8 @@ paths:
   /platform/geo/governorates:
     get:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Governorates
       summary: List governorates
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by country_id.
       security:
@@ -773,7 +848,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Governorates
       summary: Create governorate
       security:
         - platformBearerAuth: []
@@ -810,7 +886,8 @@ paths:
           type: string
     get:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Governorates
       summary: Get governorate by ID
       security:
         - platformBearerAuth: []
@@ -834,7 +911,8 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Governorates
       summary: Update governorate
       security:
         - platformBearerAuth: []
@@ -866,7 +944,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
     delete:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Governorates
       summary: Delete governorate
       security:
         - platformBearerAuth: []
@@ -894,7 +973,8 @@ paths:
   /platform/geo/cities:
     get:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Cities
       summary: List cities
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by governorate_id.
       security:
@@ -945,7 +1025,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Cities
       summary: Create city
       security:
         - platformBearerAuth: []
@@ -982,7 +1063,8 @@ paths:
           type: string
     get:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Cities
       summary: Get city by ID
       security:
         - platformBearerAuth: []
@@ -1006,7 +1088,8 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Cities
       summary: Update city
       security:
         - platformBearerAuth: []
@@ -1038,7 +1121,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
     delete:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Cities
       summary: Delete city
       security:
         - platformBearerAuth: []
@@ -1066,7 +1150,8 @@ paths:
   /platform/geo/districts:
     get:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Districts
       summary: List districts
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by city_id.
       security:
@@ -1117,7 +1202,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Districts
       summary: Create district
       security:
         - platformBearerAuth: []
@@ -1154,7 +1240,8 @@ paths:
           type: string
     get:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Districts
       summary: Get district by ID
       security:
         - platformBearerAuth: []
@@ -1178,7 +1265,8 @@ paths:
           $ref: '#/components/responses/NotFound'
     patch:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Districts
       summary: Update district
       security:
         - platformBearerAuth: []
@@ -1210,7 +1298,8 @@ paths:
           $ref: '#/components/responses/ValidationError'
     delete:
       tags:
-        - Platform - Geo
+        - Portal Platform
+      x-apidog-folder: Platform/Geo/Districts
       summary: Delete district
       security:
         - platformBearerAuth: []
@@ -1239,6 +1328,7 @@ paths:
     get:
       tags:
         - Clinic - Geo
+      x-apidog-folder: Tenant/Geo/Countries
       summary: List and search countries
       security:
         - bearerAuth: []
@@ -1259,6 +1349,7 @@ paths:
     get:
       tags:
         - Clinic - Geo
+      x-apidog-folder: Tenant/Geo/Governorates
       summary: List and search governorates with their country
       security:
         - bearerAuth: []
@@ -1283,6 +1374,7 @@ paths:
     get:
       tags:
         - Clinic - Geo
+      x-apidog-folder: Tenant/Geo/Cities
       summary: List and search cities with governorate and country
       security:
         - bearerAuth: []
@@ -1311,6 +1403,7 @@ paths:
     get:
       tags:
         - Clinic - Geo
+      x-apidog-folder: Tenant/Geo/Districts
       summary: List and search districts with city, governorate, and country
       security:
         - bearerAuth: []
@@ -1342,7 +1435,8 @@ paths:
   /tenant/context:
     get:
       tags:
-        - Clinic - Context
+        - Tenant Context
+      x-apidog-folder: Tenant/Context
       summary: Resolve active tenant, clinic, and branch context
       security:
         - bearerAuth: []
@@ -1386,7 +1480,8 @@ paths:
   /tenant/clinics:
     get:
       tags:
-        - Clinic - Clinics
+        - Clinics
+      x-apidog-folder: Tenant/Clinics
       summary: List clinics in current tenant
       security:
         - bearerAuth: []
@@ -1414,7 +1509,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
     post:
       tags:
-        - Clinic - Clinics
+        - Clinics
+      x-apidog-folder: Tenant/Clinics
       summary: Create clinic
       description: Creates a clinic inside the active tenant. Slug is generated by the server.
       security:
@@ -1447,12 +1543,79 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /tenant/clinics/{clinicId}:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics
+      summary: Get clinic details
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Clinic details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Clinic'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics
+      summary: Partially update clinic
+      description: Updates only supplied fields. Changing name regenerates the server-controlled slug. Location hierarchy is validated using existing values plus the supplied changes.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClinicUpdate'
+      responses:
+        '200':
+          description: Clinic updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Clinic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /tenant/branches:
     get:
       tags:
-        - Clinic - Branches
+        - Branches
+      x-apidog-folder: Tenant/Branches
       summary: List branches in current clinic
-      description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch.
+      description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch. Branch listing requires an active clinic context.
       security:
         - bearerAuth: []
       parameters:
@@ -1473,15 +1636,14 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Branch'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
     post:
       tags:
-        - Clinic - Branches
+        - Branches
+      x-apidog-folder: Tenant/Branches
       summary: Create branch in current clinic
       security:
         - bearerAuth: []
@@ -1535,7 +1697,8 @@ paths:
   /platform/monitoring/view:
     get:
       tags:
-        - Platform - Monitoring
+        - Portal Platform
+      x-apidog-folder: Platform/Monitoring/View
       summary: Open monitoring dashboard
       description: Serves the browser-based dashboard. Log API endpoints require platform authentication.
       responses:
@@ -1548,7 +1711,8 @@ paths:
   /platform/monitoring/logs:
     get:
       tags:
-        - Platform - Monitoring
+        - Portal Platform
+      x-apidog-folder: Platform/Monitoring/Logs
       summary: List application logs
       security:
         - platformBearerAuth: []
@@ -1638,7 +1802,8 @@ paths:
   /platform/monitoring/logs/stats:
     get:
       tags:
-        - Platform - Monitoring
+        - Portal Platform
+      x-apidog-folder: Platform/Monitoring/Logs
       summary: Get log statistics
       security:
         - platformBearerAuth: []
@@ -1676,7 +1841,8 @@ paths:
   /platform/monitoring/logs/timeline:
     get:
       tags:
-        - Platform - Monitoring
+        - Portal Platform
+      x-apidog-folder: Platform/Monitoring/Logs
       summary: Get log timeline statistics
       description: Currently returns the same aggregate statistics payload as the stats endpoint, not time-bucketed points.
       security:
@@ -1713,7 +1879,8 @@ paths:
   /platform/monitoring/logs/{id}:
     get:
       tags:
-        - Platform - Monitoring
+        - Portal Platform
+      x-apidog-folder: Platform/Monitoring/Logs
       summary: Get a log entry
       security:
         - platformBearerAuth: []
@@ -1975,6 +2142,18 @@ components:
           type: array
           items:
             type: string
+    BrandingInput:
+      type: object
+      properties:
+        logoBase64:
+          type: string
+          description: Base64 data URL for PNG, JPEG, or WebP. Maximum decoded size is 2 MB.
+        coverImageBase64:
+          type: string
+          description: Base64 data URL for PNG, JPEG, or WebP. Maximum decoded size is 2 MB.
+        primaryColor:
+          type: string
+          pattern: ^#[0-9a-fA-F]{6}$
     Tenant:
       type: object
       properties:
@@ -2042,9 +2221,6 @@ components:
               type: array
               items:
                 type: string
-        settings:
-          type: object
-          additionalProperties: true
         createdAt:
           type: string
           format: date-time
@@ -2081,17 +2257,11 @@ components:
         address:
           $ref: '#/components/schemas/BusinessAddress'
         legal:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/TenantLegal'
         branding:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/BrandingInput'
         preferences:
-          type: object
-          additionalProperties: true
-        settings:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/TenantPreferences'
     ClinicInput:
       type: object
       required:
@@ -2126,14 +2296,8 @@ components:
         timezone:
           type: string
           default: Africa/Cairo
-        countryId:
-          type: string
-        governorateId:
-          type: string
-        cityId:
-          type: string
-        districtId:
-          type: string
+        preferences:
+          $ref: '#/components/schemas/TenantPreferences'
         operatingHours:
           type: array
           maxItems: 7
@@ -2162,8 +2326,7 @@ components:
                     endTime:
                       type: string
         branding:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/BrandingInput'
         bookingSettings:
           type: object
           properties:
@@ -2187,9 +2350,6 @@ components:
           type: string
           format: date
           nullable: true
-        settings:
-          type: object
-          additionalProperties: true
     ClinicUpdate:
       type: object
       minProperties: 1
@@ -2228,8 +2388,11 @@ components:
           $ref: '#/components/schemas/BusinessAddress'
         timezone:
           type: string
+        preferences:
+          $ref: '#/components/schemas/TenantPreferences'
         countryId:
           type: string
+          description: Optional legacy top-level location field accepted by PATCH
         governorateId:
           type: string
         cityId:
@@ -2242,8 +2405,7 @@ components:
             type: object
             additionalProperties: true
         branding:
-          type: object
-          additionalProperties: true
+          $ref: '#/components/schemas/BrandingInput'
         bookingSettings:
           type: object
           additionalProperties: true
@@ -2251,9 +2413,6 @@ components:
           type: string
           format: date
           nullable: true
-        settings:
-          type: object
-          additionalProperties: true
     Clinic:
       allOf:
         - $ref: '#/components/schemas/ClinicInput'
@@ -2271,6 +2430,8 @@ components:
               enum:
                 - active
                 - suspended
+            branding:
+              $ref: '#/components/schemas/Branding'
             createdAt:
               type: string
               format: date-time
@@ -2738,7 +2899,14 @@ components:
             message:
               type: string
             details:
-              type: object
+              type: array
+              items:
+                type: object
+                properties:
+                  path:
+                    type: string
+                  message:
+                    type: string
     TenantGeoParent:
       type: object
       nullable: true
