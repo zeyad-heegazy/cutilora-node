@@ -70,7 +70,7 @@ export const tenancyService = {
       }
       if (logoUrl || coverUrl) await clinic.save();
     } catch (error) {
-      await Promise.all([removeBrandingImage(logoUrl), removeBrandingImage(coverUrl)]);
+      await Promise.all([removeBrandingImage(logoUrl), removeBrandingImage(coverUrl), tenancyRepository.deleteClinic(String(clinic._id), tenantId)]);
       throw error;
     }
     return clinic;
