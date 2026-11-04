@@ -4,6 +4,7 @@ import { Governorate } from '../models/governorate.model.js';
 import { City } from '../models/city.model.js';
 import { District } from '../models/district.model.js';
 import { Clinic } from '../../tenancy/models/clinic.model.js';
+import { Tenant } from '../../tenancy/models/tenant.model.js';
 import type { GeoResource } from '../types/geo.types.js';
 
 const models: Record<GeoResource, Model<any>> = { countries: Country, governorates: Governorate, cities: City, districts: District };
@@ -35,7 +36,12 @@ export const geoRepository = {
   update(resource: GeoResource, id: string, data: Record<string, unknown>) { return models[resource].findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true }).lean(); },
   async hasClinicReferences(resource: GeoResource, id: string) {
     const field = resource === 'countries' ? 'countryId' : resource === 'governorates' ? 'governorateId' : resource === 'cities' ? 'cityId' : 'districtId';
-    return Clinic.exists({ [field]: id });
+    const [clinicReference, clinicAddressReference, tenantAddressReference] = await Promise.all([
+      Clinic.exists({ [field]: id }),
+      Clinic.exists({ [`address.${field}`]: id }),
+      Tenant.exists({ [`address.${field}`]: id }),
+    ]);
+    return Boolean(clinicReference || clinicAddressReference || tenantAddressReference);
   },
   async delete(resource: GeoResource, id: string) {
     if (resource === 'countries') {
