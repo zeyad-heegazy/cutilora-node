@@ -9,6 +9,8 @@ import {
 } from "../modules/tenancy/routes/tenancy.routes.js";
 import { geoRouter } from "../modules/geo/routes/geo.routes.js";
 import { errorHandler } from "../shared/middleware/error-handler.js";
+import { requestLogger } from "../shared/middleware/request-logger.middleware.js";
+import { monitoringRouter } from "../modules/monitoring/routes/log.routes.js";
 
 export const app = express();
 
@@ -17,12 +19,14 @@ app.use(helmet());
 app.use(cors({ origin: "*" }));
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: true }));
+app.use(requestLogger);
 
 app.get(`${env.API_PREFIX}/health`, (_req, res) =>
   res.status(200).json({ success: true, data: { status: "ok" } }),
 );
 
 app.use(`${env.API_PREFIX}/auth`, authRouter);
+app.use(`${env.API_PREFIX}/platform/monitoring`, monitoringRouter);
 app.use(`${env.API_PREFIX}/platform/tenants`, platformTenantsRouter);
 app.use(`${env.API_PREFIX}/tenant`, tenantRouter);
 app.use(`${env.API_PREFIX}/platform/geo`, geoRouter);
