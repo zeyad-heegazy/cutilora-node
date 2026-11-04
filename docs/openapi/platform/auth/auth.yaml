@@ -4,7 +4,6 @@ paths:
     post:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Auth"
-      x-apidog-folder: "Platform/Auth"
       summary: Platform administrator login
       description: Issues a platform-audience access token only to an active platform administrator.
       requestBody:
@@ -38,7 +37,6 @@ paths:
     post:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Auth"
-      x-apidog-folder: "Platform/Auth"
       summary: Log out current platform administrator
       description: Revokes the current platform access token. Other sessions remain active.
       security: [{ platformBearerAuth: [] }]
@@ -58,7 +56,6 @@ paths:
     get:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Auth"
-      x-apidog-folder: "Platform/Auth"
       summary: Get current platform administrator
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -76,7 +73,6 @@ paths:
   /auth/platform/dev/bootstrap-admin:
     post:
       tags: [Portal Platform]
-      x-apidog-folder: "Platform/Auth"
       x-apidog-folder: "Platform/Auth"
       summary: Bootstrap the first platform administrator
       description: Development/test only. Route is not registered in production. Can be used only while no platform admin exists.
