@@ -13,6 +13,13 @@ export const geoRepository = {
   list(resource: GeoResource, filter: Record<string, unknown>, skip: number, limit: number) {
     return Promise.all([models[resource].find(filter).sort({ nameEn: 1 }).skip(skip).limit(limit).lean(), models[resource].countDocuments(filter)]);
   },
+  listForClinic(resource: GeoResource, filter: Record<string, unknown>, skip: number, limit: number) {
+    const query = models[resource].find(filter).sort({ nameEn: 1 }).skip(skip).limit(limit);
+    if (resource === 'governorates') query.populate('countryId');
+    if (resource === 'cities') query.populate({ path: 'governorateId', populate: { path: 'countryId' } });
+    if (resource === 'districts') query.populate({ path: 'cityId', populate: { path: 'governorateId', populate: { path: 'countryId' } } });
+    return Promise.all([query.lean(), models[resource].countDocuments(filter)]);
+  },
   find(resource: GeoResource, id: string) { return models[resource].findById(id).lean(); },
   create(resource: GeoResource, data: Record<string, unknown>) { return models[resource].create(data); },
   update(resource: GeoResource, id: string, data: Record<string, unknown>) { return models[resource].findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true }).lean(); },
