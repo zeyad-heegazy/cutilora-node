@@ -17,7 +17,13 @@ export const tenancyRepository = {
   createUser(data: Record<string, unknown>) { return User.create(data); },
   createMembership(data: Record<string, unknown>) { return TenantMembership.create(data); },
   listClinics(tenantId: string) { return Clinic.find({ tenantId }).sort({ name: 1 }); },
+  findClinicBySlug(tenantId: string, slug: string, excludeId?: string) {
+    return Clinic.findOne({ tenantId, slug, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).select('_id');
+  },
   createClinic(data: Record<string, unknown>) { return Clinic.create(data); },
+  updateClinic(id: string, tenantId: string, data: Record<string, unknown>) {
+    return Clinic.findOneAndUpdate({ _id: id, tenantId }, { $set: data }, { new: true, runValidators: true });
+  },
   listBranches(filter: Record<string, unknown>) { return Branch.find(filter).sort({ name: 1 }); },
   createBranch(data: Record<string, unknown>) { return Branch.create(data); },
   getTenantContext(tenantId: string, clinicId: string | null, branchId: string | null) {
