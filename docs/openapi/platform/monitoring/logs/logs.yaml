@@ -3,6 +3,7 @@ paths:
   /platform/monitoring/logs:
     get:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Monitoring/Logs"
       summary: List application logs
       security: [{ platformBearerAuth: [] }]
       parameters:
@@ -27,6 +28,7 @@ paths:
   /platform/monitoring/logs/stats:
     get:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Monitoring/Logs"
       summary: Get log statistics
       security: [{ platformBearerAuth: [] }]
       parameters:
@@ -44,6 +46,7 @@ paths:
   /platform/monitoring/logs/timeline:
     get:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Monitoring/Logs"
       summary: Get log timeline statistics
       description: Currently returns the same aggregate statistics payload as the stats endpoint, not time-bucketed points.
       security: [{ platformBearerAuth: [] }]
@@ -62,6 +65,7 @@ paths:
   /platform/monitoring/logs/{id}:
     get:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Monitoring/Logs"
       summary: Get a log entry
       security: [{ platformBearerAuth: [] }]
       parameters:
