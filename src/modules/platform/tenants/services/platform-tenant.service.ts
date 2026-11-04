@@ -153,6 +153,7 @@ export const platformTenantService = {
     let newCoverUrl = '';
     const oldLogoUrl = current.get('branding')?.logoUrl ?? '';
     const oldCoverUrl = current.get('branding')?.coverImageUrl ?? '';
+    try {
     for (const key of ['contact', 'address', 'legal', 'branding', 'preferences', 'settings']) {
       if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
         const existingValue = current.get(key);
@@ -170,6 +171,10 @@ export const platformTenantService = {
           }
         } else update[key] = deepMerge(existingObject, input[key]);
       }
+    }
+    } catch (error) {
+      await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+      throw error;
     }
     let updated: Awaited<ReturnType<typeof tenancyRepository.updateTenant>>;
     try {
