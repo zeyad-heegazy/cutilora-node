@@ -4,7 +4,22 @@ paths:
     get:
       tags: [Portal Platform]
       summary: List governorates
+      description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by country_id.
       security: [{ platformBearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: search
+          in: query
+          description: Case-insensitive search across English name, Arabic name, and code.
+          schema: { type: string, maxLength: 100 }
+        - name: country_id
+          in: query
+          schema: { type: string }
       responses:
         "200":
           description: Paginated governorates
@@ -14,4 +29,97 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: array, items: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" } }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" },
+                    }
+                  meta: { $ref: "../../../../openapi.yaml#/components/schemas/Pagination" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+    post:
+      tags: [Portal Platform]
+      summary: Create governorate
+      security: [{ platformBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "../../../../openapi.yaml#/components/schemas/GovernorateInput" }
+      responses:
+        "201":
+          description: Governorate created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
+  /platform/geo/governorates/{governorateId}:
+    parameters:
+      - name: governorateId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Portal Platform]
+      summary: Get governorate by ID
+      security: [{ platformBearerAuth: [] }]
+      responses:
+        "200":
+          description: Governorate details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [Portal Platform]
+      summary: Update governorate
+      security: [{ platformBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "../../../../openapi.yaml#/components/schemas/GovernorateUpdate" }
+      responses:
+        "200":
+          description: Governorate updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
+    delete:
+      tags: [Portal Platform]
+      summary: Delete governorate
+      security: [{ platformBearerAuth: [] }]
+      responses:
+        "200":
+          description: Governorate deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string, example: Geo entry deleted. }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { $ref: "../../../../openapi.yaml#/components/responses/Conflict" }
