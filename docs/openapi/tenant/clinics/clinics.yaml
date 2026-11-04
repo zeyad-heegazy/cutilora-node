@@ -46,6 +46,7 @@ paths:
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
   /tenant/clinics/{clinicId}:
     get:
       tags: [Clinics]
