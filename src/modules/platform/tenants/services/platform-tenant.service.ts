@@ -58,7 +58,8 @@ export const platformTenantService = {
     const { logoBase64: tenantLogoBase64, coverImageBase64: tenantCoverBase64, ...tenantBranding } = input.branding ?? {};
     let storedTenantLogo = '';
     let storedTenantCover = '';
-    let storedClinicLogo = '';\n    let storedClinicCover = '';
+    let storedClinicLogo = '';
+    let storedClinicCover = ''
     const slug = await generateUniqueTenantSlug(input.name);
     const tenant = await tenancyRepository.createTenant({
       name: input.name,
