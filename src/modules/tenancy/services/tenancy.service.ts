@@ -1,7 +1,7 @@
 import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
-import { storeBrandingLogo, removeBrandingLogo } from '../../../shared/storage/branding-image.storage.js';
+import { storeBrandingLogo, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
 
 function slugify(value: string): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -50,7 +50,7 @@ export const tenancyService = {
         clinic.set('branding.logoUrl', logoUrl);
         await clinic.save();
       } catch (error) {
-        await removeBrandingLogo(logoUrl);
+        await removeBrandingImage(logoUrl);
         throw error;
       }
     }
@@ -95,11 +95,11 @@ export const tenancyService = {
       if (typeof input.name === 'string') update.slug = await generateUniqueClinicSlug(tenantId, input.name, id);
       updated = await tenancyRepository.updateClinic(id, tenantId, update);
     } catch (error) {
-      await removeBrandingLogo(newLogoUrl);
+      await removeBrandingImage(newLogoUrl);
       throw error;
     }
-    if (!updated) { await removeBrandingLogo(newLogoUrl); return null; }
-    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingLogo(oldLogoUrl);
+    if (!updated) { await removeBrandingImage(newLogoUrl); return null; }
+    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingImage(oldLogoUrl);
     return updated;
   },
   listBranches(tenantId: string, clinicId: string, branchId: string | null) {
