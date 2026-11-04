@@ -8,5 +8,6 @@ tenantRouter.get('/context',tenancyController.context);
 tenantRouter.get('/geo/:resource',tenancyController.listGeo);
 tenantRouter.get('/clinics',requireTenantRoles('tenant_owner','tenant_admin'),tenancyController.listClinics);
 tenantRouter.post('/clinics',requireTenantRoles('tenant_owner','tenant_admin'),tenancyController.createClinic);
+tenantRouter.patch('/clinics/:clinicId',requireTenantRoles('tenant_owner','tenant_admin'),tenancyController.updateClinic);
 tenantRouter.get('/branches',tenancyController.listBranches);
 tenantRouter.post('/branches',requireTenantRoles('tenant_owner','tenant_admin','clinic_admin','clinic_manager'),tenancyController.createBranch);
