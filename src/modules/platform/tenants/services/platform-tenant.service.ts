@@ -41,6 +41,7 @@ export const platformTenantService = {
     };
   },
   async createTenant(input: any) {
+    if (input.address) await geoService.validateClinicLocation(input.address);
     const slug = await generateUniqueTenantSlug(input.name);
     const tenant = await tenancyRepository.createTenant({
       name: input.name,
@@ -111,6 +112,9 @@ export const platformTenantService = {
         const existingObject = existingValue?.toObject?.() ?? existingValue ?? {};
         update[key] = { ...existingObject, ...input[key] };
       }
+    }
+    if (input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address)) {
+      await geoService.validateClinicLocation(update.address as Record<string, string>);
     }
     const updated = await tenancyRepository.updateTenant(id, update);
     return updated ? platformTenantService.getTenantDetails(id) : null;
