@@ -10,4 +10,4 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "../openapi.yaml#/components/schemas/HealthResponse"
+                $ref: "../../openapi.yaml#/components/schemas/HealthResponse"
