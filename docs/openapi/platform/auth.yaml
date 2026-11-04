@@ -29,9 +29,9 @@ paths:
                     properties:
                       access_token: { type: string }
                       token_type: { type: string, example: Bearer }
-                      user: { $ref: "../openapi.yaml#/components/schemas/UserSummary" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+                      user: { $ref: "../../openapi.yaml#/components/schemas/UserSummary" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
   /auth/platform/me:
     get:
       tags: [Platform - Authentication]
@@ -46,9 +46,9 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { type: object, properties: { user: { $ref: "../openapi.yaml#/components/schemas/UserSummary" } } }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+                  data: { type: object, properties: { user: { $ref: "../../openapi.yaml#/components/schemas/UserSummary" } } }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
   /auth/platform/dev/bootstrap-admin:
     post:
       tags: [Platform - Authentication]
@@ -79,5 +79,5 @@ paths:
                     properties:
                       id: { type: string }
                       email: { type: string, format: email }
-        "409": { $ref: "../openapi.yaml#/components/responses/Conflict" }
-        "422": { $ref: "../openapi.yaml#/components/responses/ValidationError" }
+        "409": { $ref: "../../openapi.yaml#/components/responses/Conflict" }
+        "422": { $ref: "../../openapi.yaml#/components/responses/ValidationError" }
