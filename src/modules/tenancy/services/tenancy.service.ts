@@ -46,8 +46,13 @@ export const tenancyService = {
     const clinic = await tenancyRepository.createClinic({ ...input, branding, address, ...location, name, slug, tenantId });
     if (logoBase64) {
       const logoUrl = await storeBrandingLogo(logoBase64, 'clinics', String(clinic._id));
-      clinic.set('branding.logoUrl', logoUrl);
-      await clinic.save();
+      try {
+        clinic.set('branding.logoUrl', logoUrl);
+        await clinic.save();
+      } catch (error) {
+        await removeBrandingLogo(logoUrl);
+        throw error;
+      }
     }
     return clinic;
   },
