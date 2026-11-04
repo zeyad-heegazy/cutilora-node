@@ -2,7 +2,7 @@ openapi: 3.0.3
 paths:
   /auth/login:
     post:
-      tags: [Clinic - Authentication]
+      tags: [Authentication]
       summary: Log in
       description: Returns an access token and the user's active tenant memberships.
       requestBody:
@@ -37,7 +37,7 @@ paths:
                         items:
                           { $ref: "../../../openapi.yaml#/components/schemas/MembershipSummary" }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
-        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
   /auth/logout:
     post:
       tags: [Authentication]
@@ -55,26 +55,9 @@ paths:
                   success: { type: boolean, example: true }
                   message: { type: string, example: Logged out successfully. }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
-  /auth/logout:
-    post:
-      tags: [Tenant - Authentication]
-      summary: Log out current user
-      description: Revokes the current regular-user access token. Other sessions remain active.
-      security: [{ bearerAuth: [] }]
-      responses:
-        "200":
-          description: Logged out successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success: { type: boolean, example: true }
-                  message: { type: string, example: Logged out successfully. }
-        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
   /auth/me:
     get:
-      tags: [Clinic - Authentication]
+      tags: [Authentication]
       summary: Get current user
       security: [{ bearerAuth: [] }]
       responses:
