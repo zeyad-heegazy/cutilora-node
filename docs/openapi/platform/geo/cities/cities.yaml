@@ -1,0 +1,125 @@
+openapi: 3.0.3
+paths:
+  /platform/geo/cities:
+    get:
+      tags: [Portal Platform]
+      summary: List cities
+      description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by governorate_id.
+      security: [{ platformBearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: per_page
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: search
+          in: query
+          description: Case-insensitive search across English name, Arabic name, and code.
+          schema: { type: string, maxLength: 100 }
+        - name: governorate_id
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: Paginated cities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" },
+                    }
+                  meta: { $ref: "../../../../openapi.yaml#/components/schemas/Pagination" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+    post:
+      tags: [Portal Platform]
+      summary: Create city
+      security: [{ platformBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "../../../../openapi.yaml#/components/schemas/CityInput" }
+      responses:
+        "201":
+          description: City created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
+  /platform/geo/cities/{cityId}:
+    parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Portal Platform]
+      summary: Get city by ID
+      security: [{ platformBearerAuth: [] }]
+      responses:
+        "200":
+          description: City details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [Portal Platform]
+      summary: Update city
+      security: [{ platformBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "../../../../openapi.yaml#/components/schemas/CityUpdate" }
+      responses:
+        "200":
+          description: City updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
+    delete:
+      tags: [Portal Platform]
+      summary: Delete city
+      security: [{ platformBearerAuth: [] }]
+      responses:
+        "200":
+          description: City deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  message: { type: string, example: Geo entry deleted. }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { $ref: "../../../../openapi.yaml#/components/responses/Conflict" }
