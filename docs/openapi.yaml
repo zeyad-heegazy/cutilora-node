@@ -304,6 +304,7 @@ components:
       minProperties: 1
       properties:
         name: { type: string, minLength: 2, maxLength: 160 }
+        status: { type: string, enum: [active, suspended] }
         code: { type: string, maxLength: 30 }
         clinicType: { type: string, enum: [dermatology, aesthetic, beauty, medical_center, other] }
         description: { type: string, maxLength: 2000 }
