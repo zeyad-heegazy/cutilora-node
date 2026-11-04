@@ -4,7 +4,6 @@ paths:
     get:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Geo/Countries"
-      x-apidog-folder: "Platform/Geo/Countries"
       summary: List countries
       description: Platform administrator only. Supports pagination and search by English name, Arabic name, or code.
       security: [{ platformBearerAuth: [] }]
@@ -39,7 +38,6 @@ paths:
     post:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Geo/Countries"
-      x-apidog-folder: "Platform/Geo/Countries"
       summary: Create country
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -69,7 +67,6 @@ paths:
     get:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Geo/Countries"
-      x-apidog-folder: "Platform/Geo/Countries"
       summary: Get country by ID
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -87,7 +84,6 @@ paths:
         "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [Portal Platform]
-      x-apidog-folder: "Platform/Geo/Countries"
       x-apidog-folder: "Platform/Geo/Countries"
       summary: Update country
       security: [{ platformBearerAuth: [] }]
@@ -112,7 +108,6 @@ paths:
         "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
     delete:
       tags: [Portal Platform]
-      x-apidog-folder: "Platform/Geo/Countries"
       x-apidog-folder: "Platform/Geo/Countries"
       summary: Delete country
       security: [{ platformBearerAuth: [] }]
