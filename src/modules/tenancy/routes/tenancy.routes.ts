@@ -1,13 +1,15 @@
 import { Router } from 'express';
 import { authenticate } from '../../auth/middleware/authenticate.js';
-import { requirePlatformAdmin } from '../middleware/require-platform-admin.js';
+import { authenticatePlatform } from '../../auth/middleware/authenticate-platform.js';
 import { resolveTenantContext, requireTenantRoles } from '../middleware/tenant-context.js';
 import { tenancyController } from '../controllers/tenancy.controller.js';
+
 export const platformTenantsRouter = Router();
-platformTenantsRouter.use(authenticate, requirePlatformAdmin);
+platformTenantsRouter.use(authenticatePlatform);
 platformTenantsRouter.get('/', tenancyController.listTenants);
 platformTenantsRouter.post('/', tenancyController.createTenant);
 platformTenantsRouter.patch('/:tenantId/status', tenancyController.updateTenantStatus);
+
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
 tenantRouter.get('/context', tenancyController.context);
