@@ -1,7 +1,7 @@
 import { hashPassword } from '../../../auth/services/auth.security.js';
 import { tenancyRepository } from '../../../tenancy/repositories/tenancy.repository.js';
 import { geoService } from '../../../geo/services/geo.service.js';
-import { storeBrandingLogo, removeBrandingLogo } from '../../../shared/storage/branding-image.storage.js';
+import { storeBrandingLogo, removeBrandingLogo } from '../../../../shared/storage/branding-image.storage.js';
 
 function slugify(value: string, fallback = 'tenant'): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
