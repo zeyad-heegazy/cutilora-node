@@ -1,0 +1,1868 @@
+openapi: 3.0.3
+info:
+  title: Cutilora API
+  version: 1.0.0
+  description: |
+    API documentation for the Cutilora Node.js backend.
+    Base path: /api/v1.
+    Authentication uses Bearer access tokens.
+    Tenant-scoped endpoints require X-Tenant-Id. X-Clinic-Id and X-Branch-Id
+    select optional clinic and branch context; branch context requires clinic context.
+    The development bootstrap endpoint is unavailable when NODE_ENV=production.
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local development (replace with deployed API URL)
+tags:
+  - name: Health
+  - name: Clinic - Authentication
+  - name: Platform - Authentication
+  - name: Platform - Tenants
+  - name: Platform - Geo
+  - name: Platform - Monitoring
+  - name: Clinic - Context
+  - name: Clinic - Clinics
+  - name: Clinic - Branches
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+  /auth/login:
+    post:
+      tags:
+        - Clinic - Authentication
+      summary: Log in
+      description: Returns an access token and the user's active tenant memberships.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: admin@example.com
+                password:
+                  type: string
+                  format: password
+                  example: your-password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+                      token_type:
+                        type: string
+                        example: Bearer
+                      user:
+                        $ref: '#/components/schemas/UserSummary'
+                      memberships:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/MembershipSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /auth/me:
+    get:
+      tags:
+        - Clinic - Authentication
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current user and active memberships
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        type: object
+                        description: User record (password hash is not exposed)
+                      memberships:
+                        type: array
+                        items:
+                          type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+  /auth/platform/login:
+    post:
+      tags:
+        - Platform - Authentication
+      summary: Platform administrator login
+      description: Issues a platform-audience access token only to an active platform administrator.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Platform login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      access_token:
+                        type: string
+                      token_type:
+                        type: string
+                        example: Bearer
+                      user:
+                        $ref: '#/components/schemas/UserSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /auth/platform/me:
+    get:
+      tags:
+        - Platform - Authentication
+      summary: Get current platform administrator
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Current platform identity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      user:
+                        $ref: '#/components/schemas/UserSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /auth/platform/dev/bootstrap-admin:
+    post:
+      tags:
+        - Platform - Authentication
+      summary: Bootstrap the first platform administrator
+      description: Development/test only. Route is not registered in production. Can be used only while no platform admin exists.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - email
+                - password
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+                  minLength: 12
+      responses:
+        '201':
+          description: Platform admin created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      email:
+                        type: string
+                        format: email
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /platform/tenants:
+    get:
+      tags:
+        - Platform - Tenants
+      summary: List tenants
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Tenant list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Tenant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Platform - Tenants
+      summary: Create tenant
+      description: Creates a tenant, its owner membership, and optionally its first clinic.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+                - owner
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                slug:
+                  type: string
+                  pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                owner:
+                  type: object
+                  required:
+                    - name
+                    - email
+                    - password
+                  properties:
+                    name:
+                      type: string
+                      minLength: 2
+                    email:
+                      type: string
+                      format: email
+                    password:
+                      type: string
+                      format: password
+                      minLength: 12
+                initialClinic:
+                  type: object
+                  required:
+                    - name
+                    - slug
+                  properties:
+                    name:
+                      type: string
+                      minLength: 2
+                    slug:
+                      type: string
+                      pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+      responses:
+        '201':
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /platform/tenants/{tenantId}/status:
+    patch:
+      tags:
+        - Platform - Tenants
+      summary: Update tenant status
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - suspended
+      responses:
+        '200':
+          description: Tenant status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /platform/geo/countries:
+    get:
+      tags:
+        - Platform - Geo
+      summary: List countries
+      description: Platform administrator only. Supports pagination.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 15
+      responses:
+        '200':
+          description: Paginated countries
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GeoEntry'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Platform - Geo
+      summary: Create country
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CountryInput'
+      responses:
+        '201':
+          description: Country created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /platform/geo/countries/{countryId}:
+    parameters:
+      - name: countryId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Platform - Geo
+      summary: Get country by ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Country details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Platform - Geo
+      summary: Update country
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CountryUpdate'
+      responses:
+        '200':
+          description: Country updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags:
+        - Platform - Geo
+      summary: Delete country
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Country deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Geo entry deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /platform/geo/governorates:
+    get:
+      tags:
+        - Platform - Geo
+      summary: List governorates
+      description: Platform administrator only. Supports pagination and filtering by country_id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 15
+        - name: country_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated governorates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GeoEntry'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Platform - Geo
+      summary: Create governorate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GovernorateInput'
+      responses:
+        '201':
+          description: Governorate created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /platform/geo/governorates/{governorateId}:
+    parameters:
+      - name: governorateId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Platform - Geo
+      summary: Get governorate by ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Governorate details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Platform - Geo
+      summary: Update governorate
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GovernorateUpdate'
+      responses:
+        '200':
+          description: Governorate updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags:
+        - Platform - Geo
+      summary: Delete governorate
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Governorate deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Geo entry deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /platform/geo/cities:
+    get:
+      tags:
+        - Platform - Geo
+      summary: List cities
+      description: Platform administrator only. Supports pagination and filtering by governorate_id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 15
+        - name: governorate_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated cities
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GeoEntry'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Platform - Geo
+      summary: Create city
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityInput'
+      responses:
+        '201':
+          description: City created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /platform/geo/cities/{cityId}:
+    parameters:
+      - name: cityId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Platform - Geo
+      summary: Get city by ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: City details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Platform - Geo
+      summary: Update city
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CityUpdate'
+      responses:
+        '200':
+          description: City updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags:
+        - Platform - Geo
+      summary: Delete city
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: City deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Geo entry deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /platform/geo/districts:
+    get:
+      tags:
+        - Platform - Geo
+      summary: List districts
+      description: Platform administrator only. Supports pagination and filtering by city_id.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: per_page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 15
+        - name: city_id
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Paginated districts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/GeoEntry'
+                  meta:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Platform - Geo
+      summary: Create district
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DistrictInput'
+      responses:
+        '201':
+          description: District created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /platform/geo/districts/{districtId}:
+    parameters:
+      - name: districtId
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      tags:
+        - Platform - Geo
+      summary: Get district by ID
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: District details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Platform - Geo
+      summary: Update district
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DistrictUpdate'
+      responses:
+        '200':
+          description: District updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/GeoEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+    delete:
+      tags:
+        - Platform - Geo
+      summary: Delete district
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: District deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                    example: Geo entry deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tenant/context:
+    get:
+      tags:
+        - Clinic - Context
+      summary: Resolve active tenant, clinic, and branch context
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicId'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Resolved context and access scope
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      tenant:
+                        type: object
+                        nullable: true
+                      clinic:
+                        type: object
+                        nullable: true
+                      branch:
+                        type: object
+                        nullable: true
+                      access:
+                        $ref: '#/components/schemas/TenantAccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/clinics:
+    get:
+      tags:
+        - Clinic - Clinics
+      summary: List clinics in current tenant
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicId'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Clinic list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Clinic'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Clinic - Clinics
+      summary: Create clinic
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicId'
+        - $ref: '#/components/parameters/BranchId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                slug:
+                  type: string
+                  pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                timezone:
+                  type: string
+                  default: Africa/Cairo
+                countryId:
+                  type: string
+                governorateId:
+                  type: string
+                cityId:
+                  type: string
+                districtId:
+                  type: string
+      responses:
+        '201':
+          description: Clinic created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Clinic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /tenant/branches:
+    get:
+      tags:
+        - Clinic - Branches
+      summary: List branches in current clinic
+      description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - $ref: '#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Branch list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Branch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Clinic - Branches
+      summary: Create branch in current clinic
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - $ref: '#/components/parameters/BranchId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - slug
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                slug:
+                  type: string
+                  pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                address:
+                  type: string
+                cityId:
+                  type: string
+                timezone:
+                  type: string
+                  default: Africa/Cairo
+      responses:
+        '201':
+          description: Branch created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Branch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /platform/monitoring/view:
+    get:
+      tags:
+        - Platform - Monitoring
+      summary: Open monitoring dashboard
+      description: Serves the browser-based dashboard. Log API endpoints require platform authentication.
+      responses:
+        '200':
+          description: Monitoring dashboard HTML
+          content:
+            text/html:
+              schema:
+                type: string
+  /platform/monitoring/logs:
+    get:
+      tags:
+        - Platform - Monitoring
+      summary: List application logs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: level
+          in: query
+          schema:
+            type: string
+            enum:
+              - debug
+              - info
+              - warn
+              - error
+              - fatal
+        - name: category
+          in: query
+          schema:
+            type: string
+            enum:
+              - http
+              - auth
+              - authorization
+              - database
+              - business
+              - security
+              - system
+              - application
+        - name: module
+          in: query
+          schema:
+            type: string
+        - name: statusCode
+          in: query
+          schema:
+            type: integer
+            minimum: 100
+            maximum: 599
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: from
+          in: query
+          description: Inclusive ISO-8601 date/time
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: Inclusive ISO-8601 date/time
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Matching log records and pagination data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    description: Log list and pagination result
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /platform/monitoring/logs/stats:
+    get:
+      tags:
+        - Platform - Monitoring
+      summary: Get log statistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          description: Inclusive ISO-8601 date/time; defaults to seven days before to
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          description: Inclusive ISO-8601 date/time; defaults to current time
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Log statistics for the requested date range
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /platform/monitoring/logs/timeline:
+    get:
+      tags:
+        - Platform - Monitoring
+      summary: Get log timeline statistics
+      description: Currently returns the same aggregate statistics payload as the stats endpoint, not time-bucketed points.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Aggregate log statistics
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /platform/monitoring/logs/{id}:
+    get:
+      tags:
+        - Platform - Monitoring
+      summary: Get a log entry
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Log entry
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    TenantId:
+      name: X-Tenant-Id
+      in: header
+      required: true
+      description: Active tenant ID.
+      schema:
+        type: string
+    ClinicId:
+      name: X-Clinic-Id
+      in: header
+      required: false
+      description: Active clinic ID.
+      schema:
+        type: string
+    ClinicIdRequired:
+      name: X-Clinic-Id
+      in: header
+      required: true
+      description: Required for branch endpoints.
+      schema:
+        type: string
+    BranchId:
+      name: X-Branch-Id
+      in: header
+      required: false
+      description: Optional branch scope; requires X-Clinic-Id.
+      schema:
+        type: string
+    GeoResource:
+      name: resource
+      in: path
+      required: true
+      schema:
+        type: string
+        enum:
+          - countries
+          - governorates
+          - cities
+          - districts
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          properties:
+            status:
+              type: string
+              example: ok
+    UserSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        platform_role:
+          type: string
+          nullable: true
+    MembershipSummary:
+      type: object
+      properties:
+        tenant:
+          type: string
+        clinic:
+          type: string
+          nullable: true
+        branch_ids:
+          type: array
+          items:
+            type: string
+        scope:
+          type: string
+          enum:
+            - tenant
+            - clinic
+            - branch
+        role:
+          type: string
+    TenantAccess:
+      type: object
+      properties:
+        tenantId:
+          type: string
+        clinicId:
+          type: string
+          nullable: true
+        branchId:
+          type: string
+          nullable: true
+        role:
+          type: string
+        scope:
+          type: string
+          enum:
+            - tenant
+            - clinic
+            - branch
+    Tenant:
+      type: object
+      properties:
+        _id:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+          enum:
+            - active
+            - suspended
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Clinic:
+      type: object
+      properties:
+        _id:
+          type: string
+        tenantId:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        status:
+          type: string
+        timezone:
+          type: string
+        countryId:
+          type: string
+          nullable: true
+        governorateId:
+          type: string
+          nullable: true
+        cityId:
+          type: string
+          nullable: true
+        districtId:
+          type: string
+          nullable: true
+    Branch:
+      type: object
+      properties:
+        _id:
+          type: string
+        tenantId:
+          type: string
+        clinicId:
+          type: string
+        name:
+          type: string
+        slug:
+          type: string
+        address:
+          type: string
+          nullable: true
+        cityId:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+        status:
+          type: string
+    CountryInput:
+      type: object
+      required:
+        - name_en
+      properties:
+        name_en:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: Egypt
+        name_ar:
+          type: string
+          nullable: true
+          maxLength: 255
+          example: مصر
+        code:
+          type: string
+          minLength: 2
+          maxLength: 2
+          pattern: ^[A-Z]{2}$
+          example: EG
+    CountryUpdate:
+      type: object
+      description: All fields are optional for PATCH.
+      properties:
+        name_en:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name_ar:
+          type: string
+          nullable: true
+          maxLength: 255
+        code:
+          type: string
+          minLength: 2
+          maxLength: 2
+          pattern: ^[A-Z]{2}$
+    GovernorateInput:
+      type: object
+      required:
+        - name_en
+        - country_id
+      properties:
+        name_en:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name_ar:
+          type: string
+          nullable: true
+          maxLength: 255
+        country_id:
+          type: string
+          description: Parent country MongoDB ObjectId
+    GovernorateUpdate:
+      type: object
+      description: All fields are optional for PATCH.
+      properties:
+        name_en:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name_ar:
+          type: string
+          nullable: true
+          maxLength: 255
+        country_id:
+          type: string
+    CityInput:
+      type: object
+      required:
+        - name_en
+        - governorate_id
+      properties:
+        name_en:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name_ar:
+          type: string
+          nullable: true
+          maxLength: 255
+        governorate_id:
+          type: string
+          description: Parent governorate MongoDB ObjectId
+    CityUpdate:
+      type: object
+      description: All fields are optional for PATCH.
+      properties:
+        name_en:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name_ar:
+          type: string
+          nullable: true
+          maxLength: 255
+        governorate_id:
+          type: string
+    DistrictInput:
+      type: object
+      required:
+        - name_en
+        - city_id
+      properties:
+        name_en:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name_ar:
+          type: string
+          nullable: true
+          maxLength: 255
+        city_id:
+          type: string
+          description: Parent city MongoDB ObjectId
+    DistrictUpdate:
+      type: object
+      description: All fields are optional for PATCH.
+      properties:
+        name_en:
+          type: string
+          minLength: 1
+          maxLength: 255
+        name_ar:
+          type: string
+          nullable: true
+          maxLength: 255
+        city_id:
+          type: string
+    GeoEntry:
+      type: object
+      properties:
+        id:
+          type: string
+        name_en:
+          type: string
+        name_ar:
+          type: string
+          nullable: true
+        code:
+          type: string
+          nullable: true
+        country_id:
+          type: string
+        governorate_id:
+          type: string
+        city_id:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Pagination:
+      type: object
+      properties:
+        current_page:
+          type: integer
+        per_page:
+          type: integer
+        total:
+          type: integer
+        last_page:
+          type: integer
+    ApiError:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+            details:
+              type: object
+  responses:
+    BadRequest:
+      description: Bad request or invalid identifier/context
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Missing or invalid bearer token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: Authenticated user lacks required access
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: Duplicate resource or resource is in use
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    ValidationError:
+      description: Request validation failed
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
