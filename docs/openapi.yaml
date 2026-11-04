@@ -80,15 +80,15 @@ paths:
   /tenant/branches:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches"
   /platform/monitoring/view:
-    $ref: "./openapi/platform/monitoring/monitoring.yaml#/paths/~1platform~1monitoring~1view"
+    $ref: "./openapi/platform/monitoring/view/view.yaml#/paths/~1platform~1monitoring~1view"
   /platform/monitoring/logs:
-    $ref: "./openapi/platform/monitoring/monitoring.yaml#/paths/~1platform~1monitoring~1logs"
+    $ref: "./openapi/platform/monitoring/logs/logs.yaml#/paths/~1platform~1monitoring~1logs"
   /platform/monitoring/logs/stats:
-    $ref: "./openapi/platform/monitoring/monitoring.yaml#/paths/~1platform~1monitoring~1logs~1stats"
+    $ref: "./openapi/platform/monitoring/logs/logs.yaml#/paths/~1platform~1monitoring~1logs~1stats"
   /platform/monitoring/logs/timeline:
-    $ref: "./openapi/platform/monitoring/monitoring.yaml#/paths/~1platform~1monitoring~1logs~1timeline"
+    $ref: "./openapi/platform/monitoring/logs/logs.yaml#/paths/~1platform~1monitoring~1logs~1timeline"
   /platform/monitoring/logs/{id}:
-    $ref: "./openapi/platform/monitoring/monitoring.yaml#/paths/~1platform~1monitoring~1logs~1{id}"
+    $ref: "./openapi/platform/monitoring/logs/logs.yaml#/paths/~1platform~1monitoring~1logs~1{id}"
 components:
   securitySchemes:
     platformBearerAuth:
