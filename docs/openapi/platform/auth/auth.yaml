@@ -2,7 +2,7 @@ openapi: 3.0.3
 paths:
   /auth/platform/login:
     post:
-      tags: [Platform - Authentication]
+      tags: [Authentication]
       summary: Platform administrator login
       description: Issues a platform-audience access token only to an active platform administrator.
       requestBody:
@@ -34,7 +34,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /auth/platform/logout:
     post:
-      tags: [Platform - Authentication]
+      tags: [Authentication]
       summary: Log out current platform administrator
       description: Revokes the current platform access token. Other sessions remain active.
       security: [{ platformBearerAuth: [] }]
@@ -52,7 +52,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /auth/platform/me:
     get:
-      tags: [Platform - Authentication]
+      tags: [Authentication]
       summary: Get current platform administrator
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -69,7 +69,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /auth/platform/dev/bootstrap-admin:
     post:
-      tags: [Platform - Authentication]
+      tags: [Authentication]
       summary: Bootstrap the first platform administrator
       description: Development/test only. Route is not registered in production. Can be used only while no platform admin exists.
       requestBody:
@@ -98,4 +98,4 @@ paths:
                       id: { type: string }
                       email: { type: string, format: email }
         "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
-        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
