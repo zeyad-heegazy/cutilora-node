@@ -32,6 +32,24 @@ paths:
                       user: { $ref: "../../../openapi.yaml#/components/schemas/UserSummary" }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /auth/platform/logout:
+    post:
+      tags: [Platform - Authentication]
+      summary: Log out current platform administrator
+      description: Revokes the current platform access token. Other sessions remain active.
+      security: [{ platformBearerAuth: [] }]
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: Logged out successfully. }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /auth/platform/me:
     get:
       tags: [Platform - Authentication]
