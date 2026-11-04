@@ -1,6 +1,7 @@
 import { hashPassword } from '../../../auth/services/auth.security.js';
 import { tenancyRepository } from '../../../tenancy/repositories/tenancy.repository.js';
 import { geoService } from '../../../geo/services/geo.service.js';
+import { storeBrandingLogo, removeBrandingLogo } from '../../../shared/storage/branding-image.storage.js';
 
 function slugify(value: string, fallback = 'tenant'): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -42,6 +43,8 @@ export const platformTenantService = {
   },
   async createTenant(input: any) {
     if (input.address) await geoService.validateClinicLocation(input.address);
+    const { logoBase64: tenantLogoBase64, ...tenantBranding } = input.branding ?? {};
+    let storedTenantLogo = '';
     const slug = await generateUniqueTenantSlug(input.name);
     const tenant = await tenancyRepository.createTenant({
       name: input.name,
@@ -54,11 +57,16 @@ export const platformTenantService = {
       contact: input.contact,
       address: input.address,
       legal: input.legal,
-      branding: input.branding,
+      branding: tenantBranding,
       preferences: input.preferences,
       settings: input.settings,
     });
     try {
+      if (tenantLogoBase64) {
+        storedTenantLogo = await storeBrandingLogo(tenantLogoBase64, 'tenants', String(tenant._id));
+        tenant.set('branding.logoUrl', storedTenantLogo);
+        await tenant.save();
+      }
       let owner = await tenancyRepository.findUserByEmail(input.owner.email);
       if (!owner) owner = await tenancyRepository.createUser({
         name: input.owner.name,
@@ -78,8 +86,15 @@ export const platformTenantService = {
           cityId: initial.cityId ?? address.cityId,
           districtId: initial.districtId ?? address.districtId,
         });
-        await tenancyRepository.createClinic({
+        if (clinicLogoBase64) {
+          const clinicLogoUrl = await storeBrandingLogo(clinicLogoBase64, 'clinics', String(clinic._id));
+          clinic.set('branding.logoUrl', clinicLogoUrl);
+          await clinic.save();
+        }
+        const { logoBase64: clinicLogoBase64, ...clinicBranding } = initial.branding ?? {};
+        const clinic = await tenancyRepository.createClinic({
           ...initial,
+          branding: clinicBranding,
           address: { ...address, countryId: initial.countryId ?? address.countryId, governorateId: initial.governorateId ?? address.governorateId, cityId: initial.cityId ?? address.cityId, districtId: initial.districtId ?? address.districtId },
           tenantId: tenant._id,
           slug: clinicSlug,
@@ -92,6 +107,7 @@ export const platformTenantService = {
       return await platformTenantService.getTenantDetails(String(tenant._id));
     } catch (error) {
       await Promise.all([
+        removeBrandingLogo(storedTenantLogo),
         tenancyRepository.deleteTenantMemberships(String(tenant._id)),
         tenancyRepository.deleteTenantClinics(String(tenant._id)),
         tenancyRepository.deleteTenantSubscriptionPayments(String(tenant._id)),
@@ -106,18 +122,29 @@ export const platformTenantService = {
     if (!current) return null;
     const update: Record<string, unknown> = { ...input };
     if (typeof input.name === 'string') update.slug = await generateUniqueTenantSlug(input.name, id);
+    let newLogoUrl = '';
+    const oldLogoUrl = current.get('branding')?.logoUrl ?? '';
     for (const key of ['contact', 'address', 'legal', 'branding', 'preferences', 'settings']) {
       if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
         const existingValue = current.get(key);
         const existingObject = existingValue?.toObject?.() ?? existingValue ?? {};
-        update[key] = { ...existingObject, ...input[key] };
+        if (key === 'branding') {
+          const { logoBase64, ...brandingFields } = input.branding;
+          update.branding = { ...existingObject, ...brandingFields };
+          if (logoBase64) {
+            newLogoUrl = await storeBrandingLogo(logoBase64, 'tenants', id);
+            (update.branding as Record<string, unknown>).logoUrl = newLogoUrl;
+          }
+        } else update[key] = { ...existingObject, ...input[key] };
       }
     }
     if (input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address)) {
       await geoService.validateClinicLocation(update.address as Record<string, string>);
     }
     const updated = await tenancyRepository.updateTenant(id, update);
-    return updated ? platformTenantService.getTenantDetails(id) : null;
+    if (!updated) { await removeBrandingLogo(newLogoUrl); return null; }
+    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingLogo(oldLogoUrl);
+    return platformTenantService.getTenantDetails(id);
   },
   async updateTenantStatus(id: string, status: 'active' | 'suspended') {
     const updated = await tenancyRepository.updateTenantStatus(id, status);
