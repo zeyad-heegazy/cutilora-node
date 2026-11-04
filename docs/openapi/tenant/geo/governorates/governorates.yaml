@@ -1,0 +1,21 @@
+openapi: 3.0.3
+paths:
+  /tenant/geo/governorates:
+    get:
+      tags: [Clinic - Geo]
+      summary: List and search governorates with their country
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '../components.yaml#/components/parameters/Page'
+        - $ref: '../components.yaml#/components/parameters/PerPage'
+        - $ref: '../components.yaml#/components/parameters/Search'
+        - name: country_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated governorates with country parent
+          content:
+            application/json:
+              schema: { $ref: '../components.yaml#/components/schemas/GeoListResponse' }
+        '401': { $ref: '../../../../openapi.yaml#/components/responses/Unauthorized' }
