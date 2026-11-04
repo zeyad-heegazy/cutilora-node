@@ -82,7 +82,7 @@ export const geoService = {
     }
     const [rows, total] = await geoRepository.listForClinic(resource, filter, (query.page - 1) * query.per_page, query.per_page);
     return {
-      data: rows.map(row => mapEntry(resource, row)),
+      data: rows.map((row: any) => mapEntry(resource, row)),
       meta: { current_page: query.page, per_page: query.per_page, total, last_page: Math.max(1, Math.ceil(total / query.per_page)) },
     };
   },
