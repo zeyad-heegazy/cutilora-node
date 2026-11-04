@@ -2,9 +2,9 @@ openapi: 3.0.3
 paths:
   /tenant/branches:
     get:
-      tags: [Clinic - Branches]
+      tags: [Branches]
       summary: List branches in current clinic
-      description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch.
+      description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch. Branch listing requires an active clinic context.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
@@ -61,4 +61,4 @@ paths:
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
-        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
