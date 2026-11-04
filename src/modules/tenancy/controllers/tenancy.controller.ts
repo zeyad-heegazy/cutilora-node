@@ -1,7 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { createBranchSchema, createClinicSchema } from '../validations/tenancy.validation.js';
+import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 export const tenancyController = {
+  async listGeo(req: Request,res: Response,next: NextFunction){try{const resource=geoResourceSchema.parse(req.params.resource);const query=clinicGeoListSchema.parse(req.query);res.json({success:true,...await tenancyService.listGeo(resource,query)});}catch(e){next(e);}},
   async context(req: Request,res: Response,next: NextFunction){try{const [tenant,clinic,branch]=await tenancyService.getContext(req.tenantContext!);res.json({success:true,data:{tenant,clinic,branch,access:req.tenantContext}});}catch(e){next(e);}},
   async listClinics(req: Request,res: Response,next: NextFunction){try{res.json({success:true,data:await tenancyService.listClinics(req.tenantContext!.tenantId)});}catch(e){next(e);}},
   async createClinic(req: Request,res: Response,next: NextFunction){try{const input=createClinicSchema.parse(req.body);res.status(201).json({success:true,data:await tenancyService.createClinic(input,req.tenantContext!.tenantId)});}catch(e){next(e);}},

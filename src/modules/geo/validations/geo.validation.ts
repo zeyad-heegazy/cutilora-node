@@ -17,3 +17,12 @@ export const geoCreateSchema = z.object({
   city_id: z.string().optional(),
 });
 export const geoUpdateSchema = geoCreateSchema.partial();
+
+export const clinicGeoListSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  per_page: z.coerce.number().int().min(1).max(100).default(15),
+  search: z.string().trim().max(100).optional(),
+  country_id: z.string().optional(),
+  governorate_id: z.string().optional(),
+  city_id: z.string().optional(),
+});

@@ -5,6 +5,7 @@ import { tenancyController } from '../controllers/tenancy.controller.js';
 export const tenantRouter=Router();
 tenantRouter.use(authenticate,resolveTenantContext);
 tenantRouter.get('/context',tenancyController.context);
+tenantRouter.get('/geo/:resource',tenancyController.listGeo);
 tenantRouter.get('/clinics',requireTenantRoles('tenant_owner','tenant_admin'),tenancyController.listClinics);
 tenantRouter.post('/clinics',requireTenantRoles('tenant_owner','tenant_admin'),tenancyController.createClinic);
 tenantRouter.get('/branches',tenancyController.listBranches);
