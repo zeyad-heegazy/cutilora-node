@@ -7,8 +7,9 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const header = req.header('authorization');
     if (!header?.startsWith('Bearer ')) return res.status(401).json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'Authentication required.' } });
     const payload = verifyAccessToken(header.slice(7));
+    if (payload.tokenType !== 'user') return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN_TYPE', message: 'A regular user access token is required.' } });
     const user = await authRepository.findActiveUserById(payload.sub);
-    if (!user || !user.isActive) return res.status(401).json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'Invalid user.' } });
+    if (!user || !user.isActive || user.platformRole === 'platform_admin') return res.status(401).json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'Invalid user.' } });
     req.auth = { userId: user.id, platformRole: user.platformRole, activeClinicId: null, clinicRole: null };
     next();
   } catch { return res.status(401).json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'Invalid or expired token.' } }); }
