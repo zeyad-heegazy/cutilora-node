@@ -31,13 +31,13 @@ paths:
                     properties:
                       access_token: { type: string }
                       token_type: { type: string, example: Bearer }
-                      user: { $ref: "../openapi.yaml#/components/schemas/UserSummary" }
+                      user: { $ref: "../../openapi.yaml#/components/schemas/UserSummary" }
                       memberships:
                         type: array
                         items:
-                          { $ref: "../openapi.yaml#/components/schemas/MembershipSummary" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "422": { $ref: "../openapi.yaml#/components/responses/ValidationError" }
+                          { $ref: "../../openapi.yaml#/components/schemas/MembershipSummary" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "422": { $ref: "../../openapi.yaml#/components/responses/ValidationError" }
   /auth/me:
     get:
       tags: [Clinic - Authentication]
@@ -61,4 +61,4 @@ paths:
                           description: User record (password hash is not exposed),
                         }
                       memberships: { type: array, items: { type: object } }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
