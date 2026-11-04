@@ -1,5 +1,6 @@
 import type { ErrorRequestHandler } from 'express';
 import { ZodError } from 'zod';
+import { logger } from '../logger/logger.js';
 
 export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _next) => {
   if (error instanceof ZodError) return res.status(422).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Request validation failed.', details: error.flatten() } });
@@ -10,6 +11,6 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, _req, res, _ne
     const known = error as { status: number; code: string; message: string };
     return res.status(known.status).json({ success: false, error: { code: known.code, message: known.message } });
   }
-  console.error(error);
+  logger.error('Unhandled request exception', { error: error instanceof Error ? error.message : 'Unknown error', stack: error instanceof Error ? error.stack : undefined, path: _req.path, method: _req.method });
   return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'An unexpected error occurred.' } });
 };
