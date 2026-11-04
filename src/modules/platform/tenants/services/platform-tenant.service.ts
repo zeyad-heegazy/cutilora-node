@@ -1,5 +1,6 @@
 import { hashPassword } from '../../../auth/services/auth.security.js';
 import { tenancyRepository } from '../../../tenancy/repositories/tenancy.repository.js';
+import { geoService } from '../../../geo/services/geo.service.js';
 
 function slugify(value: string, fallback = 'tenant'): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -65,6 +66,12 @@ export const platformTenantService = {
         const initial = input.initialClinic;
         const clinicSlug = await generateUniqueClinicSlug(String(tenant._id), initial.name);
         const address = initial.address ?? {};
+        await geoService.validateClinicLocation({
+          countryId: initial.countryId ?? address.countryId,
+          governorateId: initial.governorateId ?? address.governorateId,
+          cityId: initial.cityId ?? address.cityId,
+          districtId: initial.districtId ?? address.districtId,
+        });
         await tenancyRepository.createClinic({
           ...initial,
           tenantId: tenant._id,
