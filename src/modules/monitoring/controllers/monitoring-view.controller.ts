@@ -39,7 +39,7 @@ td.message{max-width:420px;overflow-wrap:anywhere}.level{text-transform:uppercas
 <div id="notice" role="alert"></div></section></main>
 <script>
 (function(){
-const PREFIX="__API_PREFIX__", API=PREFIX+"/platform/monitoring", AUTH=PREFIX+"/auth/login";
+const PREFIX="__API_PREFIX__", API=PREFIX+"/platform/monitoring", AUTH=PREFIX+"/auth/platform/login";
 const $=id=>document.getElementById(id);let token=sessionStorage.getItem("cutilora_monitoring_token")||"",page=1,pages=1;
 function msg(id,value){$(id).textContent=value||""}
 function signOut(){token="";sessionStorage.removeItem("cutilora_monitoring_token");$("dashboard").classList.add("hidden");$("login").classList.remove("hidden")}
@@ -48,7 +48,7 @@ async function api(url){const r=await fetch(url,{headers:{Authorization:"Bearer 
 $("loginForm").addEventListener("submit",async e=>{e.preventDefault();msg("loginError","Signing in…");try{
 const r=await fetch(AUTH,{method:"POST",headers:{"Content-Type":"application/json",Accept:"application/json"},body:JSON.stringify({email:$("email").value,password:$("password").value})}),b=await r.json();
 if(!r.ok)throw Error(b.error?.message||"Sign in failed");token=b.data.access_token;
-const me=await fetch(PREFIX+"/auth/me",{headers:{Authorization:"Bearer "+token}}),u=await me.json();
+const me=await fetch(PREFIX+"/auth/platform/me",{headers:{Authorization:"Bearer "+token}}),u=await me.json();
 if(!me.ok||u.data?.user?.platformRole!=="platform_admin"&&u.data?.user?.platform_role!=="platform_admin")throw Error("Platform administrator access required");
 sessionStorage.setItem("cutilora_monitoring_token",token);msg("loginError","");show();
 }catch(err){msg("loginError",err.message);token="";sessionStorage.removeItem("cutilora_monitoring_token")}});
