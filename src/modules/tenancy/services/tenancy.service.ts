@@ -71,22 +71,28 @@ export const tenancyService = {
         } else update[key] = { ...existingValue, ...input[key] };
       }
     }
-    const locationChanged = ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input)
-      || Boolean(input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address));
-    if (locationChanged) {
-      const mergedLocation = {
-        countryId: input.countryId ?? input.address?.countryId ?? currentData.countryId ?? currentData.address?.countryId,
-        governorateId: input.governorateId ?? input.address?.governorateId ?? currentData.governorateId ?? currentData.address?.governorateId,
-        cityId: input.cityId ?? input.address?.cityId ?? currentData.cityId ?? currentData.address?.cityId,
-        districtId: input.districtId ?? input.address?.districtId ?? currentData.districtId ?? currentData.address?.districtId,
-      };
-      await geoService.validateClinicLocation(mergedLocation);
-      const existingAddress = currentData.address?.toObject?.() ?? currentData.address ?? {};
-      update.address = { ...existingAddress, ...(input.address ?? {}), ...mergedLocation };
-      Object.assign(update, mergedLocation);
+    let updated;
+    try {
+      const locationChanged = ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input)
+        || Boolean(input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address));
+      if (locationChanged) {
+        const mergedLocation = {
+          countryId: input.countryId ?? input.address?.countryId ?? currentData.countryId ?? currentData.address?.countryId,
+          governorateId: input.governorateId ?? input.address?.governorateId ?? currentData.governorateId ?? currentData.address?.governorateId,
+          cityId: input.cityId ?? input.address?.cityId ?? currentData.cityId ?? currentData.address?.cityId,
+          districtId: input.districtId ?? input.address?.districtId ?? currentData.districtId ?? currentData.address?.districtId,
+        };
+        await geoService.validateClinicLocation(mergedLocation);
+        const existingAddress = currentData.address?.toObject?.() ?? currentData.address ?? {};
+        update.address = { ...existingAddress, ...(input.address ?? {}), ...mergedLocation };
+        Object.assign(update, mergedLocation);
+      }
+      if (typeof input.name === 'string') update.slug = await generateUniqueClinicSlug(tenantId, input.name, id);
+      updated = await tenancyRepository.updateClinic(id, tenantId, update);
+    } catch (error) {
+      await removeBrandingLogo(newLogoUrl);
+      throw error;
     }
-    if (typeof input.name === 'string') update.slug = await generateUniqueClinicSlug(tenantId, input.name, id);
-    const updated = await tenancyRepository.updateClinic(id, tenantId, update);
     if (!updated) { await removeBrandingLogo(newLogoUrl); return null; }
     if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingLogo(oldLogoUrl);
     return updated;
