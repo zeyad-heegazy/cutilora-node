@@ -7,6 +7,10 @@ export const authController = {
     try { const input = loginSchema.parse(req.body); res.json({ success: true, data: await authService.login(input.email, input.password) }); }
     catch (error) { next(error); }
   },
+  async platformLogin(req: Request, res: Response, next: NextFunction) {
+    try { const input = loginSchema.parse(req.body); res.json({ success: true, data: await authService.platformLogin(input.email, input.password) }); }
+    catch (error) { next(error); }
+  },
   async me(req: Request, res: Response, next: NextFunction) {
     try { res.json({ success: true, data: await authService.me(req.auth!.userId) }); }
     catch (error) { next(error); }
