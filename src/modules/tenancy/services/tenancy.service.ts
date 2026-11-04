@@ -1,7 +1,19 @@
 import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
-import { storeBrandingLogo, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
+import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
+
+function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>): Record<string, any> {
+  const result = { ...defaults };
+  for (const [key, value] of Object.entries(provided ?? {})) {
+    const fallback = result[key];
+    result[key] = value && typeof value === 'object' && !Array.isArray(value) && fallback && typeof fallback === 'object' && !Array.isArray(fallback)
+      ? deepMerge(fallback, value) : value;
+  }
+  return result;
+}
+
+const DEFAULT_BOOKING_SETTINGS = { allowOnlineBooking: false, requireAppointmentConfirmation: true, defaultAppointmentDurationMinutes: 30, bufferMinutes: 0, cancellationWindowHours: 24 };
 
 function slugify(value: string): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -42,17 +54,23 @@ export const tenancyService = {
     const name = String(input.name);
     const slug = await generateUniqueClinicSlug(tenantId, name);
     const address = { ...(input.address ?? {}), ...location };
-    const { logoBase64, ...branding } = input.branding ?? {};
-    const clinic = await tenancyRepository.createClinic({ ...input, branding, address, ...location, name, slug, tenantId });
-    if (logoBase64) {
-      const logoUrl = await storeBrandingLogo(logoBase64, 'clinics', String(clinic._id));
-      try {
+    const { logoBase64, coverImageBase64, ...branding } = input.branding ?? {};
+    const clinic = await tenancyRepository.createClinic({ ...input, branding, bookingSettings: deepMerge(DEFAULT_BOOKING_SETTINGS, input.bookingSettings), settings: deepMerge({}, input.settings), address, ...location, name, slug, tenantId });
+    let logoUrl = '';
+    let coverUrl = '';
+    try {
+      if (logoBase64) {
+        logoUrl = await storeBrandingLogo(logoBase64, 'clinics', String(clinic._id));
         clinic.set('branding.logoUrl', logoUrl);
-        await clinic.save();
-      } catch (error) {
-        await removeBrandingImage(logoUrl);
-        throw error;
       }
+      if (coverImageBase64) {
+        coverUrl = await storeBrandingCover(coverImageBase64, 'clinics', String(clinic._id));
+        clinic.set('branding.coverImageUrl', coverUrl);
+      }
+      if (logoUrl || coverUrl) await clinic.save();
+    } catch (error) {
+      await Promise.all([removeBrandingImage(logoUrl), removeBrandingImage(coverUrl)]);
+      throw error;
     }
     return clinic;
   },
@@ -62,16 +80,22 @@ export const tenancyService = {
     const currentData = current.toObject();
     const update: Record<string, any> = { ...input };
     let newLogoUrl = '';
+    let newCoverUrl = '';
     const oldLogoUrl = currentData.branding?.logoUrl ?? '';
+    const oldCoverUrl = currentData.branding?.coverImageUrl ?? '';
     for (const key of ['address', 'contact', 'branding', 'bookingSettings']) {
       if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
         const existingValue = currentData[key]?.toObject?.() ?? currentData[key] ?? {};
         if (key === 'branding') {
-          const { logoBase64, ...brandingFields } = input.branding;
+          const { logoBase64, coverImageBase64, ...brandingFields } = input.branding;
           update.branding = { ...existingValue, ...brandingFields };
           if (logoBase64) {
             newLogoUrl = await storeBrandingLogo(logoBase64, 'clinics', id);
             update.branding.logoUrl = newLogoUrl;
+          }
+          if (coverImageBase64) {
+            newCoverUrl = await storeBrandingCover(coverImageBase64, 'clinics', id);
+            update.branding.coverImageUrl = newCoverUrl;
           }
         } else update[key] = { ...existingValue, ...input[key] };
       }
@@ -98,8 +122,9 @@ export const tenancyService = {
       await removeBrandingImage(newLogoUrl);
       throw error;
     }
-    if (!updated) { await removeBrandingImage(newLogoUrl); return null; }
+    if (!updated) { await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]); return null; }
     if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingImage(oldLogoUrl);
+    if (newCoverUrl && oldCoverUrl && oldCoverUrl !== newCoverUrl) await removeBrandingImage(oldCoverUrl);
     return updated;
   },
   listBranches(tenantId: string, clinicId: string, branchId: string | null) {
