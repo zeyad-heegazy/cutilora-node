@@ -342,6 +342,7 @@ components:
             tenantId: { type: string }
             slug: { type: string, readOnly: true }
             status: { type: string, enum: [active, suspended] }
+            branding: { $ref: "#/components/schemas/Branding" }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
     TenantDetails:
