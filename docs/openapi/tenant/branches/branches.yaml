@@ -24,7 +24,6 @@ paths:
                       type: array,
                       items: { $ref: "../../../openapi.yaml#/components/schemas/Branch" },
                     }
-        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     post:
