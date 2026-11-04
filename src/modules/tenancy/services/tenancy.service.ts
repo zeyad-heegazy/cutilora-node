@@ -13,6 +13,7 @@ function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>
   return result;
 }
 
+const DEFAULT_CLINIC_PREFERENCES = { timezone: 'Africa/Cairo', locale: 'en', currency: 'EGP', dateFormat: 'YYYY-MM-DD', weekStartsOn: 6, supportedLanguages: ['en', 'ar'] };
 const DEFAULT_BOOKING_SETTINGS = { allowOnlineBooking: false, requireAppointmentConfirmation: true, defaultAppointmentDurationMinutes: 30, bufferMinutes: 0, cancellationWindowHours: 24 };
 
 function slugify(value: string): string {
@@ -55,7 +56,7 @@ export const tenancyService = {
     const slug = await generateUniqueClinicSlug(tenantId, name);
     const address = { ...(input.address ?? {}), ...location };
     const { logoBase64, coverImageBase64, ...branding } = input.branding ?? {};
-    const clinic = await tenancyRepository.createClinic({ ...input, branding, bookingSettings: deepMerge(DEFAULT_BOOKING_SETTINGS, input.bookingSettings), settings: deepMerge({}, input.settings), address, ...location, name, slug, tenantId });
+    const clinic = await tenancyRepository.createClinic({ ...input, branding, preferences: deepMerge(DEFAULT_CLINIC_PREFERENCES, input.preferences), bookingSettings: deepMerge(DEFAULT_BOOKING_SETTINGS, input.bookingSettings), settings: deepMerge({}, input.settings), address, ...location, name, slug, tenantId });
     let logoUrl = '';
     let coverUrl = '';
     try {
@@ -83,7 +84,7 @@ export const tenancyService = {
     let newCoverUrl = '';
     const oldLogoUrl = currentData.branding?.logoUrl ?? '';
     const oldCoverUrl = currentData.branding?.coverImageUrl ?? '';
-    for (const key of ['address', 'contact', 'branding', 'bookingSettings']) {
+    for (const key of ['address', 'contact', 'branding', 'preferences', 'bookingSettings', 'settings']) {
       if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
         const existingValue = currentData[key]?.toObject?.() ?? currentData[key] ?? {};
         if (key === 'branding') {
@@ -97,7 +98,7 @@ export const tenancyService = {
             newCoverUrl = await storeBrandingCover(coverImageBase64, 'clinics', id);
             update.branding.coverImageUrl = newCoverUrl;
           }
-        } else update[key] = { ...existingValue, ...input[key] };
+        } else update[key] = deepMerge(existingValue, input[key]);
       }
     }
     let updated: Awaited<ReturnType<typeof tenancyRepository.updateClinic>>;
@@ -119,7 +120,7 @@ export const tenancyService = {
       if (typeof input.name === 'string') update.slug = await generateUniqueClinicSlug(tenantId, input.name, id);
       updated = await tenancyRepository.updateClinic(id, tenantId, update);
     } catch (error) {
-      await removeBrandingImage(newLogoUrl);
+      await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
       throw error;
     }
     if (!updated) { await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]); return null; }
