@@ -216,6 +216,9 @@ components:
         logoBase64:
           type: string
           description: Base64 data URL for PNG, JPEG, or WebP. Maximum decoded size is 2 MB.
+        coverImageBase64:
+          type: string
+          description: Base64 data URL for PNG, JPEG, or WebP. Maximum decoded size is 2 MB.
         coverImageUrl: { type: string, format: uri }
         primaryColor: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
     Tenant:
@@ -284,6 +287,7 @@ components:
         contact: { $ref: "#/components/schemas/BusinessContact" }
         address: { $ref: "#/components/schemas/BusinessAddress" }
         timezone: { type: string, default: Africa/Cairo }
+        preferences: { $ref: "#/components/schemas/TenantPreferences" }
         countryId: { type: string }
         governorateId: { type: string }
         cityId: { type: string }
@@ -324,6 +328,7 @@ components:
         contact: { type: object, additionalProperties: true }
         address: { $ref: "#/components/schemas/BusinessAddress" }
         timezone: { type: string }
+        preferences: { $ref: "#/components/schemas/TenantPreferences" }
         countryId: { type: string }
         governorateId: { type: string }
         cityId: { type: string }
