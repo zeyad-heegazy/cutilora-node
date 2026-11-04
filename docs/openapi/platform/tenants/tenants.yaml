@@ -39,7 +39,7 @@ paths:
                 contact: { $ref: "../../../openapi.yaml#/components/schemas/BusinessContact" }
                 address: { $ref: "../../../openapi.yaml#/components/schemas/BusinessAddress" }
                 legal: { $ref: "../../../openapi.yaml#/components/schemas/TenantLegal" }
-                branding: { $ref: "../../../openapi.yaml#/components/schemas/Branding" }
+                branding: { $ref: "../../../openapi.yaml#/components/schemas/BrandingInput" }
                 preferences: { $ref: "../../../openapi.yaml#/components/schemas/TenantPreferences" }
                 settings: { type: object, additionalProperties: true }
                 owner:
