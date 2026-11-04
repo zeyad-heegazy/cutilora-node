@@ -41,7 +41,7 @@ paths:
                 legal: { $ref: "../../../openapi.yaml#/components/schemas/TenantLegal" }
                 branding: { $ref: "../../../openapi.yaml#/components/schemas/BrandingInput" }
                 preferences: { $ref: "../../../openapi.yaml#/components/schemas/TenantPreferences" }
-                        owner:
+                owner:
                   type: object
                   required: [name, email, password]
                   properties:
