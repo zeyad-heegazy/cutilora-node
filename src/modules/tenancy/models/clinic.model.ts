@@ -32,6 +32,20 @@ const operatingHoursSchema = new Schema({
   breakTimes: [{ startTime: { type: String }, endTime: { type: String } }],
 }, { _id: false });
 
+const brandingSchema = new Schema({
+  logoUrl: { type: String, trim: true, default: '' },
+  coverImageUrl: { type: String, trim: true, default: '' },
+  primaryColor: { type: String, trim: true, default: '#2563eb' },
+}, { _id: false });
+
+const bookingSettingsSchema = new Schema({
+  allowOnlineBooking: { type: Boolean, default: false },
+  requireAppointmentConfirmation: { type: Boolean, default: true },
+  defaultAppointmentDurationMinutes: { type: Number, min: 5, max: 480, default: 30 },
+  bufferMinutes: { type: Number, min: 0, max: 240, default: 0 },
+  cancellationWindowHours: { type: Number, min: 0, max: 720, default: 24 },
+}, { _id: false });
+
 const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
   name: { type: String, required: true, trim: true, maxlength: 160 },
@@ -49,18 +63,8 @@ const schema = new Schema({
   districtId: { type: Schema.Types.ObjectId, ref: 'District', default: null },
   timezone: { type: String, default: 'Africa/Cairo' },
   operatingHours: { type: [operatingHoursSchema], default: [] },
-  branding: {
-    logoUrl: { type: String, trim: true, default: '' },
-    coverImageUrl: { type: String, trim: true, default: '' },
-    primaryColor: { type: String, trim: true, default: '#2563eb' },
-  },
-  bookingSettings: {
-    allowOnlineBooking: { type: Boolean, default: false },
-    requireAppointmentConfirmation: { type: Boolean, default: true },
-    defaultAppointmentDurationMinutes: { type: Number, min: 5, max: 480, default: 30 },
-    bufferMinutes: { type: Number, min: 0, max: 240, default: 0 },
-    cancellationWindowHours: { type: Number, min: 0, max: 720, default: 24 },
-  },
+  branding: { type: brandingSchema, default: () => ({}) },
+  bookingSettings: { type: bookingSettingsSchema, default: () => ({}) },
   openingDate: { type: Date, default: null },
   settings: { type: Schema.Types.Mixed, default: {} },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
