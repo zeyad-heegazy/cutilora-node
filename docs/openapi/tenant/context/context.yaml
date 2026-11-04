@@ -3,6 +3,7 @@ paths:
   /tenant/context:
     get:
       tags: [Tenant Context]
+      x-apidog-folder: "Tenant/Context"
       summary: Resolve active tenant, clinic, and branch context
       security: [{ bearerAuth: [] }]
       parameters:
