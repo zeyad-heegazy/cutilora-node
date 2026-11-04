@@ -3,6 +3,7 @@ paths:
   /tenant/geo/governorates:
     get:
       tags: [Clinic - Geo]
+      x-apidog-folder: "Tenant/Geo/Governorates"
       summary: List and search governorates with their country
       security: [{ bearerAuth: [] }]
       parameters:
