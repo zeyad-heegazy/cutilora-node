@@ -1,0 +1,17 @@
+openapi: 3.0.3
+paths:
+  /platform/geo/governorates:
+    get:
+      tags: [Portal Platform]
+      summary: List governorates
+      security: [{ platformBearerAuth: [] }]
+      responses:
+        "200":
+          description: Paginated governorates
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: "../../../../openapi.yaml#/components/schemas/GeoEntry" } }
