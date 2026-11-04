@@ -111,9 +111,9 @@ components:
               name_en: { type: string }
               name_ar: { type: string, nullable: true }
               code: { type: string, nullable: true }
-              country: { $ref: '#/components/schemas/GeoParent' }
-              governorate: { $ref: '#/components/schemas/GeoParent' }
-              city: { $ref: '#/components/schemas/GeoParent' }
+              country: { $ref: '#/components/schemas/TenantGeoParent' }
+              governorate: { $ref: '#/components/schemas/TenantGeoParent' }
+              city: { $ref: '#/components/schemas/TenantGeoParent' }
         meta:
           type: object
           properties:
@@ -121,7 +121,7 @@ components:
             per_page: { type: integer }
             total: { type: integer }
             last_page: { type: integer }
-    GeoParent:
+    TenantGeoParent:
       type: object
       nullable: true
       properties:
@@ -129,5 +129,5 @@ components:
         name_en: { type: string }
         name_ar: { type: string, nullable: true }
         code: { type: string, nullable: true }
-        country: { $ref: '#/components/schemas/GeoParent' }
-        governorate: { $ref: '#/components/schemas/GeoParent' }
+        country: { $ref: '#/components/schemas/TenantGeoParent' }
+        governorate: { $ref: '#/components/schemas/TenantGeoParent' }
