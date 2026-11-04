@@ -168,7 +168,7 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: "../../openapi.yaml#/components/schemas/Subscription" }
+                  data: { $ref: "../../openapi.yaml#/components/schemas/SubscriptionPayment" }
         "404": { $ref: "../../openapi.yaml#/components/responses/NotFound" }
         "422": { $ref: "../../openapi.yaml#/components/responses/ValidationError" }
   /platform/tenants/{tenantId}/subscription/payments:
