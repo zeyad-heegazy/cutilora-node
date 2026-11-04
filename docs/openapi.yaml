@@ -42,6 +42,10 @@ paths:
     $ref: "./openapi/platform/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}"
   /platform/tenants/{tenantId}/status:
     $ref: "./openapi/platform/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}~1status"
+  /platform/tenants/{tenantId}/subscription:
+    $ref: "./openapi/platform/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}~1subscription"
+  /platform/tenants/{tenantId}/subscription/payments:
+    $ref: "./openapi/platform/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}~1subscription~1payments"
   /platform/geo/countries:
     $ref: "./openapi/platform/geo.yaml#/paths/~1platform~1geo~1countries"
   /platform/geo/countries/{countryId}:
@@ -157,28 +161,231 @@ components:
         branchId: { type: string, nullable: true }
         role: { type: string }
         scope: { type: string, enum: [tenant, clinic, branch] }
+    BusinessContact:
+      type: object
+      properties:
+        email: { type: string, format: email, nullable: true }
+        phone: { type: string, nullable: true }
+        alternatePhone: { type: string, nullable: true }
+        whatsapp: { type: string, nullable: true }
+        website: { type: string, format: uri, nullable: true }
+    BusinessAddress:
+      type: object
+      properties:
+        countryId: { type: string, nullable: true }
+        governorateId: { type: string, nullable: true }
+        cityId: { type: string, nullable: true }
+        districtId: { type: string, nullable: true }
+        addressLine1: { type: string }
+        addressLine2: { type: string }
+        building: { type: string }
+        floor: { type: string }
+        unit: { type: string }
+        landmark: { type: string }
+        postalCode: { type: string }
+        latitude: { type: number, nullable: true }
+        longitude: { type: number, nullable: true }
     Tenant:
       type: object
       properties:
         _id: { type: string }
         name: { type: string }
+        displayName: { type: string }
+        legalName: { type: string }
         slug: { type: string }
+        businessType: { type: string, enum: [single_clinic, clinic_group, medical_center] }
+        description: { type: string }
+        industry: { type: string }
         status: { type: string, enum: [active, suspended] }
+        contact: { $ref: "#/components/schemas/BusinessContact" }
+        address: { $ref: "#/components/schemas/BusinessAddress" }
+        legal:
+          type: object
+          properties:
+            taxNumber: { type: string }
+            vatNumber: { type: string }
+            commercialRegistrationNumber: { type: string }
+        branding:
+          type: object
+          properties:
+            logoUrl: { type: string }
+            coverImageUrl: { type: string }
+            primaryColor: { type: string }
+        preferences:
+          type: object
+          properties:
+            timezone: { type: string }
+            locale: { type: string }
+            currency: { type: string }
+            dateFormat: { type: string }
+            weekStartsOn: { type: integer }
+            supportedLanguages: { type: array, items: { type: string } }
+        settings: { type: object, additionalProperties: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    TenantUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 160 }
+        displayName: { type: string, maxLength: 160 }
+        legalName: { type: string, maxLength: 200 }
+        businessType: { type: string, enum: [single_clinic, clinic_group, medical_center] }
+        description: { type: string, maxLength: 2000 }
+        industry: { type: string }
+        contact: { $ref: "#/components/schemas/BusinessContact" }
+        address: { $ref: "#/components/schemas/BusinessAddress" }
+        legal: { type: object, additionalProperties: true }
+        branding: { type: object, additionalProperties: true }
+        preferences: { type: object, additionalProperties: true }
+        settings: { type: object, additionalProperties: true }
+    ClinicInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 2, maxLength: 160 }
+        code: { type: string, maxLength: 30 }
+        clinicType: { type: string, enum: [dermatology, aesthetic, beauty, medical_center, other] }
+        description: { type: string, maxLength: 2000 }
+        specialties: { type: array, items: { type: string } }
+        contact: { $ref: "#/components/schemas/BusinessContact" }
+        address: { $ref: "#/components/schemas/BusinessAddress" }
+        timezone: { type: string, default: Africa/Cairo }
+        countryId: { type: string }
+        governorateId: { type: string }
+        cityId: { type: string }
+        districtId: { type: string }
+        operatingHours:
+          type: array
+          maxItems: 7
+          items:
+            type: object
+            required: [dayOfWeek]
+            properties:
+              dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+              isClosed: { type: boolean }
+              openTime: { type: string }
+              closeTime: { type: string }
+              breakTimes: { type: array, items: { type: object, properties: { startTime: { type: string }, endTime: { type: string } } } }
+        branding: { type: object, additionalProperties: true }
+        bookingSettings:
+          type: object
+          properties:
+            allowOnlineBooking: { type: boolean }
+            requireAppointmentConfirmation: { type: boolean }
+            defaultAppointmentDurationMinutes: { type: integer, minimum: 5, maximum: 480 }
+            bufferMinutes: { type: integer, minimum: 0, maximum: 240 }
+            cancellationWindowHours: { type: integer, minimum: 0, maximum: 720 }
+        openingDate: { type: string, format: date, nullable: true }
+        settings: { type: object, additionalProperties: true }
+    ClinicUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 160 }
+        code: { type: string, maxLength: 30 }
+        clinicType: { type: string, enum: [dermatology, aesthetic, beauty, medical_center, other] }
+        description: { type: string, maxLength: 2000 }
+        specialties: { type: array, items: { type: string } }
+        contact: { type: object, additionalProperties: true }
+        address: { $ref: "#/components/schemas/BusinessAddress" }
+        timezone: { type: string }
+        countryId: { type: string }
+        governorateId: { type: string }
+        cityId: { type: string }
+        districtId: { type: string }
+        operatingHours: { type: array, items: { type: object, additionalProperties: true } }
+        branding: { type: object, additionalProperties: true }
+        bookingSettings: { type: object, additionalProperties: true }
+        openingDate: { type: string, format: date, nullable: true }
+        settings: { type: object, additionalProperties: true }
     Clinic:
+      allOf:
+        - { $ref: "#/components/schemas/ClinicInput" }
+        - type: object
+          properties:
+            _id: { type: string }
+            tenantId: { type: string }
+            slug: { type: string, readOnly: true }
+            status: { type: string, enum: [active, suspended] }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    Subscription:
       type: object
       properties:
         _id: { type: string }
         tenantId: { type: string }
-        name: { type: string }
-        slug: { type: string }
-        status: { type: string }
-        timezone: { type: string }
-        countryId: { type: string, nullable: true }
-        governorateId: { type: string, nullable: true }
-        cityId: { type: string, nullable: true }
-        districtId: { type: string, nullable: true }
+        plan:
+          type: object
+          properties:
+            code: { type: string }
+            name: { type: string }
+            amount: { type: number }
+            currency: { type: string }
+        billingCycle: { type: string, enum: [monthly, quarterly, yearly] }
+        status: { type: string, enum: [pending, trialing, active, past_due, canceled, expired] }
+        trialStartsAt: { type: string, format: date-time, nullable: true }
+        trialEndsAt: { type: string, format: date-time, nullable: true }
+        currentPeriodStartsAt: { type: string, format: date-time, nullable: true }
+        currentPeriodEndsAt: { type: string, format: date-time, nullable: true }
+        nextBillingAt: { type: string, format: date-time, nullable: true }
+        cancelAtPeriodEnd: { type: boolean }
+        canceledAt: { type: string, format: date-time, nullable: true }
+        paymentHistory: { type: array, items: { $ref: "#/components/schemas/SubscriptionPayment" } }
+        notes: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SubscriptionInput:
+      type: object
+      required: [plan]
+      properties:
+        plan:
+          type: object
+          required: [code, name]
+          properties:
+            code: { type: string }
+            name: { type: string }
+            amount: { type: number, minimum: 0 }
+            currency: { type: string, minLength: 3, maxLength: 3 }
+        billingCycle: { type: string, enum: [monthly, quarterly, yearly] }
+        status: { type: string, enum: [pending, trialing, active, past_due, canceled, expired] }
+        trialStartsAt: { type: string, format: date-time, nullable: true }
+        trialEndsAt: { type: string, format: date-time, nullable: true }
+        currentPeriodStartsAt: { type: string, format: date-time, nullable: true }
+        currentPeriodEndsAt: { type: string, format: date-time, nullable: true }
+        nextBillingAt: { type: string, format: date-time, nullable: true }
+        cancelAtPeriodEnd: { type: boolean }
+        canceledAt: { type: string, format: date-time, nullable: true }
+        notes: { type: string }
+    SubscriptionPayment:
+      type: object
+      properties:
+        _id: { type: string }
+        amount: { type: number }
+        currency: { type: string }
+        status: { type: string, enum: [pending, paid, failed, refunded] }
+        method: { type: string }
+        provider: { type: string }
+        providerReference: { type: string }
+        invoiceNumber: { type: string }
+        invoiceUrl: { type: string }
+        paidAt: { type: string, format: date-time, nullable: true }
+        failureReason: { type: string }
+        recordedAt: { type: string, format: date-time }
+    SubscriptionPaymentInput:
+      type: object
+      required: [amount, currency, status]
+      properties:
+        amount: { type: number, minimum: 0 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+        status: { type: string, enum: [pending, paid, failed, refunded] }
+        method: { type: string }
+        provider: { type: string }
+        providerReference: { type: string }
+        invoiceNumber: { type: string }
+        invoiceUrl: { type: string, format: uri }
+        paidAt: { type: string, format: date-time, nullable: true }
+        failureReason: { type: string }
     Branch:
       type: object
       properties:
