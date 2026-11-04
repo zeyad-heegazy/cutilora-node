@@ -300,7 +300,7 @@ components:
               openTime: { type: string }
               closeTime: { type: string }
               breakTimes: { type: array, items: { type: object, properties: { startTime: { type: string }, endTime: { type: string } } } }
-        branding: { type: object, additionalProperties: true }
+        branding: { $ref: "#/components/schemas/BrandingInput" }
         bookingSettings:
           type: object
           properties:
@@ -329,7 +329,7 @@ components:
         cityId: { type: string }
         districtId: { type: string }
         operatingHours: { type: array, items: { type: object, additionalProperties: true } }
-        branding: { type: object, additionalProperties: true }
+        branding: { $ref: "#/components/schemas/BrandingInput" }
         bookingSettings: { type: object, additionalProperties: true }
         openingDate: { type: string, format: date, nullable: true }
         settings: { type: object, additionalProperties: true }
