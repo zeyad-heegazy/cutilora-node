@@ -6,6 +6,13 @@ export const platformAuthController = {
     try { const input = loginSchema.parse(req.body); res.json({ success: true, data: await platformAuthService.login(input.email, input.password) }); }
     catch (error) { next(error); }
   },
+  async logout(req: Request, res: Response, next: NextFunction) {
+    try {
+      const token = req.header('authorization')!.slice(7);
+      await platformAuthService.logout(token);
+      res.json({ success: true, message: 'Logged out successfully.' });
+    } catch (error) { next(error); }
+  },
   async me(req: Request, res: Response, next: NextFunction) {
     try { res.json({ success: true, data: await platformAuthService.me(req.auth!.userId) }); }
     catch (error) { next(error); }
