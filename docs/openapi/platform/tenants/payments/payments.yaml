@@ -4,7 +4,6 @@ paths:
     post:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Payments"
-      x-apidog-folder: "Platform/Payments"
       summary: Record a subscription payment
       description: Appends a payment record to subscription history; this does not initiate a payment.
       security: [{ platformBearerAuth: [] }]
