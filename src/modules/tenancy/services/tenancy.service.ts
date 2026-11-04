@@ -1,6 +1,7 @@
 import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
+import { storeBrandingLogo, removeBrandingLogo } from '../../../shared/storage/branding-image.storage.js';
 
 function slugify(value: string): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -41,17 +42,33 @@ export const tenancyService = {
     const name = String(input.name);
     const slug = await generateUniqueClinicSlug(tenantId, name);
     const address = { ...(input.address ?? {}), ...location };
-    return tenancyRepository.createClinic({ ...input, address, ...location, name, slug, tenantId });
+    const { logoBase64, ...branding } = input.branding ?? {};
+    const clinic = await tenancyRepository.createClinic({ ...input, branding, address, ...location, name, slug, tenantId });
+    if (logoBase64) {
+      const logoUrl = await storeBrandingLogo(logoBase64, 'clinics', String(clinic._id));
+      clinic.set('branding.logoUrl', logoUrl);
+      await clinic.save();
+    }
+    return clinic;
   },
   async updateClinic(id: string, input: Record<string, any>, tenantId: string) {
     const current = await tenancyRepository.findClinicById(id, tenantId);
     if (!current) return null;
     const currentData = current.toObject();
     const update: Record<string, any> = { ...input };
+    let newLogoUrl = '';
+    const oldLogoUrl = currentData.branding?.logoUrl ?? '';
     for (const key of ['address', 'contact', 'branding', 'bookingSettings']) {
       if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
         const existingValue = currentData[key]?.toObject?.() ?? currentData[key] ?? {};
-        update[key] = { ...existingValue, ...input[key] };
+        if (key === 'branding') {
+          const { logoBase64, ...brandingFields } = input.branding;
+          update.branding = { ...existingValue, ...brandingFields };
+          if (logoBase64) {
+            newLogoUrl = await storeBrandingLogo(logoBase64, 'clinics', id);
+            update.branding.logoUrl = newLogoUrl;
+          }
+        } else update[key] = { ...existingValue, ...input[key] };
       }
     }
     const locationChanged = ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input)
@@ -69,7 +86,10 @@ export const tenancyService = {
       Object.assign(update, mergedLocation);
     }
     if (typeof input.name === 'string') update.slug = await generateUniqueClinicSlug(tenantId, input.name, id);
-    return tenancyRepository.updateClinic(id, tenantId, update);
+    const updated = await tenancyRepository.updateClinic(id, tenantId, update);
+    if (!updated) { await removeBrandingLogo(newLogoUrl); return null; }
+    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingLogo(oldLogoUrl);
+    return updated;
   },
   listBranches(tenantId: string, clinicId: string, branchId: string | null) {
     return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) });
