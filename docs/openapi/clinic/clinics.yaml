@@ -2,7 +2,7 @@ openapi: 3.0.3
 paths:
   /tenant/clinics:
     get:
-      tags: [Clinics]
+      tags: [Clinic - Clinics]
       summary: List clinics in current tenant
       security: [{ bearerAuth: [] }]
       parameters:
@@ -26,7 +26,7 @@ paths:
         "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
     post:
-      tags: [Clinics]
+      tags: [Clinic - Clinics]
       summary: Create clinic
       security: [{ bearerAuth: [] }]
       parameters:
