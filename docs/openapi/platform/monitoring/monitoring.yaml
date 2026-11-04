@@ -13,7 +13,7 @@ paths:
               schema: { type: string }
   /platform/monitoring/logs:
     get:
-      tags: [Platform - Monitoring]
+      tags: [Portal Platform]
       summary: List application logs
       security: [{ platformBearerAuth: [] }]
       parameters:
@@ -37,7 +37,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /platform/monitoring/logs/stats:
     get:
-      tags: [Platform - Monitoring]
+      tags: [Portal Platform]
       summary: Get log statistics
       security: [{ platformBearerAuth: [] }]
       parameters:
@@ -54,7 +54,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /platform/monitoring/logs/timeline:
     get:
-      tags: [Platform - Monitoring]
+      tags: [Portal Platform]
       summary: Get log timeline statistics
       description: Currently returns the same aggregate statistics payload as the stats endpoint, not time-bucketed points.
       security: [{ platformBearerAuth: [] }]
@@ -72,7 +72,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /platform/monitoring/logs/{id}:
     get:
-      tags: [Platform - Monitoring]
+      tags: [Portal Platform]
       summary: Get a log entry
       security: [{ platformBearerAuth: [] }]
       parameters:
