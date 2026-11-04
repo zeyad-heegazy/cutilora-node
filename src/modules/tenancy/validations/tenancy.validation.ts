@@ -33,6 +33,7 @@ const brandingSchema = z.object({
 });
 const preferencesSchema = z.object({
   timezone: z.string().trim().min(1).max(100).optional(),
+  preferences: preferencesSchema.partial().optional(),
   locale: z.string().trim().min(2).max(10).optional(),
   currency: z.string().trim().length(3).transform((value) => value.toUpperCase()).optional(),
   dateFormat: z.string().trim().min(1).max(30).optional(),
@@ -48,6 +49,7 @@ const clinicFields = {
   contact: contactSchema.optional(),
   address: addressSchema.optional(),
   timezone: z.string().trim().min(1).max(100).default('Africa/Cairo'),
+  preferences: preferencesSchema.optional(),
   countryId: z.string().optional(),
   governorateId: z.string().optional(),
   cityId: z.string().optional(),
