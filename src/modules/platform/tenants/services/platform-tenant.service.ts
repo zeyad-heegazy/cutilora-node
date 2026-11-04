@@ -1,7 +1,7 @@
 import { hashPassword } from '../../../auth/services/auth.security.js';
 import { tenancyRepository } from '../../../tenancy/repositories/tenancy.repository.js';
 
-function slugify(value: string): string {
+function slugify(value: string, fallback = 'tenant'): string {
   const slug = value
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
@@ -9,7 +9,7 @@ function slugify(value: string): string {
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return slug || 'tenant';
+  return slug || fallback;
 }
 
 async function generateUniqueTenantSlug(name: string, excludeId?: string): Promise<string> {
@@ -33,7 +33,7 @@ export const platformTenantService = {
       let owner = await tenancyRepository.findUserByEmail(input.owner.email);
       if (!owner) owner = await tenancyRepository.createUser({ name: input.owner.name, email: input.owner.email.toLowerCase(), passwordHash: await hashPassword(input.owner.password) });
       await tenancyRepository.createMembership({ userId: owner._id, tenantId: tenant._id, role: 'tenant_owner', scope: 'tenant', status: 'active' });
-      if (input.initialClinic) {\n        const clinicBase = slugify(input.initialClinic.name) || 'clinic';\n        let clinicSlug = clinicBase;\n        let suffix = 2;\n        while (await tenancyRepository.findClinicBySlug(String(tenant._id), clinicSlug)) {\n          clinicSlug = `${clinicBase}-${suffix++}`;\n        }\n        await tenancyRepository.createClinic({ tenantId: tenant._id, ...input.initialClinic, slug: clinicSlug });\n      }
+      if (input.initialClinic) {\n        const clinicBase = slugify(input.initialClinic.name, 'clinic');\n        let clinicSlug = clinicBase;\n        let suffix = 2;\n        while (await tenancyRepository.findClinicBySlug(String(tenant._id), clinicSlug)) {\n          clinicSlug = `${clinicBase}-${suffix++}`;\n        }\n        await tenancyRepository.createClinic({ tenantId: tenant._id, ...input.initialClinic, slug: clinicSlug });\n      }
       return tenant;
     } catch (error) {
       await Promise.all([tenancyRepository.deleteTenantMemberships(String(tenant._id)), tenancyRepository.deleteTenantClinics(String(tenant._id)), tenancyRepository.deleteTenant(String(tenant._id))]);
