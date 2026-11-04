@@ -61,4 +61,3 @@ paths:
         "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
-        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
