@@ -38,6 +38,8 @@ paths:
     $ref: "./openapi/platform/auth.yaml#/paths/~1auth~1platform~1dev~1bootstrap-admin"
   /platform/tenants:
     $ref: "./openapi/platform/tenants.yaml#/paths/~1platform~1tenants"
+  /platform/tenants/{tenantId}:
+    $ref: "./openapi/platform/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}"
   /platform/tenants/{tenantId}/status:
     $ref: "./openapi/platform/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}~1status"
   /platform/geo/countries:
@@ -82,6 +84,11 @@ paths:
     $ref: "./openapi/platform/monitoring.yaml#/paths/~1platform~1monitoring~1logs~1{id}"
 components:
   securitySchemes:
+    platformBearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Platform administrator access token. In Apidog, read the token from the platform_token environment variable.
     bearerAuth:
       type: http
       scheme: bearer
