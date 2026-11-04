@@ -87,7 +87,7 @@ export const platformTenantService = {
           districtId: initial.districtId ?? address.districtId,
         });
       }
-      return tenant;
+      return await platformTenantService.getTenantDetails(String(tenant._id));
     } catch (error) {
       await Promise.all([
         tenancyRepository.deleteTenantMemberships(String(tenant._id)),
@@ -111,10 +111,12 @@ export const platformTenantService = {
         update[key] = { ...existingObject, ...input[key] };
       }
     }
-    return tenancyRepository.updateTenant(id, update);
+    const updated = await tenancyRepository.updateTenant(id, update);
+    return updated ? platformTenantService.getTenantDetails(id) : null;
   },
-  updateTenantStatus(id: string, status: 'active' | 'suspended') {
-    return tenancyRepository.updateTenantStatus(id, status);
+  async updateTenantStatus(id: string, status: 'active' | 'suspended') {
+    const updated = await tenancyRepository.updateTenantStatus(id, status);
+    return updated ? platformTenantService.getTenantDetails(id) : null;
   },
   async upsertSubscription(tenantId: string, input: Record<string, unknown>) {
     const tenant = await tenancyRepository.findTenantById(tenantId);
