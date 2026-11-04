@@ -250,6 +250,25 @@ components:
         name_en: { type: string, minLength: 1, maxLength: 255 }
         name_ar: { type: string, nullable: true, maxLength: 255 }
         city_id: { type: string }
+    GeoParent:
+      type: object
+      properties:
+        id: { type: string }
+        name_en: { type: string }
+        name_ar: { type: string, nullable: true }
+        code: { type: string, nullable: true }
+        country:
+          allOf:
+            - { $ref: "#/components/schemas/GeoParent" }
+          nullable: true
+        governorate:
+          allOf:
+            - { $ref: "#/components/schemas/GeoParent" }
+          nullable: true
+        city:
+          allOf:
+            - { $ref: "#/components/schemas/GeoParent" }
+          nullable: true
     GeoEntry:
       type: object
       properties:
@@ -257,9 +276,18 @@ components:
         name_en: { type: string }
         name_ar: { type: string, nullable: true }
         code: { type: string, nullable: true }
-        country_id: { type: string }
-        governorate_id: { type: string }
-        city_id: { type: string }
+        country:
+          allOf:
+            - { $ref: "#/components/schemas/GeoParent" }
+          nullable: true
+        governorate:
+          allOf:
+            - { $ref: "#/components/schemas/GeoParent" }
+          nullable: true
+        city:
+          allOf:
+            - { $ref: "#/components/schemas/GeoParent" }
+          nullable: true
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
     Pagination:
