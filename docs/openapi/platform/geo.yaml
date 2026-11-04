@@ -1,4 +1,5 @@
 openapi: 3.0.3
+paths:
   /platform/geo/countries:
     get:
       tags: [Geo]
