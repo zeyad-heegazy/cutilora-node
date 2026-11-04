@@ -3,6 +3,7 @@ paths:
   /auth/login:
     post:
       tags: [Authentication]
+      x-apidog-folder: "Tenant/Auth"
       summary: Log in
       description: Returns an access token and the user's active tenant memberships.
       requestBody:
@@ -41,6 +42,7 @@ paths:
   /auth/logout:
     post:
       tags: [Authentication]
+      x-apidog-folder: "Tenant/Auth"
       summary: Log out current user
       description: Revokes the current regular-user access token. Other sessions remain active.
       security: [{ bearerAuth: [] }]
@@ -58,6 +60,7 @@ paths:
   /auth/me:
     get:
       tags: [Authentication]
+      x-apidog-folder: "Tenant/Auth"
       summary: Get current user
       security: [{ bearerAuth: [] }]
       responses:
