@@ -7,9 +7,9 @@ paths:
       description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch.
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: "../openapi.yaml#/components/parameters/TenantId"
-        - $ref: "../openapi.yaml#/components/parameters/ClinicIdRequired"
-        - $ref: "../openapi.yaml#/components/parameters/BranchId"
+        - $ref: "../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - $ref: "../../openapi.yaml#/components/parameters/BranchId"
       responses:
         "200":
           description: Branch list
@@ -22,19 +22,19 @@ paths:
                   data:
                     {
                       type: array,
-                      items: { $ref: "../openapi.yaml#/components/schemas/Branch" },
+                      items: { $ref: "../../openapi.yaml#/components/schemas/Branch" },
                     }
-        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+        "400": { $ref: "../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
     post:
       tags: [Clinic - Branches]
       summary: Create branch in current clinic
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: "../openapi.yaml#/components/parameters/TenantId"
-        - $ref: "../openapi.yaml#/components/parameters/ClinicIdRequired"
-        - $ref: "../openapi.yaml#/components/parameters/BranchId"
+        - $ref: "../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - $ref: "../../openapi.yaml#/components/parameters/BranchId"
       requestBody:
         required: true
         content:
@@ -57,8 +57,8 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: "../openapi.yaml#/components/schemas/Branch" }
-        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
-        "422": { $ref: "../openapi.yaml#/components/responses/ValidationError" }
+                  data: { $ref: "../../openapi.yaml#/components/schemas/Branch" }
+        "400": { $ref: "../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
+        "422": { $ref: "../../openapi.yaml#/components/responses/ValidationError" }
