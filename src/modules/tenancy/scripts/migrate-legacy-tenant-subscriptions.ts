@@ -28,7 +28,7 @@ async function main() {
             notes: 'Migrated from legacy tenant.plan. Amount and billing cycle are placeholders. Confirm plan, price, currency, and billing cycle before activation.',
           },
         },
-        { upsert: true },
+        { upsert: true, setDefaultsOnInsert: true },
       );
 
       await Tenant.collection.updateOne({ _id: tenant._id }, { $unset: { plan: '' } });
