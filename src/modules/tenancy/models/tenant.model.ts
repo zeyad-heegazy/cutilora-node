@@ -23,6 +23,27 @@ const addressSchema = new Schema({
   longitude: { type: Number, min: -180, max: 180, default: null },
 }, { _id: false });
 
+const legalSchema = new Schema({
+  taxNumber: { type: String, trim: true, default: '' },
+  vatNumber: { type: String, trim: true, default: '' },
+  commercialRegistrationNumber: { type: String, trim: true, default: '' },
+}, { _id: false });
+
+const brandingSchema = new Schema({
+  logoUrl: { type: String, trim: true, default: '' },
+  coverImageUrl: { type: String, trim: true, default: '' },
+  primaryColor: { type: String, trim: true, default: '#2563eb' },
+}, { _id: false });
+
+const preferencesSchema = new Schema({
+  timezone: { type: String, default: 'Africa/Cairo' },
+  locale: { type: String, default: 'en' },
+  currency: { type: String, uppercase: true, default: 'EGP' },
+  dateFormat: { type: String, default: 'YYYY-MM-DD' },
+  weekStartsOn: { type: Number, min: 0, max: 6, default: 6 },
+  supportedLanguages: { type: [String], default: ['en', 'ar'] },
+}, { _id: false });
+
 const schema = new Schema({
   name: { type: String, required: true, trim: true, maxlength: 160 },
   displayName: { type: String, trim: true, maxlength: 160, default: '' },
@@ -34,24 +55,9 @@ const schema = new Schema({
   status: { type: String, enum: ['active', 'suspended'], default: 'active', required: true },
   contact: { type: contactSchema, default: () => ({}) },
   address: { type: addressSchema, default: () => ({}) },
-  legal: {
-    taxNumber: { type: String, trim: true, default: '' },
-    vatNumber: { type: String, trim: true, default: '' },
-    commercialRegistrationNumber: { type: String, trim: true, default: '' },
-  },
-  branding: {
-    logoUrl: { type: String, trim: true, default: '' },
-    coverImageUrl: { type: String, trim: true, default: '' },
-    primaryColor: { type: String, trim: true, default: '#2563eb' },
-  },
-  preferences: {
-    timezone: { type: String, default: 'Africa/Cairo' },
-    locale: { type: String, default: 'en' },
-    currency: { type: String, uppercase: true, default: 'EGP' },
-    dateFormat: { type: String, default: 'YYYY-MM-DD' },
-    weekStartsOn: { type: Number, min: 0, max: 6, default: 6 },
-    supportedLanguages: { type: [String], default: ['en', 'ar'] },
-  },
+  legal: { type: legalSchema, default: () => ({}) },
+  branding: { type: brandingSchema, default: () => ({}) },
+  preferences: { type: preferencesSchema, default: () => ({}) },
   settings: { type: Schema.Types.Mixed, default: {} },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
