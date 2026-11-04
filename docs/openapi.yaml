@@ -332,6 +332,16 @@ components:
             status: { type: string, enum: [active, suspended] }
             createdAt: { type: string, format: date-time }
             updatedAt: { type: string, format: date-time }
+    TenantDetails:
+      allOf:
+        - { $ref: "#/components/schemas/Tenant" }
+        - type: object
+          properties:
+            clinics: { type: array, items: { $ref: "#/components/schemas/Clinic" } }
+            subscription:
+              allOf:
+                - { $ref: "#/components/schemas/Subscription" }
+              nullable: true
     Subscription:
       type: object
       properties:
