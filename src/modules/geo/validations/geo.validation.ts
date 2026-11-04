@@ -25,11 +25,4 @@ export const clinicGeoListSchema = z.object({
   country_id: z.string().optional(),
   governorate_id: z.string().optional(),
   city_id: z.string().optional(),
-}).superRefine((value, ctx) => {
-  if (value.city_id && !value.governorate_id && !value.country_id) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['city_id'], message: 'city_id requires governorate_id or country_id.' });
-  }
-  if (value.governorate_id && !value.country_id && value.city_id) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['governorate_id'], message: 'Provide country_id when combining city_id with governorate_id.' });
-  }
 });
