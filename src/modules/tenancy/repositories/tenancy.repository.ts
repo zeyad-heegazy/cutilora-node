@@ -26,6 +26,7 @@ export const tenancyRepository = {
       { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
     );
   },
+  deleteTenantSubscription(tenantId: string) { return Subscription.deleteOne({ tenantId }); },
   addSubscriptionPayment(tenantId: string, payment: Record<string, unknown>) {
     return Subscription.findOneAndUpdate(
       { tenantId },
