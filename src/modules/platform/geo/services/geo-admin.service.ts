@@ -50,7 +50,7 @@ export const geoAdminService = {
       filter.$or = [{ nameEn: expression }, { nameAr: expression }, { code: expression }];
     }
     const [rows, total] = await geoRepository.listWithParents(resource, filter, (query.page - 1) * query.per_page, query.per_page);
-    return { data: rows.map(row => transform(resource, row)), meta: { current_page: query.page, per_page: query.per_page, total, last_page: Math.max(1, Math.ceil(total / query.per_page)) } };
+    return { data: rows.map((row: any) => transform(resource, row)), meta: { current_page: query.page, per_page: query.per_page, total, last_page: Math.max(1, Math.ceil(total / query.per_page)) } };
   },
   async show(resource: GeoResource, id: string) {
     return transform(resource, await geoRepository.findWithParents(resource, id));
