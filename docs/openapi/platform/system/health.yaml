@@ -3,6 +3,7 @@ paths:
   /health:
     get:
       tags: [Health]
+      x-apidog-folder: "Platform/System"
       summary: Health check
       responses:
         "200":
