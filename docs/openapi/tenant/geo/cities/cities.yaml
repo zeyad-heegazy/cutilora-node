@@ -1,0 +1,24 @@
+openapi: 3.0.3
+paths:
+  /tenant/geo/cities:
+    get:
+      tags: [Clinic - Geo]
+      summary: List and search cities with governorate and country
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '../components.yaml#/components/parameters/Page'
+        - $ref: '../components.yaml#/components/parameters/PerPage'
+        - $ref: '../components.yaml#/components/parameters/Search'
+        - name: country_id
+          in: query
+          schema: { type: string }
+        - name: governorate_id
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Paginated cities with complete parent hierarchy
+          content:
+            application/json:
+              schema: { $ref: '../components.yaml#/components/schemas/GeoListResponse' }
+        '401': { $ref: '../../../../openapi.yaml#/components/responses/Unauthorized' }
