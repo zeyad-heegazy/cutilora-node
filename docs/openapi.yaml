@@ -75,6 +75,8 @@ paths:
     $ref: "./openapi/tenant/context/context.yaml#/paths/~1tenant~1context"
   /tenant/clinics:
     $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics"
+  /tenant/clinics/{clinicId}:
+    $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}"
   /tenant/branches:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches"
   /platform/monitoring/view:
