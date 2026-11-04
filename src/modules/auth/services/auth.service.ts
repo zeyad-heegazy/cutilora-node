@@ -4,15 +4,34 @@ import { hashPassword, signAccessToken, verifyPassword } from './auth.security.j
 export class AuthError extends Error {
   constructor(public code: string, message: string, public status = 401) { super(message); }
 }
+async function verifyCredentials(email: string, password: string) {
+  const user = await authRepository.findUserByEmail(email.toLowerCase());
+  if (!user || !user.isActive || !(await verifyPassword(password, user.passwordHash))) {
+    throw new AuthError('INVALID_CREDENTIALS', 'Email or password is incorrect.');
+  }
+  return user;
+}
 export const authService = {
   async login(email: string, password: string) {
-    const user = await authRepository.findUserByEmail(email.toLowerCase());
-    if (!user || !user.isActive || !(await verifyPassword(password, user.passwordHash))) throw new AuthError('INVALID_CREDENTIALS', 'Email or password is incorrect.');
+    const user = await verifyCredentials(email, password);
+    if (user.platformRole === 'platform_admin') {
+      throw new AuthError('WRONG_AUTH_PORTAL', 'Use the platform administrator login endpoint.');
+    }
     const memberships = await authRepository.findActiveMemberships(user.id);
     return {
-      access_token: signAccessToken(user.id), token_type: 'Bearer',
-      user: { id: user.id, name: user.name, email: user.email, platform_role: user.platformRole },
+      access_token: signAccessToken(user.id, 'user'), token_type: 'Bearer',
+      user: { id: user.id, name: user.name, email: user.email },
       memberships: memberships.filter((m: any) => m.tenantId).map((m: any) => ({ tenant: m.tenantId, clinic: m.clinicId, branch_ids: m.branchIds, scope: m.scope, role: m.role })),
+    };
+  },
+  async platformLogin(email: string, password: string) {
+    const user = await verifyCredentials(email, password);
+    if (user.platformRole !== 'platform_admin') {
+      throw new AuthError('PLATFORM_ACCESS_REQUIRED', 'This account is not a platform administrator.');
+    }
+    return {
+      access_token: signAccessToken(user.id, 'platform'), token_type: 'Bearer',
+      user: { id: user.id, name: user.name, email: user.email, platform_role: user.platformRole },
     };
   },
   async me(userId: string) {
