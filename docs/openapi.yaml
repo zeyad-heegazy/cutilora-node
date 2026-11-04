@@ -268,9 +268,9 @@ components:
         industry: { type: string }
         contact: { $ref: "#/components/schemas/BusinessContact" }
         address: { $ref: "#/components/schemas/BusinessAddress" }
-        legal: { type: object, additionalProperties: true }
+        legal: { $ref: "#/components/schemas/TenantLegal" }
         branding: { $ref: "#/components/schemas/BrandingInput" }
-        preferences: { type: object, additionalProperties: true }
+        preferences: { $ref: "#/components/schemas/TenantPreferences" }
     ClinicInput:
       type: object
       required: [name]
