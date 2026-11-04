@@ -1,14 +1,16 @@
 import { Tenant } from '../models/tenant.model.js';
 import { Clinic } from '../models/clinic.model.js';
 import { Branch } from '../models/branch.model.js';
+import { Subscription } from '../models/subscription.model.js';
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { User } from '../../auth/models/user.model.js';
 
 export const tenancyRepository = {
   listTenants() { return Tenant.find().sort({ createdAt: -1 }); },
+  findTenantById(id: string) { return Tenant.findById(id); },
   findTenantBySlug(slug: string, excludeId?: string) { return Tenant.findOne({ slug, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).select('_id'); },
   createTenant(data: Record<string, unknown>) { return Tenant.create(data); },
-  updateTenant(id: string, data: { name: string; slug: string }) { return Tenant.findByIdAndUpdate(id, data, { new: true, runValidators: true }); },
+  updateTenant(id: string, data: Record<string, unknown>) { return Tenant.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true }); },
   updateTenantStatus(id: string, status: 'active' | 'suspended') { return Tenant.findByIdAndUpdate(id, { status }, { new: true, runValidators: true }); },
   deleteTenant(id: string) { return Tenant.deleteOne({ _id: id }); },
   deleteTenantMemberships(tenantId: string) { return TenantMembership.deleteMany({ tenantId }); },
@@ -16,7 +18,23 @@ export const tenancyRepository = {
   findUserByEmail(email: string) { return User.findOne({ email: email.toLowerCase() }); },
   createUser(data: Record<string, unknown>) { return User.create(data); },
   createMembership(data: Record<string, unknown>) { return TenantMembership.create(data); },
+  findSubscriptionByTenantId(tenantId: string) { return Subscription.findOne({ tenantId }); },
+  upsertSubscription(tenantId: string, data: Record<string, unknown>) {
+    return Subscription.findOneAndUpdate(
+      { tenantId },
+      { $set: data, $setOnInsert: { tenantId } },
+      { new: true, upsert: true, runValidators: true, setDefaultsOnInsert: true },
+    );
+  },
+  addSubscriptionPayment(tenantId: string, payment: Record<string, unknown>) {
+    return Subscription.findOneAndUpdate(
+      { tenantId },
+      { $push: { paymentHistory: payment } },
+      { new: true, runValidators: true },
+    );
+  },
   listClinics(tenantId: string) { return Clinic.find({ tenantId }).sort({ name: 1 }); },
+  findClinicById(id: string, tenantId: string) { return Clinic.findOne({ _id: id, tenantId }); },
   findClinicBySlug(tenantId: string, slug: string, excludeId?: string) {
     return Clinic.findOne({ tenantId, slug, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).select('_id');
   },
@@ -28,8 +46,8 @@ export const tenancyRepository = {
   createBranch(data: Record<string, unknown>) { return Branch.create(data); },
   getTenantContext(tenantId: string, clinicId: string | null, branchId: string | null) {
     return Promise.all([
-      Tenant.findById(tenantId).select('name slug status plan settings'),
-      clinicId ? Clinic.findOne({ _id: clinicId, tenantId }).select('name slug status timezone') : null,
+      Tenant.findById(tenantId).select('name displayName legalName slug businessType status contact branding preferences'),
+      clinicId ? Clinic.findOne({ _id: clinicId, tenantId }).select('name slug code status clinicType timezone contact address branding bookingSettings') : null,
       branchId ? Branch.findOne({ _id: branchId, tenantId, clinicId }).select('name slug status timezone') : null,
     ]);
   },
