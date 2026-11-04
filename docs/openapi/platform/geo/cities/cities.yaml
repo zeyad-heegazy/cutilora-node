@@ -4,7 +4,6 @@ paths:
     get:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Geo/Cities"
-      x-apidog-folder: "Platform/Geo/Cities"
       summary: List cities
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by governorate_id.
       security: [{ platformBearerAuth: [] }]
@@ -42,7 +41,6 @@ paths:
     post:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Geo/Cities"
-      x-apidog-folder: "Platform/Geo/Cities"
       summary: Create city
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -72,7 +70,6 @@ paths:
     get:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Geo/Cities"
-      x-apidog-folder: "Platform/Geo/Cities"
       summary: Get city by ID
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -90,7 +87,6 @@ paths:
         "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [Portal Platform]
-      x-apidog-folder: "Platform/Geo/Cities"
       x-apidog-folder: "Platform/Geo/Cities"
       summary: Update city
       security: [{ platformBearerAuth: [] }]
@@ -115,7 +111,6 @@ paths:
         "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
     delete:
       tags: [Portal Platform]
-      x-apidog-folder: "Platform/Geo/Cities"
       x-apidog-folder: "Platform/Geo/Cities"
       summary: Delete city
       security: [{ platformBearerAuth: [] }]
