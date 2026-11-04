@@ -1,0 +1,28 @@
+openapi: 3.0.3
+paths:
+  /platform/tenants/{tenantId}/subscription:
+    put:
+      tags: [Portal Platform]
+      summary: Create or replace tenant subscription
+      description: Stores the commercial subscription snapshot. No payment gateway is charged by this endpoint.
+      security: [{ platformBearerAuth: [] }]
+      parameters:
+        - { name: tenantId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "../../../../openapi.yaml#/components/schemas/SubscriptionInput" }
+      responses:
+        "200":
+          description: Subscription saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../../openapi.yaml#/components/schemas/Subscription" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "400": { $ref: "../../../../openapi.yaml#/components/responses/BadRequest" }
+        "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
