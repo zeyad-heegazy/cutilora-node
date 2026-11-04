@@ -40,7 +40,7 @@ paths:
         "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
   /auth/logout:
     post:
-      tags: [Tenant - Authentication]
+      tags: [Authentication]
       summary: Log out current user
       description: Revokes the current regular-user access token. Other sessions remain active.
       security: [{ bearerAuth: [] }]
