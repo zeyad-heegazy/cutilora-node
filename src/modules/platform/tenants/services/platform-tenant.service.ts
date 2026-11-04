@@ -107,6 +107,7 @@ export const platformTenantService = {
         const { logoBase64: clinicLogoBase64, coverImageBase64: clinicCoverBase64, ...clinicBranding } = initial.branding ?? {};
         const clinic = await tenancyRepository.createClinic({
           ...initial,
+          preferences: deepMerge(DEFAULT_TENANT_PREFERENCES, initial.preferences),
           branding: clinicBranding,
           address: { ...address, countryId: initial.countryId ?? address.countryId, governorateId: initial.governorateId ?? address.governorateId, cityId: initial.cityId ?? address.cityId, districtId: initial.districtId ?? address.districtId },
           tenantId: tenant._id,
@@ -166,7 +167,7 @@ export const platformTenantService = {
             newCoverUrl = await storeBrandingCover(coverImageBase64, 'tenants', id);
             (update.branding as Record<string, unknown>).coverImageUrl = newCoverUrl;
           }
-        } else update[key] = { ...existingObject, ...input[key] };
+        } else update[key] = deepMerge(existingObject, input[key]);
       }
     }
     let updated: Awaited<ReturnType<typeof tenancyRepository.updateTenant>>;
