@@ -1,19 +1,5 @@
 import { Schema, model, models, type Model } from 'mongoose';
 
-const paymentSchema = new Schema({
-  amount: { type: Number, required: true, min: 0 },
-  currency: { type: String, required: true, uppercase: true, minlength: 3, maxlength: 3 },
-  status: { type: String, enum: ['pending', 'paid', 'failed', 'refunded'], required: true },
-  method: { type: String, trim: true, default: '' },
-  provider: { type: String, trim: true, default: '' },
-  providerReference: { type: String, trim: true, default: '' },
-  invoiceNumber: { type: String, trim: true, default: '' },
-  invoiceUrl: { type: String, trim: true, default: '' },
-  paidAt: { type: Date, default: null },
-  failureReason: { type: String, trim: true, default: '' },
-  recordedAt: { type: Date, default: Date.now },
-}, { _id: true });
-
 const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, unique: true, index: true },
   plan: {
@@ -31,7 +17,6 @@ const schema = new Schema({
   nextBillingAt: { type: Date, default: null },
   cancelAtPeriodEnd: { type: Boolean, default: false },
   canceledAt: { type: Date, default: null },
-  paymentHistory: { type: [paymentSchema], default: [] },
   notes: { type: String, trim: true, default: '' },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
