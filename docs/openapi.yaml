@@ -94,7 +94,56 @@ paths:
                         }
                       memberships: { type: array, items: { type: object } }
         "401": { $ref: "#/components/responses/Unauthorized" }
-  /auth/dev/bootstrap-admin:
+  /auth/platform/login:
+    post:
+      tags: [Authentication]
+      summary: Platform administrator login
+      description: Issues a platform-audience access token only to an active platform administrator.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password }
+      responses:
+        "200":
+          description: Platform login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      access_token: { type: string }
+                      token_type: { type: string, example: Bearer }
+                      user: { $ref: "#/components/schemas/UserSummary" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /auth/platform/me:
+    get:
+      tags: [Authentication]
+      summary: Get current platform administrator
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Current platform identity
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: object, properties: { user: { $ref: "#/components/schemas/UserSummary" } } }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /auth/platform/dev/bootstrap-admin:
     post:
       tags: [Authentication]
       summary: Bootstrap the first platform administrator
