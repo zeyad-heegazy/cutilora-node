@@ -55,6 +55,23 @@ paths:
                   success: { type: boolean, example: true }
                   message: { type: string, example: Logged out successfully. }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+  /auth/logout:
+    post:
+      tags: [Tenant - Authentication]
+      summary: Log out current user
+      description: Revokes the current regular-user access token. Other sessions remain active.
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean, example: true }
+                  message: { type: string, example: Logged out successfully. }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
   /auth/me:
     get:
       tags: [Clinic - Authentication]
