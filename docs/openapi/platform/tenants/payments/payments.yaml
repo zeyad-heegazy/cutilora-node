@@ -1,0 +1,28 @@
+openapi: 3.0.3
+paths:
+  /platform/tenants/{tenantId}/subscription/payments:
+    post:
+      tags: [Portal Platform]
+      summary: Record a subscription payment
+      description: Appends a payment record to subscription history; this does not initiate a payment.
+      security: [{ platformBearerAuth: [] }]
+      parameters:
+        - { name: tenantId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "../../../../openapi.yaml#/components/schemas/SubscriptionPaymentInput" }
+      responses:
+        "201":
+          description: Payment record appended
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../../openapi.yaml#/components/schemas/SubscriptionPayment" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "400": { $ref: "../../../../openapi.yaml#/components/responses/BadRequest" }
+        "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
