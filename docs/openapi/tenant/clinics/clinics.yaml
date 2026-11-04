@@ -47,7 +47,6 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
         "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
-        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
   /tenant/clinics/{clinicId}:
     get:
       tags: [Clinics]
@@ -92,4 +91,3 @@ paths:
                   data: { $ref: "../../../openapi.yaml#/components/schemas/Clinic" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
-        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
