@@ -45,6 +45,7 @@ export const platformTenantService = {
     if (input.address) await geoService.validateClinicLocation(input.address);
     const { logoBase64: tenantLogoBase64, ...tenantBranding } = input.branding ?? {};
     let storedTenantLogo = '';
+    let storedClinicLogo = '';
     const slug = await generateUniqueTenantSlug(input.name);
     const tenant = await tenancyRepository.createTenant({
       name: input.name,
@@ -99,8 +100,8 @@ export const platformTenantService = {
           districtId: initial.districtId ?? address.districtId,
         });
         if (clinicLogoBase64) {
-          const clinicLogoUrl = await storeBrandingLogo(clinicLogoBase64, 'clinics', String(clinic._id));
-          clinic.set('branding.logoUrl', clinicLogoUrl);
+          storedClinicLogo = await storeBrandingLogo(clinicLogoBase64, 'clinics', String(clinic._id));
+          clinic.set('branding.logoUrl', storedClinicLogo);
           await clinic.save();
         }
       }
@@ -108,6 +109,7 @@ export const platformTenantService = {
     } catch (error) {
       await Promise.all([
         removeBrandingLogo(storedTenantLogo),
+        removeBrandingLogo(storedClinicLogo),
         tenancyRepository.deleteTenantMemberships(String(tenant._id)),
         tenancyRepository.deleteTenantClinics(String(tenant._id)),
         tenancyRepository.deleteTenantSubscriptionPayments(String(tenant._id)),
