@@ -45,20 +45,34 @@ export const geoService = {
     const filter: Record<string, unknown> = {};
     if (resource === 'governorates' && query.country_id) filter.countryId = query.country_id;
     if (resource === 'cities') {
-      if (query.governorate_id) filter.governorateId = query.governorate_id;
-      else if (query.country_id) {
+      let governorateIds: unknown[] | undefined;
+      if (query.country_id) {
         const [governorates] = await geoRepository.list('governorates', { countryId: query.country_id }, 0, 10000);
-        filter.governorateId = { $in: governorates.map(item => item._id) };
+        governorateIds = governorates.map(item => item._id);
       }
+      if (query.governorate_id) {
+        governorateIds = governorateIds
+          ? governorateIds.filter(id => String(id) === query.governorate_id)
+          : [query.governorate_id];
+      }
+      if (governorateIds) filter.governorateId = { $in: governorateIds };
     }
     if (resource === 'districts') {
-      if (query.city_id) filter.cityId = query.city_id;
-      else if (query.governorate_id) {
-        const [cities] = await geoRepository.list('cities', { governorateId: query.governorate_id }, 0, 10000);
-        filter.cityId = { $in: cities.map(item => item._id) };
-      } else if (query.country_id) {
+      let governorateIds: unknown[] | undefined;
+      if (query.country_id) {
         const [governorates] = await geoRepository.list('governorates', { countryId: query.country_id }, 0, 10000);
-        const [cities] = await geoRepository.list('cities', { governorateId: { $in: governorates.map(item => item._id) } }, 0, 10000);
+        governorateIds = governorates.map(item => item._id);
+      }
+      if (query.governorate_id) {
+        governorateIds = governorateIds
+          ? governorateIds.filter(id => String(id) === query.governorate_id)
+          : [query.governorate_id];
+      }
+      const cityFilter: Record<string, unknown> = {};
+      if (governorateIds) cityFilter.governorateId = { $in: governorateIds };
+      if (query.city_id) cityFilter._id = query.city_id;
+      if (Object.keys(cityFilter).length) {
+        const [cities] = await geoRepository.list('cities', cityFilter, 0, 10000);
         filter.cityId = { $in: cities.map(item => item._id) };
       }
     }
