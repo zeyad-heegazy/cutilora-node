@@ -140,10 +140,16 @@ export const platformTenantService = {
         } else update[key] = { ...existingObject, ...input[key] };
       }
     }
-    if (input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address)) {
-      await geoService.validateClinicLocation(update.address as Record<string, string>);
+    let updated;
+    try {
+      if (input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address)) {
+        await geoService.validateClinicLocation(update.address as Record<string, string>);
+      }
+      updated = await tenancyRepository.updateTenant(id, update);
+    } catch (error) {
+      await removeBrandingLogo(newLogoUrl);
+      throw error;
     }
-    const updated = await tenancyRepository.updateTenant(id, update);
     if (!updated) { await removeBrandingLogo(newLogoUrl); return null; }
     if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingLogo(oldLogoUrl);
     return platformTenantService.getTenantDetails(id);
