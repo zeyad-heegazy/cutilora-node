@@ -79,6 +79,7 @@ export const platformTenantService = {
         });
         await tenancyRepository.createClinic({
           ...initial,
+          address: { ...address, countryId: initial.countryId ?? address.countryId, governorateId: initial.governorateId ?? address.governorateId, cityId: initial.cityId ?? address.cityId, districtId: initial.districtId ?? address.districtId },
           tenantId: tenant._id,
           slug: clinicSlug,
           countryId: initial.countryId ?? address.countryId,
