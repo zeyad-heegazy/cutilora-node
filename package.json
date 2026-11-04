@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "seed:geo": "tsx src/modules/geo/seeds/geo.seed.ts"
+    "seed:geo": "tsx src/modules/geo/seeds/geo.seed.ts",
+    "migrate:tenant-subscriptions": "tsx src/modules/tenancy/scripts/migrate-legacy-tenant-subscriptions.ts"
   },
   "engines": {
     "node": ">=22"
