@@ -50,7 +50,7 @@ export const tenancyRepository = {
   createBranch(data: Record<string, unknown>) { return Branch.create(data); },
   getTenantContext(tenantId: string, clinicId: string | null, branchId: string | null) {
     return Promise.all([
-      Tenant.findById(tenantId).select('name displayName legalName slug businessType status contact branding preferences'),
+      Tenant.findById(tenantId).select('name displayName legalName slug businessType description industry status contact address legal branding preferences settings'),
       clinicId ? Clinic.findOne({ _id: clinicId, tenantId }).select('name slug code status clinicType timezone contact address branding bookingSettings') : null,
       branchId ? Branch.findOne({ _id: branchId, tenantId, clinicId }).select('name slug status timezone') : null,
     ]);
