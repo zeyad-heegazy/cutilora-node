@@ -28,7 +28,6 @@ const addressSchema = z.object({
 const brandingSchema = z.object({
   logoBase64: z.string().max(2_800_000).optional(),
   coverImageBase64: z.string().max(2_800_000).optional(),
-  coverImageUrl: z.string().trim().url().or(z.literal('')).optional(),
   primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
 });
 const preferencesSchema = z.object({
