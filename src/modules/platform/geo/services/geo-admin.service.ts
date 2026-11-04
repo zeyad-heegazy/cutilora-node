@@ -62,7 +62,8 @@ export const geoAdminService = {
     if (parent && !input[parentInput]) throw inputError('PARENT_REQUIRED', parentInput + ' is required.');
     if (parent && !await geoRepository.parentExists(resource, String(input[parentInput]))) throw inputError('PARENT_NOT_FOUND', 'Parent resource not found.');
     const data = { ...input, ...(parent ? { [parent.field]: input[parentInput] } : {}) };
-    return transform(resource, await geoRepository.create(resource, toDb(data)));
+    const created = await geoRepository.create(resource, toDb(data));
+    return transform(resource, await geoRepository.findWithParents(resource, String(created._id)));
   },
   async update(resource: GeoResource, id: string, input: Record<string, unknown>) {
     const current = await geoRepository.find(resource, id);
@@ -72,7 +73,8 @@ export const geoAdminService = {
     const parentInput = parent?.output === 'country' ? 'country_id' : parent?.output === 'governorate' ? 'governorate_id' : 'city_id';
     if (parent && input[parentInput] && !await geoRepository.parentExists(resource, String(input[parentInput]))) throw inputError('PARENT_NOT_FOUND', 'Parent resource not found.');
     const data = { ...input, ...(parent && input[parentInput] !== undefined ? { [parent.field]: input[parentInput] } : {}) };
-    return transform(resource, await geoRepository.update(resource, id, toDb(data)));
+    await geoRepository.update(resource, id, toDb(data));
+    return transform(resource, await geoRepository.findWithParents(resource, id));
   },
   async remove(resource: GeoResource, id: string) {
     if (!await geoRepository.find(resource, id)) return false;
