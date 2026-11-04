@@ -3,6 +3,7 @@ paths:
   /tenant/geo/countries:
     get:
       tags: [Clinic - Geo]
+      x-apidog-folder: "Tenant/Geo/Countries"
       summary: List and search countries
       security: [{ bearerAuth: [] }]
       parameters:
