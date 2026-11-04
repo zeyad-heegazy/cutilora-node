@@ -47,8 +47,11 @@ export const tenancyService = {
     if (!current) return null;
     const currentData = current.toObject();
     const update: Record<string, any> = { ...input };
-    if (input.address) {
-      update.address = { ...(currentData.address?.toObject?.() ?? currentData.address ?? {}), ...input.address };
+    for (const key of ['address', 'contact', 'branding', 'bookingSettings']) {
+      if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
+        const existingValue = currentData[key]?.toObject?.() ?? currentData[key] ?? {};
+        update[key] = { ...existingValue, ...input[key] };
+      }
     }
     const locationChanged = ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input)
       || Boolean(input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address));
