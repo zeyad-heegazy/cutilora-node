@@ -40,7 +40,8 @@ export const tenancyService = {
     await geoService.validateClinicLocation(location);
     const name = String(input.name);
     const slug = await generateUniqueClinicSlug(tenantId, name);
-    return tenancyRepository.createClinic({ ...input, ...location, name, slug, tenantId });
+    const address = { ...(input.address ?? {}), ...location };
+    return tenancyRepository.createClinic({ ...input, address, ...location, name, slug, tenantId });
   },
   async updateClinic(id: string, input: Record<string, any>, tenantId: string) {
     const current = await tenancyRepository.findClinicById(id, tenantId);
@@ -63,6 +64,8 @@ export const tenancyService = {
         districtId: input.districtId ?? input.address?.districtId ?? currentData.districtId ?? currentData.address?.districtId,
       };
       await geoService.validateClinicLocation(mergedLocation);
+      const existingAddress = currentData.address?.toObject?.() ?? currentData.address ?? {};
+      update.address = { ...existingAddress, ...(input.address ?? {}), ...mergedLocation };
       Object.assign(update, mergedLocation);
     }
     if (typeof input.name === 'string') update.slug = await generateUniqueClinicSlug(tenantId, input.name, id);
