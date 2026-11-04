@@ -19,14 +19,14 @@ tags:
   - name: Platform - Tenants
   - name: Platform - Geo
   - name: Platform - Monitoring
-  - name: Tenant Context
-  - name: Clinics
-  - name: Branches
+  - name: Clinic - Context
+  - name: Clinic - Clinics
+  - name: Clinic - Branches
 paths:
   /health:
     $ref: "./openapi/system/health.yaml#/paths/~1health"
   /auth/login:
-    $ref: "./openapi/auth/user.yaml#/paths/~1auth~1login"
+    $ref: "./openapi/clinic/auth.yaml#/paths/~1auth~1login"
   /auth/me:
     $ref: "./openapi/auth/user.yaml#/paths/~1auth~1me"
   /auth/platform/login:
