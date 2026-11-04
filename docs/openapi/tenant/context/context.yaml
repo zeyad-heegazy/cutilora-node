@@ -2,7 +2,7 @@ openapi: 3.0.3
 paths:
   /tenant/context:
     get:
-      tags: [Clinic - Context]
+      tags: [Tenant Context]
       summary: Resolve active tenant, clinic, and branch context
       security: [{ bearerAuth: [] }]
       parameters:
