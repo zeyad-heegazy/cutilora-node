@@ -3,6 +3,7 @@ paths:
   /platform/geo/governorates:
     get:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Geo/Governorates"
       summary: List governorates
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by country_id.
       security: [{ platformBearerAuth: [] }]
@@ -39,6 +40,7 @@ paths:
         "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
     post:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Geo/Governorates"
       summary: Create governorate
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -67,6 +69,7 @@ paths:
         schema: { type: string }
     get:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Geo/Governorates"
       summary: Get governorate by ID
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -84,6 +87,7 @@ paths:
         "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Geo/Governorates"
       summary: Update governorate
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -107,6 +111,7 @@ paths:
         "422": { $ref: "../../../../openapi.yaml#/components/responses/ValidationError" }
     delete:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Geo/Governorates"
       summary: Delete governorate
       security: [{ platformBearerAuth: [] }]
       responses:
