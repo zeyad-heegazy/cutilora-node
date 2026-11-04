@@ -15,13 +15,14 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const expected = Buffer.from(hash, 'hex');
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
-type TokenPayload = { sub: string; iat: number; exp: number };
+export type AuthTokenType = 'user' | 'platform';
+type TokenPayload = { sub: string; iat: number; exp: number; tokenType: AuthTokenType };
 const secret = env.JWT_SECRET;
 function encode(value: unknown) { return Buffer.from(JSON.stringify(value)).toString('base64url'); }
-export function signAccessToken(userId: string): string {
+export function signAccessToken(userId: string, tokenType: AuthTokenType = 'user'): string {
   const now = Math.floor(Date.now() / 1000);
   const header = encode({ alg: 'HS256', typ: 'JWT' });
-  const payload = encode({ sub: userId, iat: now, exp: now + env.ACCESS_TOKEN_TTL_SECONDS });
+  const payload = encode({ sub: userId, tokenType, iat: now, exp: now + env.ACCESS_TOKEN_TTL_SECONDS });
   const input = `${header}.${payload}`;
   return `${input}.${createHmac('sha256', secret).update(input).digest('base64url')}`;
 }
@@ -33,7 +34,11 @@ export function verifyAccessToken(token: string): TokenPayload {
   const expected = createHmac('sha256', secret).update(input).digest();
   const actual = Buffer.from(signature, 'base64url');
   if (actual.length !== expected.length || !timingSafeEqual(actual, expected)) throw new Error('Invalid token');
-  const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString()) as TokenPayload;
-  if (!payload.sub || payload.exp <= Math.floor(Date.now() / 1000)) throw new Error('Expired token');
-  return payload;
+  const payload = JSON.parse(Buffer.from(payloadPart, 'base64url').toString()) as Partial<TokenPayload>;
+  // Tokens issued before audience separation remain regular-user tokens only.
+  const tokenType = payload.tokenType ?? 'user';
+  if (!payload.sub || !payload.exp || payload.exp <= Math.floor(Date.now() / 1000) || !['user', 'platform'].includes(tokenType)) {
+    throw new Error('Expired or invalid token');
+  }
+  return { sub: payload.sub, iat: payload.iat ?? 0, exp: payload.exp, tokenType };
 }
