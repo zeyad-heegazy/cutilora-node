@@ -71,7 +71,7 @@ export const tenancyService = {
         } else update[key] = { ...existingValue, ...input[key] };
       }
     }
-    let updated;
+    let updated: Awaited<ReturnType<typeof tenancyRepository.updateClinic>>;
     try {
       const locationChanged = ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input)
         || Boolean(input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address));
