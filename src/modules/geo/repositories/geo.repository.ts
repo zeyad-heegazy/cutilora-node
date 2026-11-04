@@ -9,18 +9,28 @@ import type { GeoResource } from '../types/geo.types.js';
 const models: Record<GeoResource, Model<any>> = { countries: Country, governorates: Governorate, cities: City, districts: District };
 const parentFields: Partial<Record<GeoResource, string>> = { governorates: 'countryId', cities: 'governorateId', districts: 'cityId' };
 
+function populateParentChain(resource: GeoResource, query: any) {
+  if (resource === 'governorates') query.populate('countryId');
+  if (resource === 'cities') query.populate({ path: 'governorateId', populate: { path: 'countryId' } });
+  if (resource === 'districts') query.populate({ path: 'cityId', populate: { path: 'governorateId', populate: { path: 'countryId' } } });
+  return query;
+}
+
 export const geoRepository = {
   list(resource: GeoResource, filter: Record<string, unknown>, skip: number, limit: number) {
     return Promise.all([models[resource].find(filter).sort({ nameEn: 1 }).skip(skip).limit(limit).lean(), models[resource].countDocuments(filter)]);
   },
-  listForClinic(resource: GeoResource, filter: Record<string, unknown>, skip: number, limit: number) {
+  listWithParents(resource: GeoResource, filter: Record<string, unknown>, skip: number, limit: number) {
     const query = models[resource].find(filter).sort({ nameEn: 1 }).skip(skip).limit(limit);
-    if (resource === 'governorates') query.populate('countryId');
-    if (resource === 'cities') query.populate({ path: 'governorateId', populate: { path: 'countryId' } });
-    if (resource === 'districts') query.populate({ path: 'cityId', populate: { path: 'governorateId', populate: { path: 'countryId' } } });
-    return Promise.all([query.lean(), models[resource].countDocuments(filter)]);
+    return Promise.all([populateParentChain(resource, query).lean(), models[resource].countDocuments(filter)]);
+  },
+  listForClinic(resource: GeoResource, filter: Record<string, unknown>, skip: number, limit: number) {
+    return this.listWithParents(resource, filter, skip, limit);
   },
   find(resource: GeoResource, id: string) { return models[resource].findById(id).lean(); },
+  findWithParents(resource: GeoResource, id: string) {
+    return populateParentChain(resource, models[resource].findById(id)).lean();
+  },
   create(resource: GeoResource, data: Record<string, unknown>) { return models[resource].create(data); },
   update(resource: GeoResource, id: string, data: Record<string, unknown>) { return models[resource].findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true }).lean(); },
   async hasClinicReferences(resource: GeoResource, id: string) {
