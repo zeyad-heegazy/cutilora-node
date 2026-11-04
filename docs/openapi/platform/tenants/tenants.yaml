@@ -66,6 +66,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
   /platform/tenants/{tenantId}:
     get:
       tags: [Portal Platform]
@@ -117,6 +118,7 @@ paths:
                   data: { $ref: "../../../openapi.yaml#/components/schemas/TenantDetails" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
   /platform/tenants/{tenantId}/status:
     patch:
       tags: [Portal Platform]
@@ -145,6 +147,7 @@ paths:
                   data: { $ref: "../../../openapi.yaml#/components/schemas/TenantDetails" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
   /platform/tenants/{tenantId}/subscription:
     put:
       tags: [Portal Platform]
@@ -170,6 +173,7 @@ paths:
                   data: { $ref: "../../../openapi.yaml#/components/schemas/Subscription" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
   /platform/tenants/{tenantId}/subscription/payments:
     post:
       tags: [Portal Platform]
@@ -195,3 +199,4 @@ paths:
                   data: { $ref: "../../../openapi.yaml#/components/schemas/SubscriptionPayment" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
