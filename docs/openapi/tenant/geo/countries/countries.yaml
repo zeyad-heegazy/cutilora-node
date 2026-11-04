@@ -1,0 +1,18 @@
+openapi: 3.0.3
+paths:
+  /tenant/geo/countries:
+    get:
+      tags: [Clinic - Geo]
+      summary: List and search countries
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: '../components.yaml#/components/parameters/Page'
+        - $ref: '../components.yaml#/components/parameters/PerPage'
+        - $ref: '../components.yaml#/components/parameters/Search'
+      responses:
+        '200':
+          description: Paginated countries
+          content:
+            application/json:
+              schema: { $ref: '../components.yaml#/components/schemas/GeoListResponse' }
+        '401': { $ref: '../../../../openapi.yaml#/components/responses/Unauthorized' }
