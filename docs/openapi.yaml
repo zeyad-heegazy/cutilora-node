@@ -14,15 +14,12 @@ servers:
     description: Local development (replace with deployed API URL)
 tags:
   - name: Health
-  - name: Tenant - Authentication
-  - name: Platform - Authentication
-  - name: Platform - Tenants
-  - name: Platform - Geo
-  - name: Platform - Monitoring
-  - name: Tenant - Context
-  - name: Tenant - Geo
-  - name: Tenant - Clinics
-  - name: Tenant - Branches
+  - name: Portal Platform
+  - name: Authentication
+  - name: Tenant Context
+  - name: Clinics
+  - name: Branches
+  - name: Clinic - Geo
 paths:
   /health:
     $ref: "./openapi/platform/system/health.yaml#/paths/~1health"
@@ -219,7 +216,6 @@ components:
         coverImageBase64:
           type: string
           description: Base64 data URL for PNG, JPEG, or WebP. Maximum decoded size is 2 MB.
-        coverImageUrl: { type: string, format: uri }
         primaryColor: { type: string, pattern: "^#[0-9a-fA-F]{6}$" }
     Tenant:
       type: object
@@ -256,7 +252,6 @@ components:
             dateFormat: { type: string }
             weekStartsOn: { type: integer }
             supportedLanguages: { type: array, items: { type: string } }
-        settings: { type: object, additionalProperties: true }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     TenantUpdate:
@@ -274,7 +269,6 @@ components:
         legal: { type: object, additionalProperties: true }
         branding: { $ref: "#/components/schemas/BrandingInput" }
         preferences: { type: object, additionalProperties: true }
-        settings: { type: object, additionalProperties: true }
     ClinicInput:
       type: object
       required: [name]
@@ -288,10 +282,6 @@ components:
         address: { $ref: "#/components/schemas/BusinessAddress" }
         timezone: { type: string, default: Africa/Cairo }
         preferences: { $ref: "#/components/schemas/TenantPreferences" }
-        countryId: { type: string }
-        governorateId: { type: string }
-        cityId: { type: string }
-        districtId: { type: string }
         operatingHours:
           type: array
           maxItems: 7
@@ -314,7 +304,6 @@ components:
             bufferMinutes: { type: integer, minimum: 0, maximum: 240 }
             cancellationWindowHours: { type: integer, minimum: 0, maximum: 720 }
         openingDate: { type: string, format: date, nullable: true }
-        settings: { type: object, additionalProperties: true }
     ClinicUpdate:
       type: object
       minProperties: 1
@@ -329,15 +318,10 @@ components:
         address: { $ref: "#/components/schemas/BusinessAddress" }
         timezone: { type: string }
         preferences: { $ref: "#/components/schemas/TenantPreferences" }
-        countryId: { type: string }
-        governorateId: { type: string }
-        cityId: { type: string }
-        districtId: { type: string }
         operatingHours: { type: array, items: { type: object, additionalProperties: true } }
         branding: { $ref: "#/components/schemas/BrandingInput" }
         bookingSettings: { type: object, additionalProperties: true }
         openingDate: { type: string, format: date, nullable: true }
-        settings: { type: object, additionalProperties: true }
     Clinic:
       allOf:
         - { $ref: "#/components/schemas/ClinicInput" }
@@ -572,7 +556,7 @@ components:
           properties:
             code: { type: string }
             message: { type: string }
-            details: { type: object }
+            details: { type: array, items: { type: object, properties: { path: { type: string }, message: { type: string } } } }
   responses:
     BadRequest:
       description: Bad request or invalid identifier/context
