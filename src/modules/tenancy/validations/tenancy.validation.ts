@@ -28,128 +28,178 @@ const addressSchema = z.object({
 const brandingSchema = z.object({
   logoBase64: z.string().max(2_800_000).optional(),
   coverImageBase64: z.string().max(2_800_000).optional(),
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/).optional(),
+  primaryColor: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/)
+    .optional(),
 });
 const preferencesSchema = z.object({
   timezone: z.string().trim().min(1).max(100).optional(),
   locale: z.string().trim().min(2).max(10).optional(),
-  currency: z.string().trim().length(3).transform((value) => value.toUpperCase()).optional(),
+  currency: z
+    .string()
+    .trim()
+    .length(3)
+    .transform((value) => value.toUpperCase())
+    .optional(),
   dateFormat: z.string().trim().min(1).max(30).optional(),
   weekStartsOn: z.number().int().min(0).max(6).optional(),
-  supportedLanguages: z.array(z.string().trim().min(2).max(10)).max(10).optional(),
+  supportedLanguages: z
+    .array(z.string().trim().min(2).max(10))
+    .max(10)
+    .optional(),
 });
+
+const timeString = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:mm format');
+
+const operatingHourSchema = z.object({
+  dayOfWeek: z.number().int().min(0).max(6),
+  isClosed: z.boolean().optional(),
+  openTime: timeString.optional(),
+  closeTime: timeString.optional(),
+  breakTimes: z
+    .array(
+      z.object({
+        startTime: timeString,
+        endTime: timeString,
+      }),
+    )
+    .max(5)
+    .optional(),
+});
+
 const clinicFields = {
   name: z.string().trim().min(2).max(160),
   code: optionalText(30),
-  clinicType: z.enum(['dermatology', 'aesthetic', 'beauty', 'medical_center', 'other']).optional(),
+  clinicType: z
+    .enum(['dermatology', 'aesthetic', 'beauty', 'medical_center', 'other'])
+    .optional(),
   description: optionalText(2000),
   specialties: z.array(z.string().trim().min(2).max(80)).max(50).optional(),
   contact: contactSchema.optional(),
   address: addressSchema.optional(),
   timezone: z.string().trim().min(1).max(100).default('Africa/Cairo'),
   preferences: preferencesSchema.optional(),
-  countryId: z.string().optional(),
-  governorateId: z.string().optional(),
-  cityId: z.string().optional(),
-  districtId: z.string().optional(),
-  operatingHours: z.array(z.object({
-    dayOfWeek: z.number().int().min(0).max(6),
-    isClosed: z.boolean().optional(),
-    openTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/).optional(),
-    closeTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/).optional(),
-    breakTimes: z.array(z.object({
-      startTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/),
-      endTime: z.string().regex(/^([01]\\d|2[0-3]):[0-5]\\d$/),
-    })).max(5).optional(),
-  })).max(7).optional(),
+  operatingHours: z.array(operatingHourSchema).max(7).optional(),
   branding: brandingSchema.optional(),
-  bookingSettings: z.object({
-    allowOnlineBooking: z.boolean().optional(),
-    requireAppointmentConfirmation: z.boolean().optional(),
-    defaultAppointmentDurationMinutes: z.number().int().min(5).max(480).optional(),
-    bufferMinutes: z.number().int().min(0).max(240).optional(),
-    cancellationWindowHours: z.number().int().min(0).max(720).optional(),
-  }).optional(),
+  bookingSettings: z
+    .object({
+      allowOnlineBooking: z.boolean().optional(),
+      requireAppointmentConfirmation: z.boolean().optional(),
+      defaultAppointmentDurationMinutes: z
+        .number()
+        .int()
+        .min(5)
+        .max(480)
+        .optional(),
+      bufferMinutes: z.number().int().min(0).max(240).optional(),
+      cancellationWindowHours: z.number().int().min(0).max(720).optional(),
+    })
+    .optional(),
   openingDate: z.coerce.date().nullable().optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
 };
 
 export const createTenantSchema = z.object({
   name: z.string().trim().min(2).max(160),
   displayName: optionalText(160),
   legalName: optionalText(200),
-  businessType: z.enum(['single_clinic', 'clinic_group', 'medical_center']).default('single_clinic'),
+  businessType: z
+    .enum(['single_clinic', 'clinic_group', 'medical_center'])
+    .default('single_clinic'),
   description: optionalText(2000),
   industry: optionalText(100),
   contact: contactSchema.optional(),
   address: addressSchema.optional(),
-  legal: z.object({
-    taxNumber: optionalText(100),
-    vatNumber: optionalText(100),
-    commercialRegistrationNumber: optionalText(100),
-  }).optional(),
+  legal: z
+    .object({
+      taxNumber: optionalText(100),
+      vatNumber: optionalText(100),
+      commercialRegistrationNumber: optionalText(100),
+    })
+    .optional(),
   branding: brandingSchema.optional(),
   preferences: preferencesSchema.optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
   owner: z.object({
     name: z.string().trim().min(2).max(160),
     email: z.string().trim().email(),
     password: z.string().min(12).max(128),
   }),
-  initialClinic: z.object(clinicFields).omit({ timezone: true }).extend({
-    timezone: z.string().trim().min(1).max(100).default('Africa/Cairo'),
-  }).optional(),
+  initialClinic: z.object(clinicFields).optional(),
 });
 
-export const updateTenantSchema = z.object({
-  name: z.string().trim().min(2).max(160).optional(),
-  displayName: optionalText(160),
-  legalName: optionalText(200),
-  businessType: z.enum(['single_clinic', 'clinic_group', 'medical_center']).optional(),
-  description: optionalText(2000),
-  industry: optionalText(100),
-  contact: contactSchema.partial().optional(),
-  address: addressSchema.partial().optional(),
-  legal: z.object({
-    taxNumber: optionalText(100),
-    vatNumber: optionalText(100),
-    commercialRegistrationNumber: optionalText(100),
-  }).partial().optional(),
-  branding: brandingSchema.partial().optional(),
-  preferences: preferencesSchema.partial().optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
-}).refine((data) => Object.keys(data).length > 0, { message: 'At least one field must be provided.' });
+export const updateTenantSchema = z
+  .object({
+    name: z.string().trim().min(2).max(160).optional(),
+    displayName: optionalText(160),
+    legalName: optionalText(200),
+    businessType: z
+      .enum(['single_clinic', 'clinic_group', 'medical_center'])
+      .optional(),
+    description: optionalText(2000),
+    industry: optionalText(100),
+    contact: contactSchema.partial().optional(),
+    address: addressSchema.partial().optional(),
+    legal: z
+      .object({
+        taxNumber: optionalText(100),
+        vatNumber: optionalText(100),
+        commercialRegistrationNumber: optionalText(100),
+      })
+      .partial()
+      .optional(),
+    branding: brandingSchema.partial().optional(),
+    preferences: preferencesSchema.partial().optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided.',
+  });
 
-export const tenantStatusSchema = z.object({ status: z.enum(['active', 'suspended']) });
+export const tenantStatusSchema = z.object({
+  status: z.enum(['active', 'suspended']),
+});
 
 export const createClinicSchema = z.object(clinicFields);
-export const updateClinicSchema = z.object({
-  name: clinicFields.name.optional(),
-  status: z.enum(['active', 'suspended']).optional(),
-  code: clinicFields.code,
-  clinicType: clinicFields.clinicType,
-  description: clinicFields.description,
-  specialties: clinicFields.specialties,
-  contact: contactSchema.partial().optional(),
-  address: addressSchema.partial().optional(),
-  timezone: z.string().trim().min(1).max(100).optional(),
-  preferences: preferencesSchema.partial().optional(),
-  countryId: z.string().optional(),
-  governorateId: z.string().optional(),
-  cityId: z.string().optional(),
-  districtId: z.string().optional(),
-  operatingHours: clinicFields.operatingHours,
-  branding: brandingSchema.partial().optional(),
-  bookingSettings: z.object({
-    allowOnlineBooking: z.boolean().optional(),
-    requireAppointmentConfirmation: z.boolean().optional(),
-    defaultAppointmentDurationMinutes: z.number().int().min(5).max(480).optional(),
-    bufferMinutes: z.number().int().min(0).max(240).optional(),
-    cancellationWindowHours: z.number().int().min(0).max(720).optional(),
-  }).optional(),
-  openingDate: z.coerce.date().nullable().optional(),
-  settings: z.record(z.string(), z.unknown()).optional(),
-}).refine((data) => Object.keys(data).length > 0, { message: 'At least one field must be provided.' });
+
+export const updateClinicSchema = z
+  .object({
+    name: clinicFields.name.optional(),
+    status: z.enum(['active', 'suspended']).optional(),
+    code: clinicFields.code,
+    clinicType: clinicFields.clinicType,
+    description: clinicFields.description,
+    specialties: clinicFields.specialties,
+    contact: contactSchema.partial().optional(),
+    address: addressSchema.partial().optional(),
+    timezone: z.string().trim().min(1).max(100).optional(),
+    preferences: preferencesSchema.partial().optional(),
+    countryId: z.string().optional(),
+    governorateId: z.string().optional(),
+    cityId: z.string().optional(),
+    districtId: z.string().optional(),
+    operatingHours: clinicFields.operatingHours,
+    branding: brandingSchema.partial().optional(),
+    bookingSettings: z
+      .object({
+        allowOnlineBooking: z.boolean().optional(),
+        requireAppointmentConfirmation: z.boolean().optional(),
+        defaultAppointmentDurationMinutes: z
+          .number()
+          .int()
+          .min(5)
+          .max(480)
+          .optional(),
+        bufferMinutes: z.number().int().min(0).max(240).optional(),
+        cancellationWindowHours: z.number().int().min(0).max(720).optional(),
+      })
+      .optional(),
+    openingDate: z.coerce.date().nullable().optional(),
+    settings: z.record(z.string(), z.unknown()).optional(),
+  })
+  .refine((data) => Object.keys(data).length > 0, {
+    message: 'At least one field must be provided.',
+  });
 
 export const createBranchSchema = z.object({
   name: z.string().trim().min(2),
@@ -164,10 +214,17 @@ export const upsertSubscriptionSchema = z.object({
     code: z.string().trim().min(1).max(60),
     name: z.string().trim().min(1).max(120),
     amount: z.number().min(0).default(0),
-    currency: z.string().trim().length(3).transform((value) => value.toUpperCase()).default('EGP'),
+    currency: z
+      .string()
+      .trim()
+      .length(3)
+      .transform((value) => value.toUpperCase())
+      .default('EGP'),
   }),
   billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).default('monthly'),
-  status: z.enum(['pending', 'trialing', 'active', 'past_due', 'canceled', 'expired']).default('pending'),
+  status: z
+    .enum(['pending', 'trialing', 'active', 'past_due', 'canceled', 'expired'])
+    .default('pending'),
   trialStartsAt: z.coerce.date().nullable().optional(),
   trialEndsAt: z.coerce.date().nullable().optional(),
   currentPeriodStartsAt: z.coerce.date().nullable().optional(),
@@ -180,7 +237,11 @@ export const upsertSubscriptionSchema = z.object({
 
 export const createPaymentSchema = z.object({
   amount: z.number().min(0),
-  currency: z.string().trim().length(3).transform((value) => value.toUpperCase()),
+  currency: z
+    .string()
+    .trim()
+    .length(3)
+    .transform((value) => value.toUpperCase()),
   status: z.enum(['pending', 'paid', 'failed', 'refunded']),
   method: optionalText(80),
   provider: optionalText(80),
