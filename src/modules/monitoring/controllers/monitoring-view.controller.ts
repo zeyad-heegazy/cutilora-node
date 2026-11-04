@@ -72,7 +72,7 @@ if(token)show();
 
 export const monitoringViewController = {
   show(_req: Request, res: Response) {
-    const html = page.replaceAll('__API_PREFIX__', env.API_PREFIX.replace(/\\/$/, ''));
+    const html = page.replaceAll('__API_PREFIX__', env.API_PREFIX.replace(/\/$/, ''));
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; base-uri 'none'; frame-ancestors 'none'");
