@@ -43,6 +43,7 @@ export const tenancyRepository = {
     return Clinic.findOne({ tenantId, slug, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).select('_id');
   },
   createClinic(data: Record<string, unknown>) { return Clinic.create(data); },
+  deleteClinic(id: string, tenantId: string) { return Clinic.deleteOne({ _id: id, tenantId }); },
   updateClinic(id: string, tenantId: string, data: Record<string, unknown>) {
     return Clinic.findOneAndUpdate({ _id: id, tenantId }, { $set: data }, { new: true, runValidators: true });
   },
