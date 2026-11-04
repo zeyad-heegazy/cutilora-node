@@ -9,13 +9,29 @@ export const createTenantSchema = z.object({
     email: z.string().email(),
     password: z.string().min(12),
   }),
-  initialClinic: z.object({ name: z.string().min(2), slug }).optional(),
+  initialClinic: z.object({ name: z.string().min(2) }).optional(),
 });
 
 export const updateTenantSchema = z.object({
   name: z.string().trim().min(2),
 });
 
-export const tenantStatusSchema = z.object({ status: z.enum(['active', 'suspended']) });
-export const createClinicSchema = z.object({ name: z.string().min(2), slug, timezone: z.string().default('Africa/Cairo'), countryId: z.string().optional(), governorateId: z.string().optional(), cityId: z.string().optional(), districtId: z.string().optional() });
-export const createBranchSchema = z.object({ name: z.string().min(2), slug, address: z.string().optional(), cityId: z.string().optional(), timezone: z.string().default('Africa/Cairo') });
+export const tenantStatusSchema = z.object({
+  status: z.enum(['active', 'suspended']),
+});
+export const createClinicSchema = z.object({
+  name: z.string().min(2),
+  slug,
+  timezone: z.string().default('Africa/Cairo'),
+  countryId: z.string().optional(),
+  governorateId: z.string().optional(),
+  cityId: z.string().optional(),
+  districtId: z.string().optional(),
+});
+export const createBranchSchema = z.object({
+  name: z.string().min(2),
+  slug,
+  address: z.string().optional(),
+  cityId: z.string().optional(),
+  timezone: z.string().default('Africa/Cairo'),
+});
