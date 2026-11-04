@@ -140,7 +140,7 @@ export const platformTenantService = {
         } else update[key] = { ...existingObject, ...input[key] };
       }
     }
-    let updated;
+    let updated: Awaited<ReturnType<typeof tenancyRepository.updateTenant>>;
     try {
       if (input.address && ['countryId', 'governorateId', 'cityId', 'districtId'].some((key) => key in input.address)) {
         await geoService.validateClinicLocation(update.address as Record<string, string>);
