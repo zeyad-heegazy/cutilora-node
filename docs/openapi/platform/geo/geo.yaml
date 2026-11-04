@@ -2,7 +2,7 @@ openapi: 3.0.3
 paths:
   /platform/geo/countries:
     get:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: List countries
       description: Platform administrator only. Supports pagination and search by English name, Arabic name, or code.
       security: [{ platformBearerAuth: [] }]
