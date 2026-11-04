@@ -4,7 +4,7 @@ paths:
     get:
       tags: [Platform - Geo]
       summary: List countries
-      description: Platform administrator only. Supports pagination.
+      description: Platform administrator only. Supports pagination and search by English name, Arabic name, or code.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: page
@@ -13,6 +13,10 @@ paths:
         - name: per_page
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: search
+          in: query
+          description: Case-insensitive search across English name, Arabic name, and code.
+          schema: { type: string, maxLength: 100 }
       responses:
         "200":
           description: Paginated countries
@@ -120,7 +124,7 @@ paths:
     get:
       tags: [Platform - Geo]
       summary: List governorates
-      description: Platform administrator only. Supports pagination and filtering by country_id.
+      description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by country_id.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: page
@@ -129,6 +133,10 @@ paths:
         - name: per_page
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: search
+          in: query
+          description: Case-insensitive search across English name, Arabic name, and code.
+          schema: { type: string, maxLength: 100 }
         - name: country_id
           in: query
           schema: { type: string }
@@ -239,7 +247,7 @@ paths:
     get:
       tags: [Platform - Geo]
       summary: List cities
-      description: Platform administrator only. Supports pagination and filtering by governorate_id.
+      description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by governorate_id.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: page
@@ -248,6 +256,10 @@ paths:
         - name: per_page
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: search
+          in: query
+          description: Case-insensitive search across English name, Arabic name, and code.
+          schema: { type: string, maxLength: 100 }
         - name: governorate_id
           in: query
           schema: { type: string }
@@ -358,7 +370,7 @@ paths:
     get:
       tags: [Platform - Geo]
       summary: List districts
-      description: Platform administrator only. Supports pagination and filtering by city_id.
+      description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by city_id.
       security: [{ bearerAuth: [] }]
       parameters:
         - name: page
@@ -367,6 +379,10 @@ paths:
         - name: per_page
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 15 }
+        - name: search
+          in: query
+          description: Case-insensitive search across English name, Arabic name, and code.
+          schema: { type: string, maxLength: 100 }
         - name: city_id
           in: query
           schema: { type: string }
