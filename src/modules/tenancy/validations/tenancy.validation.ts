@@ -124,6 +124,7 @@ export const tenantStatusSchema = z.object({ status: z.enum(['active', 'suspende
 export const createClinicSchema = z.object(clinicFields);
 export const updateClinicSchema = z.object({
   name: clinicFields.name.optional(),
+  status: z.enum(['active', 'suspended']).optional(),
   code: clinicFields.code,
   clinicType: clinicFields.clinicType,
   description: clinicFields.description,
