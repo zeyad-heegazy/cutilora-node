@@ -93,7 +93,9 @@ export const platformTenantService = {
     if (typeof input.name === 'string') update.slug = await generateUniqueTenantSlug(input.name, id);
     for (const key of ['contact', 'address', 'legal', 'branding', 'preferences', 'settings']) {
       if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
-        update[key] = { ...(current.get(key) ?? {}), ...input[key] };
+        const existingValue = current.get(key);
+        const existingObject = existingValue?.toObject?.() ?? existingValue ?? {};
+        update[key] = { ...existingObject, ...input[key] };
       }
     }
     return tenancyRepository.updateTenant(id, update);
