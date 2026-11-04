@@ -38,39 +38,39 @@ paths:
   /auth/platform/dev/bootstrap-admin:
     $ref: "./openapi/platform/auth/auth.yaml#/paths/~1auth~1platform~1dev~1bootstrap-admin"
   /platform/tenants:
-    $ref: "./openapi/platform/tenants/tenants.yaml#/paths/~1platform~1tenants"
+    $ref: "./openapi/platform/tenants/tenant/tenant.yaml#/paths/~1platform~1tenants"
   /platform/tenants/{tenantId}:
-    $ref: "./openapi/platform/tenants/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}"
+    $ref: "./openapi/platform/tenants/tenant/tenant.yaml#/paths/~1platform~1tenants~1{tenantId}"
   /platform/tenants/{tenantId}/status:
-    $ref: "./openapi/platform/tenants/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}~1status"
+    $ref: "./openapi/platform/tenants/tenant/tenant.yaml#/paths/~1platform~1tenants~1{tenantId}~1status"
   /platform/tenants/{tenantId}/subscription:
-    $ref: "./openapi/platform/tenants/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}~1subscription"
+    $ref: "./openapi/platform/tenants/subscriptions/subscriptions.yaml#/paths/~1platform~1tenants~1{tenantId}~1subscription"
   /platform/tenants/{tenantId}/subscription/payments:
-    $ref: "./openapi/platform/tenants/tenants.yaml#/paths/~1platform~1tenants~1{tenantId}~1subscription~1payments"
+    $ref: "./openapi/platform/tenants/payments/payments.yaml#/paths/~1platform~1tenants~1{tenantId}~1subscription~1payments"
   /platform/geo/countries:
-    $ref: "./openapi/platform/geo/geo.yaml#/paths/~1platform~1geo~1countries"
+    $ref: "./openapi/platform/geo/countries/countries.yaml#/paths/~1platform~1geo~1countries"
   /platform/geo/countries/{countryId}:
-    $ref: "./openapi/platform/geo/geo.yaml#/paths/~1platform~1geo~1countries~1{countryId}"
+    $ref: "./openapi/platform/geo/countries/countries.yaml#/paths/~1platform~1geo~1countries~1{countryId}"
   /platform/geo/governorates:
-    $ref: "./openapi/platform/geo/geo.yaml#/paths/~1platform~1geo~1governorates"
+    $ref: "./openapi/platform/geo/governorates/governorates.yaml#/paths/~1platform~1geo~1governorates"
   /platform/geo/governorates/{governorateId}:
-    $ref: "./openapi/platform/geo/geo.yaml#/paths/~1platform~1geo~1governorates~1{governorateId}"
+    $ref: "./openapi/platform/geo/governorates/governorates.yaml#/paths/~1platform~1geo~1governorates~1{governorateId}"
   /platform/geo/cities:
-    $ref: "./openapi/platform/geo/geo.yaml#/paths/~1platform~1geo~1cities"
+    $ref: "./openapi/platform/geo/cities/cities.yaml#/paths/~1platform~1geo~1cities"
   /platform/geo/cities/{cityId}:
-    $ref: "./openapi/platform/geo/geo.yaml#/paths/~1platform~1geo~1cities~1{cityId}"
+    $ref: "./openapi/platform/geo/cities/cities.yaml#/paths/~1platform~1geo~1cities~1{cityId}"
   /platform/geo/districts:
-    $ref: "./openapi/platform/geo/geo.yaml#/paths/~1platform~1geo~1districts"
+    $ref: "./openapi/platform/geo/districts/districts.yaml#/paths/~1platform~1geo~1districts"
   /platform/geo/districts/{districtId}:
-    $ref: "./openapi/platform/geo/geo.yaml#/paths/~1platform~1geo~1districts~1{districtId}"
+    $ref: "./openapi/platform/geo/districts/districts.yaml#/paths/~1platform~1geo~1districts~1{districtId}"
   /tenant/geo/countries:
-    $ref: "./openapi/tenant/geo/geo.yaml#/paths/~1tenant~1geo~1countries"
+    $ref: "./openapi/tenant/geo/countries/countries.yaml#/paths/~1tenant~1geo~1countries"
   /tenant/geo/governorates:
-    $ref: "./openapi/tenant/geo/geo.yaml#/paths/~1tenant~1geo~1governorates"
+    $ref: "./openapi/tenant/geo/governorates/governorates.yaml#/paths/~1tenant~1geo~1governorates"
   /tenant/geo/cities:
-    $ref: "./openapi/tenant/geo/geo.yaml#/paths/~1tenant~1geo~1cities"
+    $ref: "./openapi/tenant/geo/cities/cities.yaml#/paths/~1tenant~1geo~1cities"
   /tenant/geo/districts:
-    $ref: "./openapi/tenant/geo/geo.yaml#/paths/~1tenant~1geo~1districts"
+    $ref: "./openapi/tenant/geo/districts/districts.yaml#/paths/~1tenant~1geo~1districts"
   /tenant/context:
     $ref: "./openapi/tenant/context/context.yaml#/paths/~1tenant~1context"
   /tenant/clinics:
