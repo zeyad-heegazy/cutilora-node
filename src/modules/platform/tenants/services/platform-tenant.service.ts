@@ -72,15 +72,19 @@ export const platformTenantService = {
       address: input.address,
       legal: input.legal,
       branding: tenantBranding,
-      preferences: input.preferences,
-      settings: input.settings,
+      preferences: deepMerge(DEFAULT_TENANT_PREFERENCES, input.preferences),
+      settings: deepMerge({}, input.settings),
     });
     try {
       if (tenantLogoBase64) {
         storedTenantLogo = await storeBrandingLogo(tenantLogoBase64, 'tenants', String(tenant._id));
         tenant.set('branding.logoUrl', storedTenantLogo);
-        await tenant.save();
       }
+      if (tenantCoverBase64) {
+        storedTenantCover = await storeBrandingCover(tenantCoverBase64, 'tenants', String(tenant._id));
+        tenant.set('branding.coverImageUrl', storedTenantCover);
+      }
+      if (storedTenantLogo || storedTenantCover) await tenant.save();
       let owner = await tenancyRepository.findUserByEmail(input.owner.email);
       if (!owner) owner = await tenancyRepository.createUser({
         name: input.owner.name,
@@ -115,14 +119,20 @@ export const platformTenantService = {
         if (clinicLogoBase64) {
           storedClinicLogo = await storeBrandingLogo(clinicLogoBase64, 'clinics', String(clinic._id));
           clinic.set('branding.logoUrl', storedClinicLogo);
-          await clinic.save();
         }
+        if (clinicCoverBase64) {
+          storedClinicCover = await storeBrandingCover(clinicCoverBase64, 'clinics', String(clinic._id));
+          clinic.set('branding.coverImageUrl', storedClinicCover);
+        }
+        if (clinicLogoBase64 || clinicCoverBase64) await clinic.save();
       }
       return await platformTenantService.getTenantDetails(String(tenant._id));
     } catch (error) {
       await Promise.all([
-        removeBrandingLogo(storedTenantLogo),
-        removeBrandingLogo(storedClinicLogo),
+        removeBrandingImage(storedTenantLogo),
+        removeBrandingImage(storedTenantCover),
+        removeBrandingImage(storedClinicLogo),
+        removeBrandingImage(storedClinicCover),
         tenancyRepository.deleteTenantMemberships(String(tenant._id)),
         tenancyRepository.deleteTenantClinics(String(tenant._id)),
         tenancyRepository.deleteTenantSubscriptionPayments(String(tenant._id)),
@@ -138,7 +148,9 @@ export const platformTenantService = {
     const update: Record<string, unknown> = { ...input };
     if (typeof input.name === 'string') update.slug = await generateUniqueTenantSlug(input.name, id);
     let newLogoUrl = '';
+    let newCoverUrl = '';
     const oldLogoUrl = current.get('branding')?.logoUrl ?? '';
+    const oldCoverUrl = current.get('branding')?.coverImageUrl ?? '';
     for (const key of ['contact', 'address', 'legal', 'branding', 'preferences', 'settings']) {
       if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
         const existingValue = current.get(key);
@@ -149,6 +161,10 @@ export const platformTenantService = {
           if (logoBase64) {
             newLogoUrl = await storeBrandingLogo(logoBase64, 'tenants', id);
             (update.branding as Record<string, unknown>).logoUrl = newLogoUrl;
+          }
+          if (coverImageBase64) {
+            newCoverUrl = await storeBrandingCover(coverImageBase64, 'tenants', id);
+            (update.branding as Record<string, unknown>).coverImageUrl = newCoverUrl;
           }
         } else update[key] = { ...existingObject, ...input[key] };
       }
@@ -163,8 +179,9 @@ export const platformTenantService = {
       await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
       throw error;
     }
-    if (!updated) { await removeBrandingLogo(newLogoUrl); return null; }
-    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingLogo(oldLogoUrl);
+    if (!updated) { await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]); return null; }
+    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingImage(oldLogoUrl);
+    if (newCoverUrl && oldCoverUrl && oldCoverUrl !== newCoverUrl) await removeBrandingImage(oldCoverUrl);
     return platformTenantService.getTenantDetails(id);
   },
   async updateTenantStatus(id: string, status: 'active' | 'suspended') {
