@@ -62,7 +62,7 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: "../../openapi.yaml#/components/schemas/Tenant" }
+                  data: { $ref: "../../openapi.yaml#/components/schemas/TenantDetails" }
         "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
         "409": { $ref: "../../openapi.yaml#/components/responses/Conflict" }
