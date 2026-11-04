@@ -17,3 +17,19 @@ export const geoCreateSchema = z.object({
   city_id: z.string().optional(),
 });
 export const geoUpdateSchema = geoCreateSchema.partial();
+
+export const clinicGeoListSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  per_page: z.coerce.number().int().min(1).max(100).default(15),
+  search: z.string().trim().max(100).optional(),
+  country_id: z.string().optional(),
+  governorate_id: z.string().optional(),
+  city_id: z.string().optional(),
+}).superRefine((value, ctx) => {
+  if (value.city_id && !value.governorate_id && !value.country_id) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['city_id'], message: 'city_id requires governorate_id or country_id.' });
+  }
+  if (value.governorate_id && !value.country_id && value.city_id) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['governorate_id'], message: 'Provide country_id when combining city_id with governorate_id.' });
+  }
+});
