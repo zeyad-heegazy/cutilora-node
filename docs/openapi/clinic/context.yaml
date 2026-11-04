@@ -21,9 +21,9 @@ paths:
                   data:
                     type: object
                     properties:
-                      tenant: { type: object, nullable: true }
-                      clinic: { type: object, nullable: true }
-                      branch: { type: object, nullable: true }
+                      tenant: { allOf: [{ $ref: "../../openapi.yaml#/components/schemas/Tenant" }], nullable: true }
+                      clinic: { allOf: [{ $ref: "../../openapi.yaml#/components/schemas/Clinic" }], nullable: true }
+                      branch: { allOf: [{ $ref: "../../openapi.yaml#/components/schemas/Branch" }], nullable: true }
                       access: { $ref: "../../openapi.yaml#/components/schemas/TenantAccess" }
         "400": { $ref: "../../openapi.yaml#/components/responses/BadRequest" }
         "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
