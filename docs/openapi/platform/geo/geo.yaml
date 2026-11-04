@@ -35,7 +35,7 @@ paths:
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     post:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Create country
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -63,7 +63,7 @@ paths:
         required: true
         schema: { type: string }
     get:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Get country by ID
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -80,7 +80,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Update country
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -103,7 +103,7 @@ paths:
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
     delete:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Delete country
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -122,7 +122,7 @@ paths:
         "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
   /platform/geo/governorates:
     get:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: List governorates
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by country_id.
       security: [{ platformBearerAuth: [] }]
@@ -158,7 +158,7 @@ paths:
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     post:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Create governorate
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -186,7 +186,7 @@ paths:
         required: true
         schema: { type: string }
     get:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Get governorate by ID
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -203,7 +203,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Update governorate
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -226,7 +226,7 @@ paths:
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
     delete:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Delete governorate
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -245,7 +245,7 @@ paths:
         "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
   /platform/geo/cities:
     get:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: List cities
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by governorate_id.
       security: [{ platformBearerAuth: [] }]
@@ -281,7 +281,7 @@ paths:
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     post:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Create city
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -309,7 +309,7 @@ paths:
         required: true
         schema: { type: string }
     get:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Get city by ID
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -326,7 +326,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Update city
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -349,7 +349,7 @@ paths:
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
     delete:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Delete city
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -368,7 +368,7 @@ paths:
         "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
   /platform/geo/districts:
     get:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: List districts
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by city_id.
       security: [{ platformBearerAuth: [] }]
@@ -404,7 +404,7 @@ paths:
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     post:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Create district
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -432,7 +432,7 @@ paths:
         required: true
         schema: { type: string }
     get:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Get district by ID
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -449,7 +449,7 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Update district
       security: [{ platformBearerAuth: [] }]
       requestBody:
@@ -472,7 +472,7 @@ paths:
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "422": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
     delete:
-      tags: [Platform - Geo]
+      tags: [Portal Platform]
       summary: Delete district
       security: [{ platformBearerAuth: [] }]
       responses:
