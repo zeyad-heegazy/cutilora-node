@@ -6,7 +6,9 @@ import { User } from '../../auth/models/user.model.js';
 
 export const tenancyRepository = {
   listTenants() { return Tenant.find().sort({ createdAt: -1 }); },
+  findTenantBySlug(slug: string, excludeId?: string) { return Tenant.findOne({ slug, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).select('_id'); },
   createTenant(data: Record<string, unknown>) { return Tenant.create(data); },
+  updateTenant(id: string, data: { name: string; slug: string }) { return Tenant.findByIdAndUpdate(id, data, { new: true, runValidators: true }); },
   updateTenantStatus(id: string, status: 'active' | 'suspended') { return Tenant.findByIdAndUpdate(id, { status }, { new: true, runValidators: true }); },
   deleteTenant(id: string) { return Tenant.deleteOne({ _id: id }); },
   deleteTenantMemberships(tenantId: string) { return TenantMembership.deleteMany({ tenantId }); },
