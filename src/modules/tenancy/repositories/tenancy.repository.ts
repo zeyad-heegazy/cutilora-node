@@ -2,6 +2,7 @@ import { Tenant } from '../models/tenant.model.js';
 import { Clinic } from '../models/clinic.model.js';
 import { Branch } from '../models/branch.model.js';
 import { Subscription } from '../models/subscription.model.js';
+import { SubscriptionPayment } from '../models/subscription-payment.model.js';
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { User } from '../../auth/models/user.model.js';
 
@@ -27,13 +28,15 @@ export const tenancyRepository = {
     );
   },
   deleteTenantSubscription(tenantId: string) { return Subscription.deleteOne({ tenantId }); },
-  addSubscriptionPayment(tenantId: string, payment: Record<string, unknown>) {
-    return Subscription.findOneAndUpdate(
-      { tenantId },
-      { $push: { paymentHistory: payment } },
-      { new: true, runValidators: true },
-    );
+  async listSubscriptionPayments(tenantId: string) {
+    return SubscriptionPayment.find({ tenantId }).sort({ createdAt: -1 });
   },
+  async addSubscriptionPayment(tenantId: string, payment: Record<string, unknown>) {
+    const subscription = await Subscription.findOne({ tenantId }).select('_id');
+    if (!subscription) return null;
+    return SubscriptionPayment.create({ ...payment, tenantId, subscriptionId: subscription._id });
+  },
+  deleteTenantSubscriptionPayments(tenantId: string) { return SubscriptionPayment.deleteMany({ tenantId }); },
   listClinics(tenantId: string) { return Clinic.find({ tenantId }).sort({ name: 1 }); },
   findClinicById(id: string, tenantId: string) { return Clinic.findOne({ _id: id, tenantId }); },
   findClinicBySlug(tenantId: string, slug: string, excludeId?: string) {
