@@ -6,9 +6,9 @@ paths:
       summary: Resolve active tenant, clinic, and branch context
       security: [{ bearerAuth: [] }]
       parameters:
-        - $ref: "../openapi.yaml#/components/parameters/TenantId"
-        - $ref: "../openapi.yaml#/components/parameters/ClinicId"
-        - $ref: "../openapi.yaml#/components/parameters/BranchId"
+        - $ref: "../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../openapi.yaml#/components/parameters/ClinicId"
+        - $ref: "../../openapi.yaml#/components/parameters/BranchId"
       responses:
         "200":
           description: Resolved context and access scope
@@ -24,7 +24,7 @@ paths:
                       tenant: { type: object, nullable: true }
                       clinic: { type: object, nullable: true }
                       branch: { type: object, nullable: true }
-                      access: { $ref: "../openapi.yaml#/components/schemas/TenantAccess" }
-        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+                      access: { $ref: "../../openapi.yaml#/components/schemas/TenantAccess" }
+        "400": { $ref: "../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
