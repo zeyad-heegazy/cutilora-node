@@ -1,0 +1,10 @@
+import { Router } from 'express';
+import { authenticatePlatform } from '../../auth/middleware/authenticate-platform.js';
+import { geoAdminController } from '../controllers/geo-admin.controller.js';
+export const platformGeoRouter = Router();
+platformGeoRouter.use(authenticatePlatform);
+platformGeoRouter.get('/:resource',geoAdminController.index);
+platformGeoRouter.post('/:resource',geoAdminController.store);
+platformGeoRouter.get('/:resource/:entry',geoAdminController.show);
+platformGeoRouter.patch('/:resource/:entry',geoAdminController.update);
+platformGeoRouter.delete('/:resource/:entry',geoAdminController.destroy);

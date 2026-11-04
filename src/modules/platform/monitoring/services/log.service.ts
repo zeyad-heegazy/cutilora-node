@@ -1,4 +1,4 @@
-import { logRepository } from '../repositories/log.repository.js';
+import { logRepository } from '../../../../shared/observability/log.repository.js';
 const allowedLevels = ['debug', 'info', 'warn', 'error', 'fatal'];
 const allowedCategories = ['http', 'auth', 'authorization', 'database', 'business', 'security', 'system', 'application'];
 export const logService = {
