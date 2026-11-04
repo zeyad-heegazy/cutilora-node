@@ -17,10 +17,10 @@ paths:
                   data:
                     {
                       type: array,
-                      items: { $ref: "../openapi.yaml#/components/schemas/Tenant" },
+                      items: { $ref: "../../openapi.yaml#/components/schemas/Tenant" },
                     }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
     post:
       tags: [Platform - Tenants]
       summary: Create tenant
@@ -59,11 +59,11 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: "../openapi.yaml#/components/schemas/Tenant" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
-        "409": { $ref: "../openapi.yaml#/components/responses/Conflict" }
-        "422": { $ref: "../openapi.yaml#/components/responses/ValidationError" }
+                  data: { $ref: "../../openapi.yaml#/components/schemas/Tenant" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { $ref: "../../openapi.yaml#/components/responses/Conflict" }
+        "422": { $ref: "../../openapi.yaml#/components/responses/ValidationError" }
   /platform/tenants/{tenantId}/status:
     patch:
       tags: [Platform - Tenants]
@@ -92,8 +92,8 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: "../openapi.yaml#/components/schemas/Tenant" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
-        "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
-        "422": { $ref: "../openapi.yaml#/components/responses/ValidationError" }
+                  data: { $ref: "../../openapi.yaml#/components/schemas/Tenant" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../openapi.yaml#/components/responses/NotFound" }
+        "422": { $ref: "../../openapi.yaml#/components/responses/ValidationError" }
