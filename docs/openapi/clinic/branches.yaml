@@ -1,0 +1,63 @@
+openapi: 3.0.3
+  /tenant/branches:
+    get:
+      tags: [Branches]
+      summary: List branches in current clinic
+      description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - $ref: "../openapi.yaml#/components/parameters/BranchId"
+      responses:
+        "200":
+          description: Branch list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "../openapi.yaml#/components/schemas/Branch" },
+                    }
+        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+    post:
+      tags: [Branches]
+      summary: Create branch in current clinic
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - $ref: "../openapi.yaml#/components/parameters/BranchId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug]
+              properties:
+                name: { type: string, minLength: 2 }
+                slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+                address: { type: string }
+                cityId: { type: string }
+                timezone: { type: string, default: Africa/Cairo }
+      responses:
+        "201":
+          description: Branch created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../openapi.yaml#/components/schemas/Branch" }
+        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+        "422": { $ref: "../openapi.yaml#/components/responses/ValidationError" }

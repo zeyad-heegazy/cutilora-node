@@ -1,0 +1,98 @@
+openapi: 3.0.3
+  /platform/tenants:
+    get:
+      tags: [Platform - Tenants]
+      summary: List tenants
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Tenant list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    {
+                      type: array,
+                      items: { $ref: "../openapi.yaml#/components/schemas/Tenant" },
+                    }
+        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+    post:
+      tags: [Platform - Tenants]
+      summary: Create tenant
+      description: Creates a tenant, its owner membership, and optionally its first clinic.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, slug, owner]
+              properties:
+                name: { type: string, minLength: 2 }
+                slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+                owner:
+                  type: object
+                  required: [name, email, password]
+                  properties:
+                    name: { type: string, minLength: 2 }
+                    email: { type: string, format: email }
+                    password: { type: string, format: password, minLength: 12 }
+                initialClinic:
+                  type: object
+                  required: [name, slug]
+                  properties:
+                    name: { type: string, minLength: 2 }
+                    slug:
+                      { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+      responses:
+        "201":
+          description: Tenant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../openapi.yaml#/components/schemas/Tenant" }
+        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+        "409": { $ref: "../openapi.yaml#/components/responses/Conflict" }
+        "422": { $ref: "../openapi.yaml#/components/responses/ValidationError" }
+  /platform/tenants/{tenantId}/status:
+    patch:
+      tags: [Platform - Tenants]
+      summary: Update tenant status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: tenantId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, suspended] }
+      responses:
+        "200":
+          description: Tenant status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../openapi.yaml#/components/schemas/Tenant" }
+        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+        "422": { $ref: "../openapi.yaml#/components/responses/ValidationError" }
