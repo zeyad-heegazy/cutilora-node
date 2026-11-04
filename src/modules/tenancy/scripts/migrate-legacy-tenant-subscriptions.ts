@@ -16,15 +16,16 @@ async function main() {
       }
 
       const code = legacyPlan.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'legacy-plan';
+      const legacyCurrency = typeof tenant.settings?.currency === 'string' ? tenant.settings.currency.toUpperCase() : 'XXX';
       await Subscription.updateOne(
         { tenantId: tenant._id },
         {
           $setOnInsert: {
             tenantId: tenant._id,
-            plan: { code, name: legacyPlan, amount: 0, currency: 'EGP' },
+            plan: { code, name: legacyPlan, amount: 0, currency: legacyCurrency },
             billingCycle: 'monthly',
             status: 'pending',
-            notes: 'Migrated from legacy tenant.plan. Confirm billing details before activation.',
+            notes: 'Migrated from legacy tenant.plan. Amount and billing cycle are placeholders. Confirm plan, price, currency, and billing cycle before activation.',
           },
         },
         { upsert: true },
