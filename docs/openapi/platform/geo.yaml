@@ -5,7 +5,7 @@ paths:
       tags: [Platform - Geo]
       summary: List countries
       description: Platform administrator only. Supports pagination and search by English name, Arabic name, or code.
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       parameters:
         - name: page
           in: query
@@ -37,7 +37,7 @@ paths:
     post:
       tags: [Platform - Geo]
       summary: Create country
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -65,7 +65,7 @@ paths:
     get:
       tags: [Platform - Geo]
       summary: Get country by ID
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: Country details
@@ -82,7 +82,7 @@ paths:
     patch:
       tags: [Platform - Geo]
       summary: Update country
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -105,7 +105,7 @@ paths:
     delete:
       tags: [Platform - Geo]
       summary: Delete country
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: Country deleted
@@ -125,7 +125,7 @@ paths:
       tags: [Platform - Geo]
       summary: List governorates
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by country_id.
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       parameters:
         - name: page
           in: query
@@ -160,7 +160,7 @@ paths:
     post:
       tags: [Platform - Geo]
       summary: Create governorate
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -188,7 +188,7 @@ paths:
     get:
       tags: [Platform - Geo]
       summary: Get governorate by ID
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: Governorate details
@@ -205,7 +205,7 @@ paths:
     patch:
       tags: [Platform - Geo]
       summary: Update governorate
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -228,7 +228,7 @@ paths:
     delete:
       tags: [Platform - Geo]
       summary: Delete governorate
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: Governorate deleted
@@ -248,7 +248,7 @@ paths:
       tags: [Platform - Geo]
       summary: List cities
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by governorate_id.
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       parameters:
         - name: page
           in: query
@@ -283,7 +283,7 @@ paths:
     post:
       tags: [Platform - Geo]
       summary: Create city
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -311,7 +311,7 @@ paths:
     get:
       tags: [Platform - Geo]
       summary: Get city by ID
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: City details
@@ -328,7 +328,7 @@ paths:
     patch:
       tags: [Platform - Geo]
       summary: Update city
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -351,7 +351,7 @@ paths:
     delete:
       tags: [Platform - Geo]
       summary: Delete city
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: City deleted
@@ -371,7 +371,7 @@ paths:
       tags: [Platform - Geo]
       summary: List districts
       description: Platform administrator only. Supports pagination, search by English name, Arabic name, or code, and filtering by city_id.
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       parameters:
         - name: page
           in: query
@@ -406,7 +406,7 @@ paths:
     post:
       tags: [Platform - Geo]
       summary: Create district
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -434,7 +434,7 @@ paths:
     get:
       tags: [Platform - Geo]
       summary: Get district by ID
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: District details
@@ -451,7 +451,7 @@ paths:
     patch:
       tags: [Platform - Geo]
       summary: Update district
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       requestBody:
         required: true
         content:
@@ -474,7 +474,7 @@ paths:
     delete:
       tags: [Platform - Geo]
       summary: Delete district
-      security: [{ bearerAuth: [] }]
+      security: [{ platformBearerAuth: [] }]
       responses:
         "200":
           description: District deleted
