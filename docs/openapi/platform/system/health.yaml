@@ -1,0 +1,13 @@
+openapi: 3.0.3
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        "200":
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                $ref: "../../../openapi.yaml#/components/schemas/HealthResponse"
