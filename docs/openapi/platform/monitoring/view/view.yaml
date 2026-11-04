@@ -3,6 +3,7 @@ paths:
   /platform/monitoring/view:
     get:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Monitoring/View"
       summary: Open monitoring dashboard
       description: Serves the browser-based dashboard. Log API endpoints require platform authentication.
       responses:
