@@ -4,7 +4,6 @@ paths:
     put:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Subscriptions"
-      x-apidog-folder: "Platform/Subscriptions"
       summary: Create or replace tenant subscription
       description: Stores the commercial subscription snapshot. No payment gateway is charged by this endpoint.
       security: [{ platformBearerAuth: [] }]
