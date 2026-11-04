@@ -28,7 +28,7 @@ paths:
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     post:
-      tags: [Clinic - Branches]
+      tags: [Branches]
       summary: Create branch in current clinic
       security: [{ bearerAuth: [] }]
       parameters:
