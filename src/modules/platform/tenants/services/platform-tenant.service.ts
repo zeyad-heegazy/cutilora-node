@@ -26,14 +26,14 @@ async function generateUniqueTenantSlug(name: string, excludeId?: string): Promi
 
 export const platformTenantService = {
   listTenants() { return tenancyRepository.listTenants(); },
-  async createTenant(input: { name: string; owner: { name: string; email: string; password: string }; initialClinic?: { name: string; slug: string } }) {
+  async createTenant(input: { name: string; owner: { name: string; email: string; password: string }; initialClinic?: { name: string } }) {
     const slug = await generateUniqueTenantSlug(input.name);
     const tenant = await tenancyRepository.createTenant({ name: input.name, slug });
     try {
       let owner = await tenancyRepository.findUserByEmail(input.owner.email);
       if (!owner) owner = await tenancyRepository.createUser({ name: input.owner.name, email: input.owner.email.toLowerCase(), passwordHash: await hashPassword(input.owner.password) });
       await tenancyRepository.createMembership({ userId: owner._id, tenantId: tenant._id, role: 'tenant_owner', scope: 'tenant', status: 'active' });
-      if (input.initialClinic) await tenancyRepository.createClinic({ tenantId: tenant._id, ...input.initialClinic });
+      if (input.initialClinic) {\n        const clinicBase = slugify(input.initialClinic.name) || 'clinic';\n        let clinicSlug = clinicBase;\n        let suffix = 2;\n        while (await tenancyRepository.findClinicBySlug(String(tenant._id), clinicSlug)) {\n          clinicSlug = `${clinicBase}-${suffix++}`;\n        }\n        await tenancyRepository.createClinic({ tenantId: tenant._id, ...input.initialClinic, slug: clinicSlug });\n      }
       return tenant;
     } catch (error) {
       await Promise.all([tenancyRepository.deleteTenantMemberships(String(tenant._id)), tenancyRepository.deleteTenantClinics(String(tenant._id)), tenancyRepository.deleteTenant(String(tenant._id))]);
