@@ -1,0 +1,13 @@
+openapi: 3.0.3
+paths:
+  /platform/monitoring/view:
+    get:
+      tags: [Portal Platform]
+      summary: Open monitoring dashboard
+      description: Serves the browser-based dashboard. Log API endpoints require platform authentication.
+      responses:
+        "200":
+          description: Monitoring dashboard HTML
+          content:
+            text/html:
+              schema: { type: string }
