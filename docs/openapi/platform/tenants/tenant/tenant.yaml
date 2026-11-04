@@ -5,6 +5,7 @@ paths:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Tenants"
       x-apidog-folder: "Platform/Tenants"
+      x-apidog-folder: "Platform/Tenants"
       summary: List tenants
       security: [{ platformBearerAuth: [] }]
       responses:
@@ -21,6 +22,7 @@ paths:
         "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
     post:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Tenants"
       x-apidog-folder: "Platform/Tenants"
       x-apidog-folder: "Platform/Tenants"
       summary: Create tenant and owner
@@ -76,6 +78,7 @@ paths:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Tenants"
       x-apidog-folder: "Platform/Tenants"
+      x-apidog-folder: "Platform/Tenants"
       summary: Get tenant details
       description: Returns tenant profile, all clinics, and its current subscription with payment history.
       security: [{ platformBearerAuth: [] }]
@@ -104,6 +107,7 @@ paths:
       tags: [Portal Platform]
       x-apidog-folder: "Platform/Tenants"
       x-apidog-folder: "Platform/Tenants"
+      x-apidog-folder: "Platform/Tenants"
       summary: Partially update tenant profile
       description: All supplied fields are updated. Nested objects are merged. Changing name regenerates the server-controlled slug.
       security: [{ platformBearerAuth: [] }]
@@ -130,6 +134,7 @@ paths:
   /platform/tenants/{tenantId}/status:
     patch:
       tags: [Portal Platform]
+      x-apidog-folder: "Platform/Tenants"
       x-apidog-folder: "Platform/Tenants"
       x-apidog-folder: "Platform/Tenants"
       summary: Update tenant status
