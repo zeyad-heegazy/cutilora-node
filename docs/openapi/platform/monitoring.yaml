@@ -32,9 +32,9 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { success: { type: boolean }, data: { type: object, description: Log list and pagination result } } }
-        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+        "400": { $ref: "../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
   /platform/monitoring/logs/stats:
     get:
       tags: [Platform - Monitoring]
@@ -49,9 +49,9 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { success: { type: boolean }, data: { type: object } } }
-        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+        "400": { $ref: "../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
   /platform/monitoring/logs/timeline:
     get:
       tags: [Platform - Monitoring]
@@ -67,9 +67,9 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { success: { type: boolean }, data: { type: object } } }
-        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
+        "400": { $ref: "../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
   /platform/monitoring/logs/{id}:
     get:
       tags: [Platform - Monitoring]
@@ -83,7 +83,7 @@ paths:
           content:
             application/json:
               schema: { type: object, properties: { success: { type: boolean }, data: { type: object } } }
-        "400": { $ref: "../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../openapi.yaml#/components/responses/Forbidden" }
-        "404": { $ref: "../openapi.yaml#/components/responses/NotFound" }
+        "400": { $ref: "../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../openapi.yaml#/components/responses/NotFound" }
