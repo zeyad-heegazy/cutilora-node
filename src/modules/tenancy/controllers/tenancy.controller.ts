@@ -3,7 +3,7 @@ import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRoleCatalog, getTenantRolePermissions } from '../middleware/tenant-permissions.js';
 import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
-import { authService } from '../../auth/services/auth.service.js';
+import { userSessionService } from '../../auth/services/user-session.service.js';
 
 export const tenancyController = {
   async getProfile(req: Request, res: Response, next: NextFunction) {
@@ -93,7 +93,7 @@ export const tenancyController = {
         String(req.params.userId ?? ''),
       );
       if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_USER_NOT_FOUND', message: 'User not found in this tenant.' } });
-      const sessions = await authService.listUserSessionSummaries(String(req.params.userId ?? ''));
+      const sessions = await userSessionService.listSummaries(String(req.params.userId ?? ''));
       res.json({ success: true, data: { ...item, sessions } });
     } catch (e) { next(e); }
   },
@@ -103,7 +103,7 @@ export const tenancyController = {
       const sessionId = String(req.params.sessionId ?? '');
       const item = await tenancyService.getTenantUserDetails(req.tenantContext!.tenantId, userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_USER_NOT_FOUND', message: 'User not found in this tenant.' } });
-      const revoked = await authService.revokeUserSession(userId, sessionId);
+      const revoked = await userSessionService.revoke(userId, sessionId);
       if (!revoked) return res.status(404).json({ success: false, error: { code: 'SESSION_NOT_FOUND', message: 'Active user session not found.' } });
       res.json({ success: true, data: { sessionId: revoked.sessionId, revokedAt: revoked.revokedAt } });
     } catch (e) { next(e); }
