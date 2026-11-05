@@ -3,6 +3,7 @@ import { TenantRole } from '../models/tenant-role.model.js';
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { Branch } from '../models/branch.model.js';
+import { Clinic } from '../models/clinic.model.js';
 import { getTenantRolePermissions } from './tenant-access.service.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
 import { hasScopedPermission, type PermissionGrant } from '../../../shared/authorization/permission.engine.js';
@@ -72,12 +73,11 @@ async function assertActorCanGrant(tenantId: string, actorId: string, actorClini
 async function validateGrantTargets(tenantId: string, grants: PermissionGrant[]) {
   for (const grant of grants) {
     validateGrantShape(grant, grant.scope);
-    if (grant.clinicId && !await Branch.exists({ _id: grant.branchId, tenantId, clinicId: grant.clinicId, status: 'active' }).then((found) => grant.scope !== 'branch' || Boolean(found))) {
-      fail(400, 'PERMISSION_TARGET_INVALID', 'The selected branch must be active and belong to the selected clinic and tenant.');
+    if (grant.scope === 'clinic' && !await Clinic.exists({ _id: grant.clinicId, tenantId, status: 'active' })) {
+      fail(400, 'PERMISSION_TARGET_INVALID', 'The selected clinic must be active and belong to this tenant.');
     }
-    if (grant.scope === 'clinic') {
-      const { Clinic } = await import('../models/clinic.model.js');
-      if (!await Clinic.exists({ _id: grant.clinicId, tenantId, status: 'active' })) fail(400, 'PERMISSION_TARGET_INVALID', 'The selected clinic must be active and belong to this tenant.');
+    if (grant.scope === 'branch' && !await Branch.exists({ _id: grant.branchId, tenantId, clinicId: grant.clinicId, status: 'active' })) {
+      fail(400, 'PERMISSION_TARGET_INVALID', 'The selected branch must be active and belong to the selected clinic and tenant.');
     }
   }
 }
