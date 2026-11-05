@@ -17,4 +17,5 @@ const schema = new Schema({
 }, { timestamps: true, minimize: false });
 
 schema.index({ tenantId: 1, status: 1, category: 1, createdAt: -1 });
+schema.index({ tenantId: 1, replacesDocumentId: 1 }, { unique: true, partialFilterExpression: { replacesDocumentId: { $type: 'objectId' } } });
 export const TenantDocument = (models.TenantDocument || model('TenantDocument', schema)) as Model<any>;
