@@ -4,6 +4,7 @@ import {
   createClinicSchema,
   updateBranchSchema,
   branchLifecycleReasonSchema,
+  updateTenantConfigurationSchema,
 } from '../../src/modules/tenancy/validations/tenancy.validation.js';
 
 describe('tenancy request validation', () => {
@@ -16,6 +17,12 @@ describe('tenancy request validation', () => {
       intake: { requireConsent: true },
       customFlag: 'enabled',
     });
+  });
+
+  it('prevents tenant configuration from writing platform or computed configuration layers', () => {
+    expect(updateTenantConfigurationSchema.safeParse({ values: { locale: 'ar' } }).success).toBe(true);
+    expect(updateTenantConfigurationSchema.safeParse({ values: { platformDefaults: { bookingSettings: {} } } }).success).toBe(false);
+    expect(updateTenantConfigurationSchema.safeParse({ values: { effectiveValues: {} } }).success).toBe(false);
   });
 
   it('allows a branch slug to be generated from its name', () => {

@@ -4,7 +4,7 @@ import { TenantConfiguration } from '../models/tenant-configuration.model.js';
 import { Clinic } from '../models/clinic.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 
-type TemplateType = 'service' | 'treatment' | 'message' | 'notification' | 'appointment_policy' | 'cancellation_policy' | 'rescheduling_policy' | 'operational_preferences';
+type TemplateType = 'service_category' | 'treatment_category' | 'service' | 'treatment' | 'message' | 'notification' | 'appointment_policy' | 'cancellation_policy' | 'rescheduling_policy' | 'operational_preferences';
 type PublishInput = { applyTo: 'new_clinics' | 'all' | 'selected'; clinicIds?: string[]; confirm: true };
 
 function snapshot(template: any) {

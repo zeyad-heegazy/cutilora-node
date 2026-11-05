@@ -34,6 +34,15 @@ const clinicId = '64b000000000000000000003';
 describe('tenant shared configuration service', () => {
   beforeEach(() => vi.resetAllMocks());
 
+  it('returns read-only platform defaults and identifies the source of effective tenant settings', async () => {
+    vi.mocked(tenancyRepository.findTenantConfiguration).mockResolvedValue({ version: 2, values: { bookingSettings: { defaultAppointmentDurationMinutes: 45 } } } as any);
+    const result = await tenancyService.getTenantConfiguration(tenantId);
+    expect(result.platformDefaults.bookingSettings.defaultAppointmentDurationMinutes).toBe(30);
+    expect(result.effectiveValues.bookingSettings.defaultAppointmentDurationMinutes).toBe(45);
+    expect(result.sources['bookingSettings.defaultAppointmentDurationMinutes']).toBe('tenant_default');
+    expect(result.sources['bookingSettings.bufferMinutes']).toBe('platform_default');
+  });
+
   it('updates configuration with optimistic versioning and preserves existing nested defaults', async () => {
     vi.mocked(tenancyRepository.findTenantConfiguration).mockResolvedValue({
       version: 3,

@@ -129,7 +129,7 @@ const clinicFields = {
   address: addressSchema.optional(),
   timezone: timezoneSchema.default('Africa/Cairo'),
   preferences: preferencesSchema.optional(),
-  settings: z.record(z.unknown()).refine((settings) => !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides'].some((key) => key in settings), 'Reserved organization configuration keys cannot be changed through clinic settings.').optional(),
+  settings: z.record(z.unknown()).refine((settings) => !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides', 'platformDefaults', 'effectiveValues', 'sources'].some((key) => key in settings), 'Reserved organization configuration keys cannot be changed through clinic settings.').optional(),
   operatingHours: operatingHoursArraySchema.optional(),
   branding: brandingSchema.optional(),
   bookingSettings: z
@@ -222,7 +222,7 @@ export const updateClinicSchema = z
     address: addressSchema.partial().optional(),
     timezone: timezoneSchema.optional(),
     preferences: preferencesSchema.partial().optional(),
-    settings: z.record(z.unknown()).refine((settings) => !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides'].some((key) => key in settings), 'Reserved organization configuration keys cannot be changed through clinic settings.').optional(),
+    settings: z.record(z.unknown()).refine((settings) => !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides', 'platformDefaults', 'effectiveValues', 'sources'].some((key) => key in settings), 'Reserved organization configuration keys cannot be changed through clinic settings.').optional(),
     countryId: z.string().optional(),
     governorateId: z.string().optional(),
     cityId: z.string().optional(),
@@ -419,7 +419,7 @@ export const tenantAuditQuerySchema = z.object({
 });
 
 const configurationValuesSchema = z.record(z.unknown()).refine((values) =>
-  !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides'].some((key) => key in values),
+  !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides', 'platformDefaults', 'effectiveValues', 'sources'].some((key) => key in values),
   'Reserved configuration keys cannot be supplied.',
 );
 export const updateTenantConfigurationSchema = z.object({

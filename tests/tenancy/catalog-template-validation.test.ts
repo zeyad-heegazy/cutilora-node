@@ -14,6 +14,11 @@ describe('tenant catalog template validation', () => {
     })).toMatchObject({ type: 'service', name: 'Laser Hair Removal' });
   });
 
+  it('supports shared service and treatment categories as distinct template types', () => {
+    expect(createCatalogTemplateSchema.safeParse({ type: 'service_category', name: 'Laser', content: { label: 'Laser' } }).success).toBe(true);
+    expect(createCatalogTemplateSchema.safeParse({ type: 'treatment_category', name: 'Skin', content: { label: 'Skin' } }).success).toBe(true);
+  });
+
   it('rejects unknown template types and content larger than 64 KB', () => {
     expect(createCatalogTemplateSchema.safeParse({
       type: 'unknown', name: 'Bad type', content: {},

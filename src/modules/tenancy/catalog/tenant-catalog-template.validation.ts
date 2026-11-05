@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const catalogTemplateTypeSchema = z.enum([
-  'service', 'treatment', 'message', 'notification',
+  'service_category', 'treatment_category', 'service', 'treatment', 'message', 'notification',
   'appointment_policy', 'cancellation_policy', 'rescheduling_policy', 'operational_preferences',
 ]);
 

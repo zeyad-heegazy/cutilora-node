@@ -8,7 +8,7 @@ paths:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
         - in: query
           name: type
-          schema: { type: string, enum: [service, treatment, message, notification, appointment_policy, cancellation_policy, rescheduling_policy, operational_preferences] }
+          schema: { type: string, enum: [service_category, treatment_category, service, treatment, message, notification, appointment_policy, cancellation_policy, rescheduling_policy, operational_preferences] }
         - in: query
           name: status
           schema: { type: string, enum: [draft, published, archived] }
@@ -38,7 +38,7 @@ paths:
               type: object
               required: [type, name, content]
               properties:
-                type: { type: string, enum: [service, treatment, message, notification, appointment_policy, cancellation_policy, rescheduling_policy, operational_preferences] }
+                type: { type: string, enum: [service_category, treatment_category, service, treatment, message, notification, appointment_policy, cancellation_policy, rescheduling_policy, operational_preferences] }
                 name: { type: string, minLength: 2, maxLength: 160 }
                 description: { type: string, maxLength: 1000 }
                 content: { type: object, description: JSON template payload; maximum 64 KB }

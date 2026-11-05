@@ -14,7 +14,7 @@ const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
   type: {
     type: String,
-    enum: ['service', 'treatment', 'message', 'notification', 'appointment_policy', 'cancellation_policy', 'rescheduling_policy', 'operational_preferences'],
+    enum: ['service_category', 'treatment_category', 'service', 'treatment', 'message', 'notification', 'appointment_policy', 'cancellation_policy', 'rescheduling_policy', 'operational_preferences'],
     required: true,
   },
   name: { type: String, required: true, trim: true, maxlength: 160 },
