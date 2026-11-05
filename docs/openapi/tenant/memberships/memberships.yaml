@@ -1,5 +1,40 @@
 paths:
   /tenant/roles:
+    post:
+      tags: [Tenant Access Control]
+      summary: Create a tenant custom role
+      description: Creates a tenant-owned role with explicit tenant, clinic or branch permission grants. Every permission must exist in the catalog, every target must belong to the tenant, and the actor cannot grant beyond their own effective authority.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scope, permissions]
+              properties:
+                key: { type: string, minLength: 2, maxLength: 80 }
+                name: { type: string, minLength: 2, maxLength: 120 }
+                description: { type: string, maxLength: 500 }
+                scope: { type: string, enum: [tenant, clinic, branch] }
+                permissions:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [permission, scope]
+                    properties:
+                      permission: { type: string, maxLength: 120 }
+                      scope: { type: string, enum: [tenant, clinic, branch] }
+                      clinicId: { type: string, nullable: true }
+                      branchId: { type: string, nullable: true }
+      responses:
+        "201": { description: Tenant custom role created and audited }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: Tenant role key already exists }
     get:
       tags: [Tenant Memberships]
       x-apidog-folder: "Tenant/Users and Memberships"
@@ -68,7 +103,7 @@ paths:
                 name: { type: string, minLength: 2, maxLength: 120 }
                 description: { type: string, maxLength: 500 }
                 clinicId: { type: string, description: Required when cloning a clinic-scoped template }
-                branchIds: { type: array, maxItems: 50, items: { type: string }, description: Required when cloning a branch-scoped template }
+                branchIds: { type: array, maxItems: 20, items: { type: string }, description: Required when cloning a branch-scoped template }
       responses:
         "201": { description: Cloned tenant-owned role from a custom role or starter template }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
@@ -76,7 +111,7 @@ paths:
     post:
       tags: [Tenant Access Control]
       summary: Deactivate an unused custom role
-      description: A role assigned to active or invited memberships cannot be deactivated.
+      description: A role referenced by any membership, including suspended memberships, cannot be deactivated.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
