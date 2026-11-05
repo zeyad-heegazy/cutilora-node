@@ -3,6 +3,7 @@ import { authenticate } from '../auth/middleware/authenticate.js';
 import { resolveTenantContext } from '../tenancy/middleware/tenant-context.js';
 import { requireTenantPermission } from '../tenancy/middleware/tenant-permissions.js';
 import { clinicFinanceController } from './clinic-finance.controller.js';
+import { cashSessionController } from './cash-session.controller.js';
 
 export const clinicFinanceRouter = Router();
 clinicFinanceRouter.use(authenticate, resolveTenantContext);
@@ -20,3 +21,9 @@ clinicFinanceRouter.get('/expenses', requireTenantPermission('finance.expenses.r
 clinicFinanceRouter.post('/expenses', requireTenantPermission('finance.expenses.manage'), clinicFinanceController.createExpense);
 clinicFinanceRouter.post('/expenses/:expenseId/pay', requireTenantPermission('finance.expenses.manage'), clinicFinanceController.payExpense);
 clinicFinanceRouter.post('/expenses/:expenseId/void', requireTenantPermission('finance.expenses.manage'), clinicFinanceController.voidExpense);
+
+clinicFinanceRouter.get('/cash-sessions/open', requireTenantPermission('finance.cash.read'), cashSessionController.getOpen);
+clinicFinanceRouter.post('/cash-sessions', requireTenantPermission('finance.cash.manage'), cashSessionController.open);
+clinicFinanceRouter.post('/cash-sessions/:sessionId/movements', requireTenantPermission('finance.cash.manage'), cashSessionController.addMovement);
+clinicFinanceRouter.post('/cash-sessions/:sessionId/close', requireTenantPermission('finance.cash.manage'), cashSessionController.close);
+clinicFinanceRouter.post('/cash-sessions/:sessionId/approve', requireTenantPermission('finance.cash.approve'), cashSessionController.approve);
