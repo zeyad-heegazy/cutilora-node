@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -41,8 +41,9 @@ export const tenancyController = {
   },
   async listTenantInvitations(req: Request, res: Response, next: NextFunction) {
     try {
-      const items = await tenancyService.listTenantInvitations(req.tenantContext!.tenantId);
-      res.json({ success: true, data: items });
+      const query = tenantInvitationListQuerySchema.parse(req.query);
+      const result = await tenancyService.listTenantInvitations(req.tenantContext!.tenantId, query);
+      res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
   async createTenantInvitation(req: Request, res: Response, next: NextFunction) {
