@@ -98,6 +98,12 @@ export const tenancyService = {
       updatedBy: userId,
     });
   },
+  getDashboardCounts(tenantId: string) {
+    return tenancyRepository.getDashboardCounts(tenantId);
+  },
+  listDashboardClinics(tenantId: string) {
+    return tenancyRepository.listDashboardClinics(tenantId);
+  },
   getContext(context: { tenantId: string; clinicId: string | null; branchId: string | null }) {
     return tenancyRepository.getTenantContext(context.tenantId, context.clinicId, context.branchId);
   },
