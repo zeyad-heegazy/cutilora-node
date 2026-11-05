@@ -531,7 +531,12 @@ export const tenancyService = {
     const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
     if (!branch) return null;
     const currentSettings = branch.settings?.toObject?.() ?? branch.settings ?? {};
-    return this.updateBranch(branchId, { settings: deepMerge(currentSettings, settings) }, tenantId, clinicId, userId);
+    const updated = await tenancyRepository.updateBranch(branchId, tenantId, clinicId, {
+      settings: deepMerge(currentSettings, settings),
+      updatedBy: userId,
+    });
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.settings.updated', targetType: 'branch', targetId: branchId, clinicId, metadata: { changedKeys: Object.keys(settings) } });
+    return updated;
   },
   async createBranch(input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
