@@ -67,3 +67,10 @@ export function requireTenantRoles(...roles: string[]) {
     next();
   };
 }
+
+export function requireTenantScope(req: Request, res: Response, next: NextFunction) {
+  if (!req.tenantContext || req.tenantContext.scope !== 'tenant') {
+    return deny(res, 403, 'TENANT_SCOPE_REQUIRED', 'This operation requires tenant-wide access.');
+  }
+  next();
+}
