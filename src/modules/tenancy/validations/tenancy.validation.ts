@@ -467,6 +467,7 @@ export const clinicListQuerySchema = z.object({
 });
 
 export const branchListQuerySchema = z.object({
+  clinicId: z.string().regex(/^[a-f0-9]{24}$/i).optional(),
   search: z.string().trim().min(1).max(100).optional(),
   status: z.enum(['draft', 'active', 'temporarily_closed', 'suspended', 'closed']).optional(),
   page: z.coerce.number().int().min(1).default(1),
