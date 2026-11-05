@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
+import { getTenantRolePermissions } from '../middleware/tenant-permissions.js';
 import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
@@ -201,6 +202,10 @@ export const tenancyController = {
       const query = clinicGeoListSchema.parse(req.query);
       res.json({ success: true, ...await tenancyService.listGeo(resource, query) });
     } catch (e) { next(e); }
+  },
+  async getPermissions(req: Request, res: Response) {
+    const context = req.tenantContext!;
+    res.json({ success: true, data: { role: context.role, scope: context.scope, permissions: getTenantRolePermissions(context.role) } });
   },
   async context(req: Request, res: Response, next: NextFunction) {
     try {
