@@ -10,7 +10,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     listBranches: vi.fn(),
     getDashboardCounts: vi.fn().mockResolvedValue({ clinics: { total: 0 }, branches: { total: 0 }, activeMembers: 0, pendingInvitations: 0 }),
     findSubscriptionByTenantId: vi.fn().mockResolvedValue(null),
-    acquireTenantEntitlementLock: vi.fn().mockResolvedValue({ _id: tenantId }),
+    acquireTenantEntitlementLock: vi.fn().mockResolvedValue({ _id: 'tenant-1' }),
     releaseTenantEntitlementLock: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
   },
 }));
