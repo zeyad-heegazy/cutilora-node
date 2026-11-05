@@ -207,13 +207,25 @@ export const tenancyService = {
     }
     const isDemotingLastOwner = current.scope === 'tenant' && current.role === 'tenant_owner' && current.status === 'active'
       && (next.scope !== 'tenant' || next.role !== 'tenant_owner' || next.status !== 'active');
-    if (isDemotingLastOwner && await tenancyRepository.countActiveTenantOwners(tenantId) <= 1) {
-      throw { status: 409, code: 'LAST_TENANT_OWNER_REQUIRED', message: 'The last active Tenant Owner cannot be demoted or suspended.' };
-    }
     if (actorRole !== 'tenant_owner' && (next.scope === 'tenant' || next.role === 'tenant_owner' || next.role === 'tenant_admin')) {
       throw { status: 403, code: 'ROLE_GRANT_DENIED', message: 'Tenant Admin cannot grant tenant-wide or administrative roles.' };
     }
-    const updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
+
+    let updated;
+    if (isDemotingLastOwner) {
+      const lock = await tenancyRepository.acquireTenantOwnerMutationLock(tenantId, new Date(), 30_000);
+      if (!lock) throw { status: 409, code: 'OWNER_CHANGE_IN_PROGRESS', message: 'Another Tenant Owner change is in progress. Retry shortly.' };
+      try {
+        if (await tenancyRepository.countActiveTenantOwners(tenantId) <= 1) {
+          throw { status: 409, code: 'LAST_TENANT_OWNER_REQUIRED', message: 'The last active Tenant Owner cannot be demoted or suspended.' };
+        }
+        updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
+      } finally {
+        await tenancyRepository.releaseTenantOwnerMutationLock(tenantId).catch(() => null);
+      }
+    } else {
+      updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
+    }
     if (updated) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'membership.updated', targetType: 'tenant_membership', targetId: membershipId, clinicId: next.clinicId, metadata: { role: next.role, scope: next.scope, status: next.status } });
     return updated;
   },
