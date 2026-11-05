@@ -300,6 +300,13 @@ export const upsertSubscriptionSchema = z.object({
       .length(3)
       .transform((value) => value.toUpperCase())
       .default('EGP'),
+    limits: z.object({
+      maxClinics: z.number().int().min(0).nullable().optional(),
+      maxBranches: z.number().int().min(0).nullable().optional(),
+      maxUsers: z.number().int().min(0).nullable().optional(),
+      maxStorageBytes: z.number().int().min(0).nullable().optional(),
+    }).optional(),
+    features: z.array(z.string().trim().min(1).max(80)).max(100).optional(),
   }),
   billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).default('monthly'),
   status: z
