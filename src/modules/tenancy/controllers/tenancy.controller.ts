@@ -105,6 +105,7 @@ export const tenancyController = {
       if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_USER_NOT_FOUND', message: 'User not found in this tenant.' } });
       const revoked = await userSessionService.revoke(userId, sessionId);
       if (!revoked) return res.status(404).json({ success: false, error: { code: 'SESSION_NOT_FOUND', message: 'Active user session not found.' } });
+      await tenancyService.recordTenantUserSessionRevoked(req.tenantContext!.tenantId, req.auth!.userId, userId, sessionId);
       res.json({ success: true, data: { sessionId: revoked.sessionId, revokedAt: revoked.revokedAt } });
     } catch (e) { next(e); }
   },
