@@ -76,7 +76,7 @@ export const tenancyService = {
   listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
     const filter: Record<string, any> = { tenantId };
     if (query.actorId) filter.actorUserId = query.actorId;
-    if (query.action) filter.action = { $regex: query.action, $options: 'i' };
+    if (query.action) filter.action = query.action;
     if (query.targetType) filter.targetType = query.targetType;
     if (query.clinicId) filter.clinicId = query.clinicId;
     if (query.branchId) filter.branchId = query.branchId;
@@ -253,7 +253,7 @@ export const tenancyService = {
   listGeo(resource: GeoResource, query: { page: number; per_page: number; search?: string; country_id?: string; governorate_id?: string; city_id?: string }) {
     return geoService.listForClinic(resource, query);
   },
-  async createClinic(input: Record<string, any>, tenantId: string) {
+  async createClinic(input: Record<string, any>, tenantId: string, userId?: string) {
     const location = locationFrom(input);
     await geoService.validateClinicLocation(location);
     const name = String(input.name);
@@ -277,9 +277,10 @@ export const tenancyService = {
       await Promise.all([removeBrandingImage(logoUrl), removeBrandingImage(coverUrl), tenancyRepository.deleteClinic(String(clinic._id), tenantId)]);
       throw error;
     }
+    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'clinic.created', targetType: 'clinic', targetId: String(clinic._id), metadata: { name: clinic.name } });
     return clinic;
   },
-  async updateClinic(id: string, input: Record<string, any>, tenantId: string) {
+  async updateClinic(id: string, input: Record<string, any>, tenantId: string, userId?: string) {
     const current = await tenancyRepository.findClinicById(id, tenantId);
     if (!current) return null;
     const currentData = current.toObject();
@@ -335,6 +336,7 @@ export const tenancyService = {
     if (!updated) { await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]); return null; }
     if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingImage(oldLogoUrl);
     if (newCoverUrl && oldCoverUrl && oldCoverUrl !== newCoverUrl) await removeBrandingImage(oldCoverUrl);
+    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: input.status ? 'clinic.status.changed' : 'clinic.updated', targetType: 'clinic', targetId: id, metadata: { changedFields: Object.keys(input), ...(input.status ? { status: input.status } : {}) } });
     return updated;
   },
   async listBranchHolidays(tenantId: string, clinicId: string, branchId: string) {
@@ -351,7 +353,7 @@ export const tenancyService = {
     const scope = { tenantId, clinicId, branchId };
     const overlap = await tenancyRepository.findOverlappingBranchHoliday(scope, startDate, endDate);
     if (overlap) throw { status: 409, code: 'BRANCH_HOLIDAY_OVERLAP', message: 'This date range overlaps an existing active holiday or closure.' };
-    return tenancyRepository.createBranchHoliday({
+    const holiday = await tenancyRepository.createBranchHoliday({
       ...input,
       tenantId,
       clinicId,
@@ -360,11 +362,15 @@ export const tenancyService = {
       startDate,
       endDate,
     });
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.created', targetType: 'branch_holiday', targetId: String(holiday._id), clinicId, branchId, metadata: { type: input.type, startDate: input.startDate, endDate: input.endDate } });
+    return holiday;
   },
   async cancelBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, userId: string) {
     const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
     if (!branch) return null;
-    return tenancyRepository.cancelBranchHoliday(tenantId, clinicId, branchId, holidayId, userId);
+    const holiday = await tenancyRepository.cancelBranchHoliday(tenantId, clinicId, branchId, holidayId, userId);
+    if (holiday) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.cancelled', targetType: 'branch_holiday', targetId: holidayId, clinicId, branchId });
+    return holiday;
   },
   listBranches(tenantId: string, clinicId: string, branchId: string | null) {
     return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) });
@@ -372,7 +378,7 @@ export const tenancyService = {
   getBranch(id: string, tenantId: string, clinicId: string) {
     return tenancyRepository.findBranchById(id, tenantId, clinicId);
   },
-  async createBranch(input: Record<string, any>, tenantId: string, clinicId: string) {
+  async createBranch(input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
     if (!clinic) return null;
     await geoService.validateCity(input.cityId ?? null);
@@ -382,15 +388,17 @@ export const tenancyService = {
     while (await tenancyRepository.findBranchBySlug(tenantId, clinicId, slug)) {
       slug = `${base}-${suffix++}`;
     }
-    return tenancyRepository.createBranch({
+    const branch = await tenancyRepository.createBranch({
       ...input,
       slug,
       timezone: input.timezone || clinic.timezone || clinic.preferences?.timezone || 'Africa/Cairo',
       tenantId,
       clinicId,
     });
+    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.created', targetType: 'branch', targetId: String(branch._id), clinicId, metadata: { name: branch.name } });
+    return branch;
   },
-  async updateBranch(id: string, input: Record<string, any>, tenantId: string, clinicId: string) {
+  async updateBranch(id: string, input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
     if (!current) return null;
     const update: Record<string, unknown> = { ...input };
@@ -404,6 +412,8 @@ export const tenancyService = {
       }
       update.slug = candidate;
     }
-    return tenancyRepository.updateBranch(id, tenantId, clinicId, update);
+    const branch = await tenancyRepository.updateBranch(id, tenantId, clinicId, update);
+    if (branch && userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: input.status ? 'branch.status.changed' : 'branch.updated', targetType: 'branch', targetId: id, clinicId, metadata: { changedFields: Object.keys(input), ...(input.status ? { status: input.status } : {}) } });
+    return branch;
   },
 };
