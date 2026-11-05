@@ -8,6 +8,7 @@ import {
   verifyAccessToken,
 } from './auth.security.js';
 import { tokenRevocationService } from './token-revocation.service.js';
+import { logger } from '../../../shared/logger/logger.js';
 export class AuthError extends Error {
   constructor(
     public code: string,
@@ -108,6 +109,24 @@ export const authService = {
         acceptedBy: String(user._id),
       });
       if (!accepted) throw new AuthError('INVITATION_ACCEPTANCE_CONFLICT', 'The invitation could not be completed. Please try again.', 409);
+
+      try {
+        await tenancyRepository.createTenantAuditEvent({
+          tenantId: String(invitation.tenantId),
+          actorUserId: String(user._id),
+          action: 'membership.invitation.accepted',
+          targetType: 'tenant_membership',
+          targetId: String(membership._id),
+          clinicId: invitation.clinicId ?? null,
+          metadata: { invitationId: String(invitation._id), role: invitation.role, scope: invitation.scope },
+        });
+      } catch (auditError) {
+        logger.warn('Tenant invitation accepted but audit event could not be persisted.', {
+          tenantId: String(invitation.tenantId),
+          invitationId: String(invitation._id),
+          error: auditError instanceof Error ? auditError.message : String(auditError),
+        });
+      }
 
       return {
         user: { id: String(user._id), name: user.name, email: user.email },
