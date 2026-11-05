@@ -79,38 +79,39 @@ export const tenancyRepository = {
   countExpiringTenantDocuments(tenantId: string, from: Date, to: Date) {
     return TenantDocument.countDocuments({ tenantId, status: 'active', expiresAt: { $gte: from, $lte: to } });
   },
-  listTenantDocuments(tenantId: string) {
-    return TenantDocument.find({ tenantId, status: 'active' }).sort({ createdAt: -1 }).lean();
+  listTenantDocuments(tenantId: string, clinicId: string | null = null) {
+    return TenantDocument.find({ tenantId, clinicId, status: 'active' }).sort({ createdAt: -1 }).lean();
   },
-  async listTenantDocumentVersions(tenantId: string, documentId: string) {
-    const anchor = await TenantDocument.findOne({ _id: documentId, tenantId }).select('-storageKey').lean() as any;
+  async listTenantDocumentVersions(tenantId: string, documentId: string, clinicId: string | null = null) {
+    const scope = { tenantId, clinicId };
+    const anchor = await TenantDocument.findOne({ _id: documentId, ...scope }).select('-storageKey').lean() as any;
     if (!anchor) return null;
     const byId = new Map<string, any>([[String(anchor._id), anchor]]);
     let current: any = anchor;
     for (let depth = 0; current.replacesDocumentId && depth < 100; depth += 1) {
-      const parent = await TenantDocument.findOne({ _id: current.replacesDocumentId, tenantId }).select('-storageKey').lean() as any;
+      const parent = await TenantDocument.findOne({ _id: current.replacesDocumentId, ...scope }).select('-storageKey').lean() as any;
       if (!parent || byId.has(String(parent._id))) break;
       byId.set(String(parent._id), parent);
       current = parent;
     }
     current = anchor;
     for (let depth = 0; depth < 100; depth += 1) {
-      const child = await TenantDocument.findOne({ tenantId, replacesDocumentId: current._id }).select('-storageKey').sort({ version: -1 }).lean() as any;
+      const child = await TenantDocument.findOne({ ...scope, replacesDocumentId: current._id }).select('-storageKey').sort({ version: -1 }).lean() as any;
       if (!child || byId.has(String(child._id))) break;
       byId.set(String(child._id), child);
       current = child;
     }
     return [...byId.values()].sort((a, b) => (a.version ?? 1) - (b.version ?? 1));
   },
-  findTenantDocumentMetadata(tenantId: string, documentId: string) {
-    return TenantDocument.findOne({ _id: documentId, tenantId, status: 'active' }).select('-storageKey').lean();
+  findTenantDocumentMetadata(tenantId: string, documentId: string, clinicId: string | null = null) {
+    return TenantDocument.findOne({ _id: documentId, tenantId, clinicId, status: 'active' }).select('-storageKey').lean();
   },
-  findTenantDocument(tenantId: string, documentId: string) {
-    return TenantDocument.findOne({ _id: documentId, tenantId, status: 'active' }).select('+storageKey');
+  findTenantDocument(tenantId: string, documentId: string, clinicId: string | null = null) {
+    return TenantDocument.findOne({ _id: documentId, tenantId, clinicId, status: 'active' }).select('+storageKey');
   },
-  archiveTenantDocument(tenantId: string, documentId: string, userId: string) {
+  archiveTenantDocument(tenantId: string, documentId: string, userId: string, clinicId: string | null = null) {
     return TenantDocument.findOneAndUpdate(
-      { _id: documentId, tenantId, status: 'active' },
+      { _id: documentId, tenantId, clinicId, status: 'active' },
       { $set: { status: 'archived', archivedAt: new Date(), archivedBy: userId } },
       { new: true, runValidators: true },
     );
