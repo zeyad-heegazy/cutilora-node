@@ -30,7 +30,7 @@ paths:
       tags: [Tenant Memberships]
       x-apidog-folder: "Tenant/Users and Memberships"
       summary: List tenant users and memberships
-      description: Lists tenant memberships with linked user identity and clinic/branch scopes.
+      description: Lists tenant memberships with linked user identity, clinic/branch scopes and lastLoginAt.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
