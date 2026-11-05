@@ -272,27 +272,29 @@ export const tenancyService = {
     return archived;
   },
   async getTenantUserEffectiveAccess(tenantId: string, userId: string) {
-    if (!/^[a-f\d]{24}$/i.test(userId)) return null;
+    if (!/^[a-f\\d]{24}$/i.test(userId)) return null;
     const memberships = await tenancyRepository.listMembershipsForUser(tenantId, userId);
     if (!memberships.length) return null;
-    return {
-      userId,
-      memberships: memberships.map((membership: any) => ({
+    const resolved = await Promise.all(memberships.map(async (membership: any) => {
+      const customRole = membership.role === 'custom' && membership.customRoleId
+        ? await tenancyRepository.findActiveTenantRoleById(tenantId, String(membership.customRoleId))
+        : null;
+      return {
         membershipId: String(membership._id),
         status: membership.status,
         role: membership.role,
         scope: membership.scope,
         clinic: membership.clinicId,
         branches: membership.branchIds ?? [],
-        permissions: membership.status === 'active'
-          ? (membership.role === 'custom'
-            ? ((await tenancyRepository.findActiveTenantRoleById(tenantId, String(membership.customRoleId ?? '')))?.permissions ?? [])
-            : getTenantRolePermissions(membership.role))
-          : [],
         customRoleId: membership.customRoleId ? String(membership.customRoleId) : null,
+        customRoleName: customRole?.name ?? null,
+        permissions: membership.status !== 'active' ? [] : membership.role === 'custom'
+          ? (customRole?.permissions ?? [])
+          : getTenantRolePermissions(membership.role),
         permissionSource: membership.role === 'custom' ? 'custom_role' : 'built_in_role',
-      })),
-    };
+      };
+    }));
+    return { userId, memberships: resolved };
   },
   listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; branchId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number }) {
     return tenancyRepository.listTenantMemberships(tenantId, query);
@@ -351,6 +353,13 @@ export const tenancyService = {
         for (const branchId of next.branchIds) {
           if (!await tenancyRepository.findBranchById(branchId, tenantId, next.clinicId)) throw { status: 404, code: 'BRANCH_NOT_FOUND', message: 'A selected branch does not belong to the selected clinic.' };
         }
+      }
+    }
+    if (next.role === 'custom') {
+      const selectedRole = await tenancyRepository.findActiveTenantRoleById(tenantId, String(next.customRoleId ?? ''));
+      if (!selectedRole || selectedRole.scope !== next.scope) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role does not match the membership scope.' };
+      if (actorRole !== 'tenant_owner' && !selectedRole.permissions.every((permission: string) => hasPermission(getTenantRolePermissions(actorRole), permission))) {
+        throw { status: 403, code: 'ROLE_GRANT_DENIED', message: 'You cannot assign a custom role with permissions beyond your own access.' };
       }
     }
     const isDemotingLastOwner = current.scope === 'tenant' && current.role === 'tenant_owner' && current.status === 'active'
