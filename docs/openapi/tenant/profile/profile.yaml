@@ -20,10 +20,11 @@ paths:
                   data: { $ref: "../../../openapi.yaml#/components/schemas/Tenant" }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [Tenant Organization]
       summary: Update organization profile
-      description: Updates tenant identity, contact, address, legal details, branding and preferences. Only the Tenant Owner may change legal identity fields.
+      description: Updates tenant identity, contact, address, legal details, branding and preferences. Only the Tenant Owner may change legal identity fields. Logo and cover images are sent as Base64 data URLs and stored as files; the API persists their public URLs.
       security:
         - bearerAuth: []
       parameters:
@@ -36,23 +37,43 @@ paths:
       responses:
         "200":
           description: Updated tenant profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../openapi.yaml#/components/schemas/Tenant" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
   /tenant/preferences:
     get:
       tags: [Tenant Organization]
       summary: Get organization preferences
+      description: Returns organization-level defaults, including defaults applied when the tenant is created without explicit preferences.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       responses:
-        "200": { description: Organization preferences }
+        "200":
+          description: Organization preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../openapi.yaml#/components/schemas/TenantPreferences" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [Tenant Organization]
       summary: Update organization preferences
-      description: Updates organization-level defaults. Clinic and branch timezones remain independent.
+      description: Updates organization-level defaults using a partial merge. Unspecified preference values are preserved. Clinic and branch timezones remain independent.
       security:
         - bearerAuth: []
       parameters:
@@ -67,6 +88,16 @@ paths:
               properties:
                 preferences: { $ref: "../../../openapi.yaml#/components/schemas/TenantPreferences" }
       responses:
-        "200": { description: Updated preferences }
+        "200":
+          description: Updated organization preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../openapi.yaml#/components/schemas/TenantPreferences" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
