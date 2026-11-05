@@ -2,6 +2,8 @@ import { Types } from 'mongoose';
 import { ClinicFinanceEntry } from '../models/clinic-finance-entry.model.js';
 import { Clinic } from '../models/clinic.model.js';
 import { Branch } from '../models/branch.model.js';
+import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
+import { logger } from '../../../shared/logger/logger.js';
 
 type Actor = { tenantId: string; userId: string; clinicId?: string | null; branchId?: string | null; scope?: string };
 type Scope = { clinicId?: string; branchId?: string; from?: Date; to?: Date; currency?: string; page?: number; perPage?: number };
@@ -30,6 +32,21 @@ function assertActorClinic(actor: Actor, clinicId: unknown, branchId: unknown) {
   if (actor.scope === 'clinic' && String(actor.clinicId) !== String(clinicId)) fail(403, 'CLINIC_ACCESS_DENIED', 'This finance record is outside your clinic scope.');
   if (actor.scope === 'branch' && (String(actor.clinicId) !== String(clinicId) || String(actor.branchId) !== String(branchId))) fail(403, 'BRANCH_ACCESS_DENIED', 'This finance record is outside your branch scope.');
 }
+async function audit(actor: Actor, action: string, entry: any, metadata: Record<string, unknown> = {}) {
+  try {
+    await TenantAuditEvent.create({
+      tenantId: actor.tenantId, actorUserId: actor.userId, action,
+      targetType: 'clinic_finance_entry', targetId: String(entry._id),
+      clinicId: entry.clinicId, branchId: entry.branchId || null,
+      metadata: { type: entry.type, amount: entry.amount, currency: entry.currency, ...metadata },
+    });
+  } catch (error) {
+    logger.error('Failed to persist clinic finance audit event', {
+      tenantId: actor.tenantId, action, entryId: String(entry._id),
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+  }
+}
 function normalizeEntry(entry: any) { const value = entry?.toObject ? entry.toObject() : entry; return value; }
 
 export const clinicFinanceService = {
@@ -49,7 +66,7 @@ export const clinicFinanceService = {
     const data = { tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null, type: 'invoice', status: input.status === 'draft' ? 'draft' : 'issued', currency, amount, patientId: input.patientId && validId(input.patientId) ? input.patientId : null, invoiceNumber: input.invoiceNumber?.trim() || null, description: input.description?.trim() || '', lineItems, occurredAt: input.issuedAt ? new Date(input.issuedAt) : new Date(), createdBy: actor.userId };
     if (input.patientId && !validId(input.patientId)) fail(400, 'INVALID_PATIENT_ID', 'patientId must be a valid identifier.');
     if (input.invoiceNumber && await ClinicFinanceEntry.exists({ tenantId: actor.tenantId, invoiceNumber: input.invoiceNumber.trim() })) fail(409, 'INVOICE_NUMBER_EXISTS', 'Invoice number already exists for this tenant.');
-    try { return normalizeEntry(await ClinicFinanceEntry.create(data)); }
+    try { const created = await ClinicFinanceEntry.create(data); await audit(actor, 'finance.invoice.created', created); return normalizeEntry(created); }
     catch (error: any) { if (error?.code === 11000) fail(409, 'INVOICE_NUMBER_EXISTS', 'Invoice number already exists for this tenant.'); throw error; }
   },
   async recordPayment(actor: Actor, input: any) {
@@ -62,7 +79,7 @@ export const clinicFinanceService = {
     if (input.branchId && String(input.branchId) !== String(invoice.branchId || '')) fail(400, 'BRANCH_SCOPE_MISMATCH', 'Payment branch must match the invoice branch.');
     if (input.idempotencyKey) {
       const existing = await ClinicFinanceEntry.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
-      if (existing) return existing;
+      if (existing) { if (existing.type !== 'payment' || String(existing.invoiceId) !== String(input.invoiceId) || existing.amount !== input.amount || existing.currency !== invoice.currency) fail(409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used for a different payment.'); return existing; }
     }
     const reserved = await ClinicFinanceEntry.findOneAndUpdate(
       { _id: invoice._id, tenantId: actor.tenantId, type: 'invoice', status: 'issued', $expr: { $lte: [{ $add: [{ $ifNull: ['$settledAmount', 0] }, input.amount] }, '$amount'] } },
@@ -71,6 +88,7 @@ export const clinicFinanceService = {
     if (!reserved) fail(409, 'PAYMENT_EXCEEDS_BALANCE', 'Payment exceeds the remaining invoice balance.');
     try {
       const payment = await ClinicFinanceEntry.create({ tenantId: actor.tenantId, clinicId: invoice.clinicId, branchId: invoice.branchId || null, type: 'payment', status: 'posted', currency: invoice.currency, amount: input.amount, patientId: invoice.patientId, invoiceId: invoice._id, method: input.method?.trim() || 'other', reference: input.reference?.trim() || null, idempotencyKey: input.idempotencyKey || null, occurredAt: input.paidAt ? new Date(input.paidAt) : new Date(), createdBy: actor.userId });
+      await audit(actor, 'finance.payment.recorded', payment);
       return normalizeEntry(payment);
     } catch (error: any) {
       await ClinicFinanceEntry.updateOne({ _id: invoice._id, tenantId: actor.tenantId }, { $inc: { settledAmount: -input.amount } });
@@ -95,6 +113,7 @@ export const clinicFinanceService = {
     try {
       const refund = await ClinicFinanceEntry.create({ tenantId: actor.tenantId, clinicId: payment.clinicId, branchId: payment.branchId, type: 'refund', status: 'posted', currency: payment.currency, amount: input.amount, patientId: payment.patientId, invoiceId: payment.invoiceId, paymentId: payment._id, method: input.method?.trim() || payment.method, reference: input.reference?.trim() || null, occurredAt: input.refundedAt ? new Date(input.refundedAt) : new Date(), createdBy: actor.userId });
       await ClinicFinanceEntry.updateOne({ _id: payment.invoiceId, tenantId: actor.tenantId, type: 'invoice' }, { $inc: { settledAmount: -input.amount } });
+      await audit(actor, 'finance.refund.recorded', refund, { paymentId: String(payment._id) });
       return normalizeEntry(refund);
     } catch (error) {
       await ClinicFinanceEntry.updateOne({ _id: payment._id, tenantId: actor.tenantId }, { $inc: { refundedAmount: -input.amount } });
@@ -106,7 +125,9 @@ export const clinicFinanceService = {
     if (!money(input.amount) || input.amount <= 0) fail(400, 'INVALID_AMOUNT', 'Expense amount must be greater than zero with at most two decimal places.');
     const currency = cleanCurrency(input.currency);
     if (!/^[A-Z]{3}$/.test(currency)) fail(400, 'INVALID_CURRENCY', 'currency must be a three-letter ISO currency code.');
-    return normalizeEntry(await ClinicFinanceEntry.create({ tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null, type: 'expense', status: 'posted', currency, amount: input.amount, category: input.category.trim(), description: input.description?.trim() || '', reference: input.reference?.trim() || null, occurredAt: input.spentAt ? new Date(input.spentAt) : new Date(), createdBy: actor.userId }));
+    const expense = await ClinicFinanceEntry.create({ tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null, type: 'expense', status: 'posted', currency, amount: input.amount, category: input.category.trim(), description: input.description?.trim() || '', reference: input.reference?.trim() || null, occurredAt: input.spentAt ? new Date(input.spentAt) : new Date(), createdBy: actor.userId });
+    await audit(actor, 'finance.expense.recorded', expense);
+    return normalizeEntry(expense);
   },
   async listEntries(tenantId: string, scope: Scope) {
     const page = Math.max(1, scope.page || 1), perPage = Math.min(100, Math.max(1, scope.perPage || 25));
