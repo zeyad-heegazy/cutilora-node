@@ -49,6 +49,7 @@ tenantRouter.post('/clinics', requireTenantScope, requireTenantPermission('clini
 tenantRouter.post('/clinics/:clinicId/activate', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.activateClinic);
 tenantRouter.post('/clinics/:clinicId/deactivate', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.deactivateClinic);
 tenantRouter.get('/clinics/:clinicId/branches', requireTenantPermission('branch.read'), tenancyController.listClinicBranches);
+tenantRouter.get('/clinics/:clinicId/users', requireTenantPermission('clinic.members.read'), tenancyController.listClinicUsers);
 tenantRouter.get('/clinics/:clinicId/documents', requireTenantPermission('clinic.documents.read'), tenancyController.listClinicDocuments);
 tenantRouter.post('/clinics/:clinicId/documents', requireTenantPermission('clinic.documents.manage'), tenancyController.createClinicDocument);
 tenantRouter.put('/clinics/:clinicId/documents/:documentId/replace', requireTenantPermission('clinic.documents.manage'), tenancyController.replaceClinicDocument);
