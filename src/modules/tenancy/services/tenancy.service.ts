@@ -215,6 +215,9 @@ export const tenancyService = {
   listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number }) {
     return tenancyRepository.listTenantMemberships(tenantId, query);
   },
+  getTenantUserDetails(tenantId: string, userId: string) {
+    return tenancyRepository.findTenantUserDetails(tenantId, userId);
+  },
   async listTenantMembershipHistory(tenantId: string, membershipId: string, page = 1, perPage = 25) {
     const membership = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
     if (!membership) return null;
