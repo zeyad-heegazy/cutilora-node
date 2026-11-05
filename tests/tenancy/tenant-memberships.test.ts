@@ -19,6 +19,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     findPendingTenantInvitation: vi.fn(),
     createTenantInvitation: vi.fn(),
     findBranchById: vi.fn(),
+    transitionBranchStatus: vi.fn(),
     updateTenantMembership: vi.fn(),
     createTenantAuditEvent: vi.fn().mockResolvedValue({}),
     getDashboardCounts: vi.fn(),
@@ -60,6 +61,37 @@ describe('tenant membership administration', () => {
     vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue(null as any);
     vi.mocked(tenancyRepository.acquireTenantEntitlementLock).mockResolvedValue({ _id: tenantId } as any);
     vi.mocked(tenancyRepository.releaseTenantEntitlementLock).mockResolvedValue({ modifiedCount: 1 } as any);
+  });
+
+  it('temporarily closes an active branch with a reason and an audit event', async () => {
+    const branch = { _id: branchId, status: 'active' };
+    const updated = { _id: branchId, status: 'temporarily_closed', closureReason: 'Renovation' };
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue(branch as any);
+    vi.mocked(tenancyRepository.transitionBranchStatus).mockResolvedValue(updated as any);
+
+    await expect(tenancyService.temporarilyCloseBranch(branchId, tenantId, clinicId, actorId, 'Renovation')).resolves.toEqual(updated);
+    expect(tenancyRepository.transitionBranchStatus).toHaveBeenCalledWith(branchId, tenantId, clinicId, ['active'], expect.objectContaining({ status: 'temporarily_closed', closureReason: 'Renovation' }));
+    expect(tenancyRepository.createTenantAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: 'branch.temporarily_closed', branchId }));
+  });
+
+  it('rejects temporary closure unless the branch is active', async () => {
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId, status: 'suspended' } as any);
+    await expect(tenancyService.temporarilyCloseBranch(branchId, tenantId, clinicId, actorId, 'Renovation')).rejects.toMatchObject({ status: 409, code: 'BRANCH_LIFECYCLE_CONFLICT' });
+    expect(tenancyRepository.transitionBranchStatus).not.toHaveBeenCalled();
+  });
+
+  it('does not reactivate a permanently closed branch', async () => {
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId, status: 'closed' } as any);
+    await expect(tenancyService.activateBranch(branchId, tenantId, clinicId, actorId)).rejects.toMatchObject({ status: 409, code: 'BRANCH_PERMANENTLY_CLOSED' });
+    expect(tenancyRepository.transitionBranchStatus).not.toHaveBeenCalled();
+  });
+
+  it('permanently closes a branch and records the reason', async () => {
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId, status: 'suspended' } as any);
+    const updated = { _id: branchId, status: 'closed', closureReason: 'Business ended' };
+    vi.mocked(tenancyRepository.transitionBranchStatus).mockResolvedValue(updated as any);
+    await expect(tenancyService.permanentlyCloseBranch(branchId, tenantId, clinicId, actorId, 'Business ended')).resolves.toEqual(updated);
+    expect(tenancyRepository.transitionBranchStatus).toHaveBeenCalledWith(branchId, tenantId, clinicId, ['active', 'temporarily_closed', 'suspended'], expect.objectContaining({ status: 'closed', closureReason: 'Business ended' }));
   });
 
   it('filters activity events by both clinic and branch ownership', async () => {
