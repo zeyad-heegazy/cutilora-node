@@ -135,6 +135,24 @@ export const tenancyService = {
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.resent', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
     return { invitation: updated, invitationToken: token, acceptanceEndpoint: '/auth/invitations/accept', delivery: 'manual' };
   },
+  async getTenantUserEffectiveAccess(tenantId: string, userId: string) {
+    if (!/^[a-f\\d]{24}$/i.test(userId)) return null;
+    const memberships = await tenancyRepository.listMembershipsForUser(tenantId, userId);
+    if (!memberships.length) return null;
+    return {
+      userId,
+      memberships: memberships.map((membership: any) => ({
+        membershipId: String(membership._id),
+        status: membership.status,
+        role: membership.role,
+        scope: membership.scope,
+        clinic: membership.clinicId,
+        branches: membership.branchIds ?? [],
+        permissions: membership.status === 'active' ? getTenantRolePermissions(membership.role) : [],
+        permissionSource: 'built_in_role',
+      })),
+    };
+  },
   listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; page: number; perPage: number }) {
     return tenancyRepository.listTenantMemberships(tenantId, query);
   },
