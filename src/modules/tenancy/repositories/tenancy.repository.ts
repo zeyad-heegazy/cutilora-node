@@ -394,7 +394,7 @@ export const tenancyRepository = {
       ],
     }, { $set: { status: 'processing', processingAt: now } }, { new: true }).select('+tokenHash');
   },
-  updateClaimedTenantInvitation(invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, status: 'processing' }, { $set: update }, { new: true, runValidators: true }); },
+  updateClaimedTenantInvitation(invitationId: string, processingAt: Date, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, status: 'processing', processingAt }, { $set: update }, { new: true, runValidators: true }); },
   createTenantMembership(data: Record<string, unknown>) { return TenantMembership.create(data); },
   deleteTenantMembershipById(id: string) { return TenantMembership.deleteOne({ _id: id }); },
   findTenantMembershipForUser(userId: string, tenantId: string) { return TenantMembership.findOne({ userId, tenantId, status: { $in: ['active', 'invited'] } }); },
