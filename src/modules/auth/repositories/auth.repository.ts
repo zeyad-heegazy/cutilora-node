@@ -9,6 +9,7 @@ export const authRepository = {
   findUserById(id: string) { return User.findById(id).select('name email platformRole isActive'); },
   findActiveUserById(id: string) { return User.findById(id).select('platformRole isActive'); },
   createUser(data: Record<string, unknown>) { return User.create(data); },
+  deleteUserById(id: string) { return User.deleteOne({ _id: id }); },
   hasPlatformAdmin() { return User.exists({ platformRole: 'platform_admin' }); },
   findActiveMemberships(userId: string) {
     return TenantMembership.find({ userId, status: 'active' })
