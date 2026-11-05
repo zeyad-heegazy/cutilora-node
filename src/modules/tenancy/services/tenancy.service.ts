@@ -824,6 +824,28 @@ export const tenancyService = {
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.created', targetType: 'branch_holiday', targetId: String(holiday._id), clinicId, branchId, metadata: { type: input.type, startDate: input.startDate, endDate: input.endDate } });
     return holiday;
   },
+  async updateBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, userId: string, input: Record<string, any>) {
+    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+    if (!branch) return null;
+    const startDate = new Date(`${input.startDate}T00:00:00.000Z`);
+    const endDate = new Date(`${input.endDate}T00:00:00.000Z`);
+    if (startDate > endDate) throw { status: 400, code: 'INVALID_DATE_RANGE', message: 'endDate must be on or after startDate.' };
+    const scope = { tenantId, clinicId, branchId };
+    const overlap = await tenancyRepository.findOverlappingBranchHoliday(scope, startDate, endDate, holidayId);
+    if (overlap) throw { status: 409, code: 'BRANCH_HOLIDAY_OVERLAP', message: 'This date range overlaps an existing active holiday or closure.' };
+    const holiday = await tenancyRepository.updateBranchHoliday(tenantId, clinicId, branchId, holidayId, {
+      title: input.title,
+      type: input.type,
+      startDate,
+      endDate,
+      isAllDay: input.isAllDay,
+      startTime: input.isAllDay ? null : input.startTime,
+      endTime: input.isAllDay ? null : input.endTime,
+      reason: input.reason ?? '',
+    });
+    if (holiday) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.updated', targetType: 'branch_holiday', targetId: holidayId, clinicId, branchId, metadata: { type: input.type, startDate: input.startDate, endDate: input.endDate } });
+    return holiday;
+  },
   async cancelBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, userId: string) {
     const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
     if (!branch) return null;
