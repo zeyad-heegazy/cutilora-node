@@ -114,7 +114,7 @@ export const tenancyController = {
     try {
       const input = updateTenantMembershipSchema.parse(req.body);
       const context = req.tenantContext!;
-      const item = await tenancyService.updateTenantMembership(context.tenantId, String(req.params.membershipId ?? ''), req.auth!.userId, context.role, input);
+      const item = await tenancyService.updateTenantMembership(context.tenantId, String(req.params.membershipId ?? ''), req.auth!.userId, context.role, input, getTenantRoleGrants(context.role, context).map((grant) => grant.permission));
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Membership not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
