@@ -7,7 +7,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       responses:
         "200":
           description: Tenant profile
@@ -17,9 +17,9 @@ paths:
                 type: object
                 properties:
                   success: { type: boolean }
-                  data: { $ref: "../../openapi.yaml#/components/schemas/Tenant" }
-        "401": { $ref: "../../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
+                  data: { $ref: "../../../openapi.yaml#/components/schemas/Tenant" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     patch:
       tags: [Tenant Organization]
       summary: Update organization profile
@@ -27,17 +27,17 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "../../openapi.yaml#/components/schemas/TenantUpdate" }
+            schema: { $ref: "../../../openapi.yaml#/components/schemas/TenantUpdate" }
       responses:
         "200":
           description: Updated tenant profile
-        "400": { $ref: "../../openapi.yaml#/components/responses/ValidationError" }
-        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/preferences:
     get:
       tags: [Tenant Organization]
@@ -45,10 +45,10 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       responses:
         "200": { description: Organization preferences }
-        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     patch:
       tags: [Tenant Organization]
       summary: Update organization preferences
@@ -56,7 +56,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - $ref: "../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       requestBody:
         required: true
         content:
@@ -65,8 +65,8 @@ paths:
               type: object
               required: [preferences]
               properties:
-                preferences: { $ref: "../../openapi.yaml#/components/schemas/TenantPreferences" }
+                preferences: { $ref: "../../../openapi.yaml#/components/schemas/TenantPreferences" }
       responses:
         "200": { description: Updated preferences }
-        "400": { $ref: "../../openapi.yaml#/components/responses/ValidationError" }
-        "403": { $ref: "../../openapi.yaml#/components/responses/Forbidden" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
