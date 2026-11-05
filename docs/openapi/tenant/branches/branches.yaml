@@ -5,7 +5,7 @@ paths:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches"
       summary: List branches in current clinic
-      description: X-Clinic-Id is required. Results are restricted to X-Branch-Id when supplied. Branch-scoped memberships must select an authorized branch. Lifecycle values: active, temporarily_closed, suspended, closed.
+      description: "X-Clinic-Id is required. Results are restricted to X-Branch-Id when supplied. Branch-scoped memberships must select an authorized branch. Lifecycle values: active, temporarily_closed, suspended, closed."
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
