@@ -215,6 +215,15 @@ export const tenancyService = {
   listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number }) {
     return tenancyRepository.listTenantMemberships(tenantId, query);
   },
+  async listTenantMembershipHistory(tenantId: string, membershipId: string, page = 1, perPage = 25) {
+    const membership = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
+    if (!membership) return null;
+    return tenancyRepository.listTenantAuditEvents({
+      tenantId,
+      targetType: 'tenant_membership',
+      targetId: membershipId,
+    }, page, perPage);
+  },
   async updateTenantMembership(tenantId: string, membershipId: string, actorUserId: string, actorRole: string, input: Record<string, any>) {
     const current = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
     if (!current) return null;
