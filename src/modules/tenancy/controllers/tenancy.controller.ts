@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -168,6 +168,19 @@ export const tenancyController = {
       const input = createTenantDocumentSchema.parse(req.body);
       const item = await tenancyService.createTenantDocument(req.tenantContext!.tenantId, req.auth!.userId, input);
       res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async replaceTenantDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = replaceTenantDocumentSchema.parse(req.body);
+      const item = await tenancyService.replaceTenantDocument(
+        req.tenantContext!.tenantId,
+        String(req.params.documentId ?? ''),
+        req.auth!.userId,
+        input,
+      );
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found.' } });
+      res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
   async getTenantDocument(req: Request, res: Response, next: NextFunction) {
