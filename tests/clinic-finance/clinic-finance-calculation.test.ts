@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateInvoiceLines, getReceivableAgingBucket } from '../../src/modules/clinic-finance/clinic-finance.service.js';
+import { calculateInvoiceLines, calculateInvoiceSettlement, getReceivableAgingBucket } from '../../src/modules/clinic-finance/clinic-finance.service.js';
 
 describe('clinic invoice calculations', () => {
   it('calculates discounts and tax using integer minor currency units', () => {
@@ -51,5 +51,31 @@ describe('receivable aging buckets', () => {
     [91, 'over90Days'],
   ])('classifies %i overdue days', (days, bucket) => {
     expect(getReceivableAgingBucket(days)).toBe(bucket);
+  });
+});
+
+describe('invoice credit note settlement', () => {
+  it('reduces the outstanding receivable without changing recorded collections', () => {
+    expect(calculateInvoiceSettlement(10000, 2500, 0, 0)).toEqual({
+      balanceDueMinor: 7500, creditBalanceMinor: 0, status: 'partially_credited',
+    });
+  });
+
+  it('tracks a customer credit when a paid invoice receives a credit note', () => {
+    expect(calculateInvoiceSettlement(10000, 2000, 10000, 0)).toEqual({
+      balanceDueMinor: 0, creditBalanceMinor: 2000, status: 'paid',
+    });
+  });
+
+  it('supports fully crediting an unpaid invoice', () => {
+    expect(calculateInvoiceSettlement(10000, 10000, 0, 0)).toEqual({
+      balanceDueMinor: 0, creditBalanceMinor: 0, status: 'credited',
+    });
+  });
+
+  it('recalculates the receivable after a refund on a credited invoice', () => {
+    expect(calculateInvoiceSettlement(10000, 2000, 5000, 4000)).toEqual({
+      balanceDueMinor: 1000, creditBalanceMinor: 0, status: 'partially_paid',
+    });
   });
 });
