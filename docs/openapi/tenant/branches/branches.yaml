@@ -4,13 +4,14 @@ paths:
     get:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches"
-      summary: List branches in current clinic
-      description: "X-Clinic-Id is required. Results are restricted to X-Branch-Id when supplied. Branch-scoped memberships must select an authorized branch. Lifecycle values: draft, active, temporarily_closed, suspended, closed."
+      summary: List branches in the tenant or current permitted scope
+      description: "Tenant-scoped memberships can list all branches in their tenant and optionally filter by clinicId. Clinic-scoped memberships are restricted to their selected clinic. Branch-scoped memberships are restricted to their selected branch. X-Clinic-Id is not required for tenant-wide listing. Lifecycle values: draft, active, temporarily_closed, suspended, closed."
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
-        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicId"
         - $ref: "../../../openapi.yaml#/components/parameters/BranchId"
+        - { name: clinicId, in: query, description: Optional clinic filter for tenant-scoped memberships only; ignored as a scope override and rejected when it differs from the caller's clinic scope., schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
         - { name: search, in: query, schema: { type: string, maxLength: 100 } }
         - { name: status, in: query, schema: { type: string, enum: [draft, active, temporarily_closed, suspended, closed] } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
