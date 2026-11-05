@@ -51,6 +51,7 @@ export const createExpenseSchema = z.object({
 export const payExpenseSchema = z.object({ idempotencyKey: z.string().trim().min(8).max(128), method: paymentMethodSchema, paidAt: z.coerce.date().optional() });
 export const voidExpenseSchema = z.object({ reason: z.string().trim().min(3).max(500) });
 export const reportQuerySchema = z.object({ from: z.coerce.date(), to: z.coerce.date(), branchId: z.string().regex(/^[a-f0-9]{24}$/i).optional(), groupBy: z.enum(['day', 'month']).default('day') }).refine((v) => v.from <= v.to && v.to.getTime() - v.from.getTime() <= 366 * 24 * 60 * 60 * 1000, 'Report range must be ordered and no longer than 366 days.');
+export const receivablesQuerySchema = z.object({ asOf: z.coerce.date().optional(), branchId: z.string().regex(/^[a-f0-9]{24}$/i).optional() });
 export const summaryQuerySchema = z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional(), branchId: z.string().regex(/^[a-f0-9]{24}$/i).optional() }).refine((v) => !v.from || !v.to || v.from <= v.to, 'from must be before or equal to to');
 export const expenseListQuerySchema = z.object({
   status: z.enum(['recorded', 'paid', 'void']).optional(),
