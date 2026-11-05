@@ -62,7 +62,7 @@ export function getTenantRoleGrants(
   role: string,
   context: { scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string | null; branchId?: string | null },
 ) {
-  const permissions = getTenantRolePermissions(role);
+  const permissions = context.customPermissions ?? getTenantRolePermissions(role);
   return permissions.map((permission) => ({
     permission,
     scope: context.scope,
