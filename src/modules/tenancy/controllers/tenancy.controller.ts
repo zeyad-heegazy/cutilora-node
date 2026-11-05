@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -69,7 +69,9 @@ export const tenancyController = {
   },
   async listTenantUsers(req: Request, res: Response, next: NextFunction) {
     try {
-      res.json({ success: true, data: await tenancyService.listTenantMemberships(req.tenantContext!.tenantId) });
+      const query = tenantUserListQuerySchema.parse(req.query);
+      const result = await tenancyService.listTenantMemberships(req.tenantContext!.tenantId, query);
+      res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
   async updateTenantMembership(req: Request, res: Response, next: NextFunction) {
