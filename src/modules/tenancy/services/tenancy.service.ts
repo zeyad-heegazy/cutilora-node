@@ -576,6 +576,8 @@ export const tenancyService = {
   async updateBranchSettings(tenantId: string, clinicId: string, branchId: string, userId: string, settings: Record<string, any>) {
     const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
     if (!branch) return null;
+    const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
+    if (!clinic) return null;
     const currentSettings = branch.settings?.toObject?.() ?? branch.settings ?? {};
     const mergedOverrides = deepMerge(currentSettings.organizationOverrides ?? {}, settings);
     const updated = await tenancyRepository.updateBranch(branchId, tenantId, clinicId, {
