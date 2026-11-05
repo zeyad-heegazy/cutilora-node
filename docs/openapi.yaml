@@ -103,6 +103,8 @@ paths:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1invitations~1{invitationId}~1revoke"
   /tenant/invitations/{invitationId}/resend:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1invitations~1{invitationId}~1resend"
+  /tenant/roles:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles"
   /tenant/users:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users"
   /tenant/memberships/{membershipId}:
