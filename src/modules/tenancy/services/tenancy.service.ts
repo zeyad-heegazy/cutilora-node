@@ -44,6 +44,51 @@ export const tenancyService = {
   getProfile(tenantId: string) {
     return tenancyRepository.findTenantById(tenantId);
   },
+  async updateProfile(tenantId: string, userId: string, input: Record<string, any>) {
+    const current = await tenancyRepository.findTenantById(tenantId);
+    if (!current) return null;
+    const update: Record<string, any> = { ...input, updatedBy: userId };
+    for (const key of ['contact', 'address', 'legal', 'preferences']) {
+      if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
+        const existing = current.get(key);
+        update[key] = deepMerge(existing?.toObject?.() ?? existing ?? {}, input[key]);
+      }
+    }
+    if (input.address) await geoService.validateClinicLocation(update.address);
+    const oldBranding = current.get('branding')?.toObject?.() ?? current.get('branding') ?? {};
+    let newLogoUrl = '';
+    let newCoverUrl = '';
+    if (input.branding) {
+      const { logoBase64, coverImageBase64, ...brandingFields } = input.branding;
+      update.branding = { ...oldBranding, ...brandingFields };
+      try {
+        if (logoBase64) {
+          newLogoUrl = await storeBrandingLogo(logoBase64, 'tenants', tenantId);
+          update.branding.logoUrl = newLogoUrl;
+        }
+        if (coverImageBase64) {
+          newCoverUrl = await storeBrandingCover(coverImageBase64, 'tenants', tenantId);
+          update.branding.coverImageUrl = newCoverUrl;
+        }
+      } catch (error) {
+        await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+        throw error;
+      }
+    }
+    try {
+      const updated = await tenancyRepository.updateTenant(tenantId, update);
+      if (!updated) {
+        await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+        return null;
+      }
+      if (newLogoUrl && oldBranding.logoUrl) await removeBrandingImage(oldBranding.logoUrl);
+      if (newCoverUrl && oldBranding.coverImageUrl) await removeBrandingImage(oldBranding.coverImageUrl);
+      return updated;
+    } catch (error) {
+      await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+      throw error;
+    }
+  },
   async updatePreferences(tenantId: string, userId: string, preferences: Record<string, any>) {
     const current = await tenancyRepository.findTenantById(tenantId);
     if (!current) return null;
