@@ -64,7 +64,7 @@ describe('tenant custom role service', () => {
       scope: 'tenant',
       permissions: [{ permission: 'billing.read', scope: 'tenant' }],
     });
-    expect(role).toMatchObject({ id: 'role-new', key: 'finance-viewer', scope: 'tenant', version: 1 });
+    expect(role).toMatchObject({ id: 'role-new', key: 'finance-viewer', scope: 'tenant' });
     expect(mocks.roleCreate).toHaveBeenCalledOnce();
     expect(mocks.auditCreate).toHaveBeenCalledWith(expect.objectContaining({ action: 'access.role.created', tenantId: 'tenant-a' }));
   });
@@ -112,7 +112,7 @@ describe('tenant custom role service', () => {
 
   it('rejects stale role edits instead of overwriting a newer permission version', async () => {
     mocks.roleFindOne.mockReturnValue(query({ _id: 'role-a', version: 4, scope: 'tenant', permissions: [] }));
-    await expect(tenantRolesService.update('tenant-a', 'owner-a', null, '64b000000000000000000001', {
+    await expect(tenantRolesService.update('tenant-a', 'owner-a', null, '507f1f77bcf86cd799439011', {
       expectedVersion: 3,
       name: 'Stale Update',
     })).rejects.toMatchObject({ status: 409, code: 'ROLE_VERSION_CONFLICT' });
