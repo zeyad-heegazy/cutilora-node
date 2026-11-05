@@ -55,6 +55,23 @@ describe('tenant dashboard service', () => {
     expect(tenancyRepository.findSubscriptionByTenantId).toHaveBeenCalledWith(tenantId);
   });
 
+  it('returns usage without inventing plan limits that the platform schema does not define', async () => {
+    vi.mocked(tenancyRepository.getDashboardCounts).mockResolvedValue({
+      clinics: { total: 3, active: 3, suspended: 0 },
+      branches: { total: 5, active: 5, suspended: 0 },
+      activeMembers: 8,
+      pendingInvitations: 2,
+    } as any);
+    vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue({
+      plan: { code: 'growth', name: 'Growth' },
+    } as any);
+
+    const usage = await tenancyService.getTenantSubscriptionUsage(tenantId);
+    expect(usage.usage).toEqual({ clinics: 3, branches: 5, activeMembers: 8, pendingInvitations: 2 });
+    expect(usage.limits).toBeNull();
+    expect(usage.limitsAvailable).toBe(false);
+  });
+
   it('returns null when the tenant has no subscription', async () => {
     vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue(null as any);
     await expect(tenancyService.getSubscriptionOverview(tenantId)).resolves.toBeNull();
