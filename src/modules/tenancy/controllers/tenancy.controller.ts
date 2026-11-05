@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -74,6 +74,44 @@ export const tenancyController = {
       if (subscription?.status === 'past_due') alerts.push({ code: 'SUBSCRIPTION_PAST_DUE', severity: 'critical' });
       if (clinics.some((clinic: any) => clinic.status === 'suspended')) alerts.push({ code: 'CLINIC_ACCESS_RESTRICTED', severity: 'warning' });
       res.json({ success: true, data: { items: alerts, generatedAt: new Date().toISOString() } });
+    } catch (e) { next(e); }
+  },
+  async listTenantDocuments(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json({ success: true, data: await tenancyService.listTenantDocuments(req.tenantContext!.tenantId) });
+    } catch (e) { next(e); }
+  },
+  async createTenantDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = createTenantDocumentSchema.parse(req.body);
+      const item = await tenancyService.createTenantDocument(req.tenantContext!.tenantId, req.auth!.userId, input);
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async getTenantDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getTenantDocumentMetadata(req.tenantContext!.tenantId, String(req.params.documentId ?? ''));
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async downloadTenantDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await tenancyService.getTenantDocument(req.tenantContext!.tenantId, String(req.params.documentId ?? ''));
+      if (!result) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found.' } });
+      const safeName = String(result.document.name).replace(/[^a-zA-Z0-9._-]/g, '_');
+      res.setHeader('Content-Type', result.document.mimeType);
+      res.setHeader('Content-Length', result.content.length);
+      res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.send(result.content);
+    } catch (e) { next(e); }
+  },
+  async archiveTenantDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.archiveTenantDocument(req.tenantContext!.tenantId, String(req.params.documentId ?? ''), req.auth!.userId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Document not found.' } });
+      res.json({ success: true, data: { id: String(item._id), status: item.status, archivedAt: item.archivedAt } });
     } catch (e) { next(e); }
   },
   async listGeo(req: Request, res: Response, next: NextFunction) {
