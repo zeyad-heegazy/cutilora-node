@@ -38,6 +38,30 @@ export const tenancyController = {
       res.json({ success: true, data: item.preferences });
     } catch (e) { next(e); }
   },
+  async getTenantSubscription(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getTenantSubscription(req.tenantContext!.tenantId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'SUBSCRIPTION_NOT_FOUND', message: 'No subscription is configured for this tenant.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async getTenantSubscriptionUsage(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json({ success: true, data: await tenancyService.getTenantSubscriptionUsage(req.tenantContext!.tenantId) });
+    } catch (e) { next(e); }
+  },
+  async listTenantInvoices(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json({ success: true, data: await tenancyService.listTenantInvoices(req.tenantContext!.tenantId) });
+    } catch (e) { next(e); }
+  },
+  async getTenantInvoice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getTenantInvoice(req.tenantContext!.tenantId, String(req.params.invoiceId ?? ''));
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Invoice not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
   async dashboardSummary(req: Request, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantContext!.tenantId;
