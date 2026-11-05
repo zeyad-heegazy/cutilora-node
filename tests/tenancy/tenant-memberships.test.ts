@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     listTenantMemberships: vi.fn(),
+    findTenantUserDetails: vi.fn(),
     listTenantInvitations: vi.fn(),
     listTenantAuditEvents: vi.fn(),
     listMembershipsForUser: vi.fn(),
@@ -254,6 +255,23 @@ describe('tenant membership administration', () => {
     await expect(tenancyService.listTenantMembershipHistory(tenantId, membershipId)).resolves.toBeNull();
 
     expect(tenancyRepository.listTenantAuditEvents).not.toHaveBeenCalled();
+  });
+
+  it('returns tenant user details through a tenant-scoped repository query', async () => {
+    vi.mocked(tenancyRepository.findTenantUserDetails).mockResolvedValue({
+      _id: targetId, name: 'Clinic User', email: 'user@example.com',
+      memberships: [{ tenantId, scope: 'clinic', role: 'clinic_manager' }],
+    } as any);
+
+    const result = await tenancyService.getTenantUserDetails(tenantId, targetId);
+
+    expect(tenancyRepository.findTenantUserDetails).toHaveBeenCalledWith(tenantId, targetId);
+    expect(result).toMatchObject({ email: 'user@example.com', memberships: [{ role: 'clinic_manager' }] });
+  });
+
+  it('returns no tenant user when the identity has no membership in the active tenant', async () => {
+    vi.mocked(tenancyRepository.findTenantUserDetails).mockResolvedValue(null as any);
+    await expect(tenancyService.getTenantUserDetails(tenantId, targetId)).resolves.toBeNull();
   });
 
 });
