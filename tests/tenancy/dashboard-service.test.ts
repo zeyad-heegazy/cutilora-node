@@ -124,4 +124,25 @@ describe('tenant dashboard service', () => {
     expect(result.truncated).toBe(false);
   });
 
+  it('returns Platform-configured entitlements alongside tenant usage', async () => {
+    vi.mocked(tenancyRepository.getDashboardCounts).mockResolvedValue({
+      clinics: { total: 2, active: 2, suspended: 0 },
+      branches: { total: 4, active: 4, suspended: 0 },
+      activeMembers: 7,
+      pendingInvitations: 1,
+    } as any);
+    vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue({
+      plan: {
+        code: 'growth', name: 'Growth',
+        limits: { maxClinics: 5, maxBranches: 10, maxUsers: 20, maxStorageBytes: 104857600 },
+        features: ['advanced_reports'],
+      },
+    } as any);
+
+    const usage = await tenancyService.getTenantSubscriptionUsage(tenantId);
+    expect(usage.limits).toEqual({ maxClinics: 5, maxBranches: 10, maxUsers: 20, maxStorageBytes: 104857600 });
+    expect(usage.limitsAvailable).toBe(true);
+    expect(usage.plan?.features).toEqual(['advanced_reports']);
+  });
+
 });
