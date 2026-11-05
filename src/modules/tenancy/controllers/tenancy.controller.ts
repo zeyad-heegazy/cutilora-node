@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { getTenantRoleCatalog, getTenantRolePermissions, getTenantRoleGrants } from '../middleware/tenant-permissions.js';
+import { getTenantRoleCatalog, getTenantRoleGrants } from '../middleware/tenant-permissions.js';
 import { TENANT_PERMISSION_CATALOG } from '../services/tenant-access.service.js';
 import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema, createTenantRoleSchema, updateTenantRoleSchema, tenantRoleListQuerySchema, cloneTenantRoleSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
