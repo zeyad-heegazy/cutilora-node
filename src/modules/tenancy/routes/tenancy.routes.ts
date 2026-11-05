@@ -25,6 +25,7 @@ tenantRouter.get('/dashboard/clinics', requireTenantScope, requireTenantPermissi
 tenantRouter.get('/dashboard/alerts', requireTenantScope, requireTenantPermission('dashboard.read'), tenancyController.dashboardAlerts);
 tenantRouter.get('/documents', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.listTenantDocuments);
 tenantRouter.post('/documents', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.createTenantDocument);
+tenantRouter.put('/documents/:documentId/replace', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.replaceTenantDocument);
 tenantRouter.get('/documents/:documentId', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.getTenantDocument);
 tenantRouter.get('/documents/:documentId/download', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.downloadTenantDocument);
 tenantRouter.delete('/documents/:documentId', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.archiveTenantDocument);
