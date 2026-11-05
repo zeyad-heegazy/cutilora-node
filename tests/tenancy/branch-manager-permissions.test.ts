@@ -13,6 +13,13 @@ describe('branch manager permissions', () => {
     expect(permissions).toContain('branch.holidays.manage');
   });
 
+  it('grants clinic managers branch schedule and settings management', () => {
+    expect(getTenantRolePermissions('clinic_admin')).toContain('branch.schedule.manage');
+    expect(getTenantRolePermissions('clinic_admin')).toContain('branch.settings.manage');
+    expect(getTenantRolePermissions('clinic_manager')).toContain('branch.schedule.manage');
+    expect(getTenantRolePermissions('clinic_manager')).toContain('branch.settings.manage');
+  });
+
   it('grants clinic-wide assigned-user visibility to clinic admins and managers', () => {
     expect(getTenantRolePermissions('clinic_admin')).toContain('clinic.members.read');
     expect(getTenantRolePermissions('clinic_manager')).toContain('clinic.members.read');
