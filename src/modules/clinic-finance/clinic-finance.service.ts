@@ -158,14 +158,18 @@ export const clinicFinanceService = {
     };
     const nextPaid = current.paidMinor + input.amountMinor;
     const nextStatus = nextPaid - current.refundedMinor >= current.totalMinor ? 'paid' : 'partially_paid';
-    const updated = await ClinicInvoice.findOneAndUpdate(
-      { _id: invoiceId, ...invoiceFilter(scope), version: current.version, status: current.status, balanceDueMinor: { $gte: input.amountMinor } },
-      { $push: { payments: payment, events: { type: 'payment.recorded', actorUserId: scope.userId, occurredAt: new Date(), metadata: { paymentId: payment._id, amountMinor: input.amountMinor, method: input.method } } },
-        $set: { paidMinor: nextPaid, balanceDueMinor: current.totalMinor - (nextPaid - current.refundedMinor), status: nextStatus, updatedBy: scope.userId }, $inc: { version: 1 } },
-      { new: true, runValidators: true },
-    );
-    if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Invoice changed while recording payment. Reload and retry.' };
-    return updated;
+    try {
+      const updated = await ClinicInvoice.findOneAndUpdate(
+        { _id: invoiceId, ...invoiceFilter(scope), version: current.version, status: current.status, balanceDueMinor: { $gte: input.amountMinor } },
+        { $push: { payments: payment, events: { type: 'payment.recorded', actorUserId: scope.userId, occurredAt: new Date(), metadata: { paymentId: payment._id, amountMinor: input.amountMinor, method: input.method } } },
+          $set: { paidMinor: nextPaid, balanceDueMinor: current.totalMinor - (nextPaid - current.refundedMinor), status: nextStatus, updatedBy: scope.userId }, $inc: { version: 1 } },
+        { new: true, runValidators: true },
+      );
+      if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Invoice changed while recording payment. Reload and retry.' };
+      return updated;
+    } finally {
+      if (cashSessionId) await releaseCashSession(scope, cashSessionId);
+    }
   },
 
   async refundPayment(scope: Scope, invoiceId: string, paymentId: string, input: any) {
