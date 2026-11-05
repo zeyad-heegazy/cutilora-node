@@ -44,7 +44,7 @@ describe('branch business-hours validation', () => {
 
     expect(() =>
       updateBranchOperatingHoursSchema.parse({ operatingHours: invalid }),
-    ).toThrow('Breaks must be inside operating hours and must not overlap.');
+    ).toThrow('Shifts and breaks must be ordered, non-overlapping, and breaks must be inside their shift.');
   });
 
   it('accepts multiple split shifts with breaks contained in each shift', () => {
@@ -103,6 +103,6 @@ describe('branch business-hours validation', () => {
 
     expect(() =>
       updateBranchOperatingHoursSchema.parse({ operatingHours: invalid }),
-    ).toThrow('Open days require openTime before closeTime; overnight hours are not supported.');
+    ).toThrow('Open days require either one valid open/close window or one to three split shifts; overnight hours are not supported.');
   });
 });
