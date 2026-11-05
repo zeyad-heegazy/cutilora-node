@@ -252,7 +252,6 @@ const branchFields = {
   name: z.string().trim().min(2).max(160),
   code: z.string().trim().max(30).transform((value) => value.toUpperCase()).optional(),
   slug: slug.optional(),
-  status: z.enum(['active', 'suspended']),
   address: z.string().trim().max(500).optional(),
   addressDetails: addressSchema.partial().optional(),
   contact: contactSchema.partial().optional(),
