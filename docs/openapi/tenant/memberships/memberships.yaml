@@ -11,6 +11,20 @@ paths:
       responses:
         "200": { description: Built-in tenant role catalog and permission matrix }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/users/{userId}/effective-access:
+    get:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Preview a tenant user's effective access
+      description: Returns only memberships in the active tenant, their clinic/branch scopes and permissions derived from the built-in role catalog. Suspended memberships return no effective permissions.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: userId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      responses:
+        "200": { description: Tenant-scoped effective access preview }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/users:
     get:
       tags: [Tenant Memberships]
