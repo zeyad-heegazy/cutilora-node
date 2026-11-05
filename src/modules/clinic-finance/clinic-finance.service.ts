@@ -444,6 +444,13 @@ export const clinicFinanceService = {
           services.get(key).quantity += line.quantity;
         }
       }
+      for (const note of invoice.creditNotes ?? []) {
+        const creditedAt = new Date(note.issuedAt);
+        if (creditedAt >= query.from && creditedAt <= query.to) {
+          rowFor(invoice.currency).creditedMinor += note.amountMinor;
+          trendFor(invoice.currency, creditedAt).creditedMinor += note.amountMinor;
+        }
+      }
       for (const payment of invoice.payments ?? []) {
         const receivedAt = new Date(payment.receivedAt);
         if (receivedAt >= query.from && receivedAt <= query.to) {
