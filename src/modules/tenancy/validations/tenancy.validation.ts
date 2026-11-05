@@ -411,7 +411,7 @@ export const updateTenantMembershipSchema = z.object({
 });
 
 export const updateBranchSettingsSchema = z.object({
-  settings: z.record(z.unknown()).refine((settings) => Object.keys(settings).length > 0, 'At least one setting is required.'),
+  overrides: z.record(z.unknown()).refine((overrides) => Object.keys(overrides).length > 0, 'At least one override is required.'),
 });
 
 export const updateClinicSettingsSchema = z.object({
