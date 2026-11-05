@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const membershipFindOne = vi.fn();
-const roleFindOne = vi.fn();
+const { membershipFindOne, roleFindOne } = vi.hoisted(() => ({ membershipFindOne: vi.fn(), roleFindOne: vi.fn() }));
 vi.mock('../../src/modules/tenancy/models/tenant-membership.model.js', () => ({
   TenantMembership: { findOne: (...args: any[]) => membershipFindOne(...args) },
 }));
