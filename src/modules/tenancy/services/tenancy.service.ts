@@ -212,7 +212,7 @@ export const tenancyService = {
       })),
     };
   },
-  listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number }) {
+  listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; branchId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number }) {
     return tenancyRepository.listTenantMemberships(tenantId, query);
   },
   getTenantUserDetails(tenantId: string, userId: string) {
