@@ -75,6 +75,14 @@ function dateFilter(from?: Date, to?: Date) {
   return from || to ? { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } : undefined;
 }
 
+export function getReceivableAgingBucket(overdueDays: number): 'current' | 'days1To30' | 'days31To60' | 'days61To90' | 'over90Days' {
+  if (overdueDays <= 0) return 'current';
+  if (overdueDays <= 30) return 'days1To30';
+  if (overdueDays <= 60) return 'days31To60';
+  if (overdueDays <= 90) return 'days61To90';
+  return 'over90Days';
+}
+
 export const clinicFinanceService = {
   async createInvoice(scope: Scope, input: InvoiceInput) {
     const clinic = await assertClinic(scope);
@@ -305,11 +313,12 @@ export const clinicFinanceService = {
       const overdueDays = Math.floor((asOf.getTime() - new Date(dueAt).getTime()) / 86400000);
       const row = getBucket(invoice.currency);
       row.invoiceCount += 1;
-      if (overdueDays <= 0) row.currentMinor += invoice.balanceDueMinor;
-      else if (overdueDays <= 30) row.days1To30Minor += invoice.balanceDueMinor;
-      else if (overdueDays <= 60) row.days31To60Minor += invoice.balanceDueMinor;
-      else if (overdueDays <= 90) row.days61To90Minor += invoice.balanceDueMinor;
-      else row.over90DaysMinor += invoice.balanceDueMinor;
+      const bucket = getReceivableAgingBucket(overdueDays);
+      const field = bucket === 'current' ? 'currentMinor'
+        : bucket === 'days1To30' ? 'days1To30Minor'
+          : bucket === 'days31To60' ? 'days31To60Minor'
+            : bucket === 'days61To90' ? 'days61To90Minor' : 'over90DaysMinor';
+      row[field] += invoice.balanceDueMinor;
     }
     return { asOf, currencies: [...buckets.values()].map((row) => ({ ...row, outstandingMinor: row.currentMinor + row.days1To30Minor + row.days31To60Minor + row.days61To90Minor + row.over90DaysMinor })) };
   },
