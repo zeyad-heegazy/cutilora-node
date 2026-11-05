@@ -6,7 +6,8 @@ import '../../tenancy/models/branch.model.js';
 
 export const authRepository = {
   findUserByEmail(email: string) { return User.findOne({ email }).select('+passwordHash name email platformRole isActive'); },
-  findUserById(id: string) { return User.findById(id).select('name email platformRole isActive'); },
+  findUserById(id: string) { return User.findById(id).select('name email platformRole isActive lastLoginAt'); },
+  updateLastLogin(id: string, at: Date) { return User.updateOne({ _id: id }, { $set: { lastLoginAt: at } }); },
   findActiveUserById(id: string) { return User.findById(id).select('platformRole isActive'); },
   createUser(data: Record<string, unknown>) { return User.create(data); },
   deleteUserById(id: string) { return User.deleteOne({ _id: id }); },
