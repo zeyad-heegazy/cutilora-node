@@ -1,0 +1,71 @@
+paths:
+  /tenant/subscription:
+    get:
+      tags: [Tenant Subscription]
+      x-apidog-folder: "Tenant/Subscription"
+      summary: Get current Cutilora subscription
+      description: Read-only tenant self-service view. Platform retains ownership of plan pricing, billing, invoices, collection and administrative changes.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Current subscription summary }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/subscription/usage:
+    get:
+      tags: [Tenant Subscription]
+      x-apidog-folder: "Tenant/Subscription"
+      summary: Get tenant subscription usage
+      description: Returns current tenant-scoped usage counts. Plan limits are explicitly unavailable until the Platform entitlement schema is implemented.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Usage counts and entitlement availability
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      usage:
+                        type: object
+                        properties:
+                          clinics: { type: integer }
+                          branches: { type: integer }
+                          activeMembers: { type: integer }
+                          pendingInvitations: { type: integer }
+                      limits: { type: object, nullable: true }
+                      limitsAvailable: { type: boolean }
+                      limitsMessage: { type: string }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/invoices:
+    get:
+      tags: [Tenant Subscription]
+      x-apidog-folder: "Tenant/Subscription/Invoices"
+      summary: List tenant subscription invoices
+      description: Lists only invoice/payment records associated with the current tenant's Cutilora subscription. Clinic patient invoices are never included.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant subscription invoice records }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/invoices/{invoiceId}:
+    get:
+      tags: [Tenant Subscription]
+      x-apidog-folder: "Tenant/Subscription/Invoices"
+      summary: Get tenant subscription invoice
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: invoiceId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Tenant subscription invoice details }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
