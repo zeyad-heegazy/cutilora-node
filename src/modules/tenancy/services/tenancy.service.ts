@@ -498,20 +498,60 @@ export const tenancyService = {
         throw error;
       }
     }
+    let updated;
     try {
-      const updated = await tenancyRepository.updateTenant(tenantId, update);
-      if (!updated) {
-        await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
-        return null;
-      }
-      if (newLogoUrl && oldBranding.logoUrl) await removeBrandingImage(oldBranding.logoUrl);
-      if (newCoverUrl && oldBranding.coverImageUrl) await removeBrandingImage(oldBranding.coverImageUrl);
-      await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.profile.updated', targetType: 'tenant', targetId: tenantId, metadata: { changedFields: Object.keys(input) } });
-      return updated;
+      updated = await tenancyRepository.updateTenant(tenantId, update);
     } catch (error) {
-      await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+      const cleanup = await Promise.allSettled([
+        removeBrandingImage(newLogoUrl),
+        removeBrandingImage(newCoverUrl),
+      ]);
+      cleanup.forEach((result) => {
+        if (result.status === 'rejected') {
+          logger.warn('Failed to clean up an uncommitted tenant branding image', {
+            tenantId,
+            error: result.reason instanceof Error ? result.reason.message : 'unknown',
+          });
+        }
+      });
       throw error;
     }
+
+    if (!updated) {
+      const cleanup = await Promise.allSettled([
+        removeBrandingImage(newLogoUrl),
+        removeBrandingImage(newCoverUrl),
+      ]);
+      cleanup.forEach((result) => {
+        if (result.status === 'rejected') {
+          logger.warn('Failed to clean up an uncommitted tenant branding image', {
+            tenantId,
+            error: result.reason instanceof Error ? result.reason.message : 'unknown',
+          });
+        }
+      });
+      return null;
+    }
+
+    // The database now references the new files. Old-file cleanup must never
+    // roll back the successful update by deleting the newly referenced files.
+    const oldFiles = [
+      newLogoUrl && oldBranding.logoUrl ? oldBranding.logoUrl : '',
+      newCoverUrl && oldBranding.coverImageUrl ? oldBranding.coverImageUrl : '',
+    ].filter(Boolean);
+    const cleanup = await Promise.allSettled(oldFiles.map((url) => removeBrandingImage(url)));
+    cleanup.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        logger.warn('Failed to remove a replaced tenant branding image', {
+          tenantId,
+          imageUrl: oldFiles[index],
+          error: result.reason instanceof Error ? result.reason.message : 'unknown',
+        });
+      }
+    });
+
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.profile.updated', targetType: 'tenant', targetId: tenantId, metadata: { changedFields: Object.keys(input) } });
+    return updated;
   },
   async updatePreferences(tenantId: string, userId: string, preferences: Record<string, any>) {
     const current = await tenancyRepository.findTenantById(tenantId);
