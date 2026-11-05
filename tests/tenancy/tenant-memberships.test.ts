@@ -87,10 +87,10 @@ describe('tenant membership administration', () => {
     }));
   });
 
-  it('rejects custom roles that grant permissions outside the actor permission set', async () => {
+  it('prevents Tenant Admin from creating tenant-wide custom roles', async () => {
     await expect(tenancyService.createCustomTenantRole(tenantId, actorId, 'tenant_admin', 'tenant', {
-      name: 'Elevated', scope: 'clinic', permissions: ['organization.manage'],
-    })).rejects.toMatchObject({ status: 403, code: 'PERMISSION_GRANT_ESCALATION' });
+      name: 'Elevated', scope: 'tenant', permissions: ['organization.manage'],
+    })).rejects.toMatchObject({ status: 403, code: 'ROLE_SCOPE_GRANT_DENIED' });
     expect(tenancyRepository.createTenantRole).not.toHaveBeenCalled();
   });
 
