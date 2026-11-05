@@ -249,13 +249,17 @@ export const clinicFinanceService = {
     if (current.status === 'paid' && current.paymentIdempotencyKey === input.idempotencyKey && current.paymentMethod === input.method) return current;
     if (current.status !== 'recorded') throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense is not awaiting payment.' };
     const cashSessionId = input.method === 'cash' ? await reserveCashSession(scope) : null;
-    const updated = await ClinicExpense.findOneAndUpdate(
-      { _id: expenseId, ...invoiceFilter(scope), status: 'recorded' },
-      { $set: { status: 'paid', paymentMethod: input.method, paymentIdempotencyKey: input.idempotencyKey, cashSessionId, paidAt: input.method === 'cash' ? new Date() : (input.paidAt ?? new Date()), updatedBy: scope.userId }, $push: { events: { type: 'expense.paid', actorUserId: scope.userId, occurredAt: new Date(), metadata: { method: input.method } } } },
-      { new: true, runValidators: true },
-    );
-    if (!updated) throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense was paid or changed by another request.' };
-    return updated;
+    try {
+      const updated = await ClinicExpense.findOneAndUpdate(
+        { _id: expenseId, ...invoiceFilter(scope), status: 'recorded' },
+        { $set: { status: 'paid', paymentMethod: input.method, paymentIdempotencyKey: input.idempotencyKey, cashSessionId, paidAt: input.method === 'cash' ? new Date() : (input.paidAt ?? new Date()), updatedBy: scope.userId }, $push: { events: { type: 'expense.paid', actorUserId: scope.userId, occurredAt: new Date(), metadata: { method: input.method } } } },
+        { new: true, runValidators: true },
+      );
+      if (!updated) throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense was paid or changed by another request.' };
+      return updated;
+    } finally {
+      if (cashSessionId) await releaseCashSession(scope, cashSessionId);
+    }
   },
 
   async voidExpense(scope: Scope, expenseId: string, reason: string) {
