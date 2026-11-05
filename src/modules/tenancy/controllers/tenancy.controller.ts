@@ -486,7 +486,7 @@ export const tenancyController = {
     const context = req.tenantContext!;
     const permissions = context.role === 'tenant_owner'
       ? TENANT_PERMISSION_CATALOG
-      : TENANT_PERMISSION_CATALOG.filter((permission) => getTenantRolePermissions(context.role).includes(permission));
+      : TENANT_PERMISSION_CATALOG.filter((permission) => getTenantRoleGrants(context.role, context).some((grant) => grant.permission === permission));
     res.json({ success: true, data: { permissions, assignable: permissions } });
   },
   async createTenantRole(req: Request, res: Response, next: NextFunction) {
