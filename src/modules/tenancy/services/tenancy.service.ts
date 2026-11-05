@@ -1,3 +1,4 @@
+import { createHash, randomBytes } from 'node:crypto';
 import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
@@ -73,6 +74,66 @@ async function recordTenantAuditEvent(input: Record<string, unknown>): Promise<v
 }
 
 export const tenancyService = {
+  async createTenantInvitation(tenantId: string, userId: string, actorRole: string, input: { email: string; role: string; scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string; branchIds?: string[]; expiresInDays?: number }) {
+    const grantableByOwner = ['tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'];
+    const grantableByAdmin = ['billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'];
+    const grantable = actorRole === 'tenant_owner' ? grantableByOwner : actorRole === 'tenant_admin' ? grantableByAdmin : [];
+    if (!grantable.includes(input.role)) throw { status: 403, code: 'ROLE_GRANT_FORBIDDEN', message: 'You cannot invite a user with this role.' };
+    const scopeRoles: Record<string, string[]> = {
+      tenant: ['tenant_admin', 'billing_admin'],
+      clinic: ['clinic_admin', 'clinic_manager', 'staff', 'provider', 'receptionist'],
+      branch: ['branch_manager', 'staff', 'provider', 'receptionist'],
+    };
+    if (!scopeRoles[input.scope]?.includes(input.role)) throw { status: 400, code: 'INVITATION_SCOPE_INVALID', message: 'The selected role is not valid for this membership scope.' };
+    if (input.scope === 'tenant' && (input.clinicId || (input.branchIds?.length ?? 0))) throw { status: 400, code: 'INVITATION_SCOPE_INVALID', message: 'Tenant-wide invitations cannot include clinic or branch scopes.' };
+    if (input.scope !== 'tenant' && !input.clinicId) throw { status: 400, code: 'CLINIC_REQUIRED', message: 'A clinic is required for clinic- or branch-scoped invitations.' };
+    if (input.scope === 'clinic' && (input.branchIds?.length ?? 0)) throw { status: 400, code: 'INVITATION_SCOPE_INVALID', message: 'Clinic-scoped invitations cannot include branch IDs.' };
+    if (input.scope === 'branch' && !(input.branchIds?.length)) throw { status: 400, code: 'BRANCH_REQUIRED', message: 'At least one branch is required for branch-scoped invitations.' };
+    if (input.clinicId && !await tenancyRepository.findClinicById(input.clinicId, tenantId)) return null;
+    for (const branchId of input.branchIds ?? []) {
+      if (!input.clinicId || !await tenancyRepository.findBranchById(branchId, tenantId, input.clinicId)) throw { status: 400, code: 'BRANCH_SCOPE_INVALID', message: 'Every selected branch must belong to the selected clinic and tenant.' };
+    }
+    const email = input.email.trim().toLowerCase();
+    const pending = await tenancyRepository.findPendingTenantInvitation(tenantId, email);
+    if (pending) throw { status: 409, code: 'INVITATION_ALREADY_PENDING', message: 'An active invitation already exists for this email.' };
+    const token = randomBytes(32).toString('base64url');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Date.now() + (input.expiresInDays ?? 7) * 24 * 60 * 60 * 1000);
+    const invitation = await tenancyRepository.createTenantInvitation({
+      tenantId, email, role: input.role, scope: input.scope, clinicId: input.clinicId ?? null,
+      branchIds: input.branchIds ?? [], invitedBy: userId, tokenHash, status: 'pending', expiresAt,
+    });
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.created', targetType: 'tenant_invitation', targetId: String(invitation._id), clinicId: input.clinicId, metadata: { email, role: input.role, scope: input.scope } });
+    return {
+      invitation: { id: String(invitation._id), email, role: invitation.role, scope: invitation.scope, clinicId: invitation.clinicId, branchIds: invitation.branchIds, status: invitation.status, expiresAt: invitation.expiresAt },
+      invitationToken: token,
+      acceptanceEndpoint: '/auth/invitations/accept',
+      delivery: 'manual',
+    };
+  },
+  async listTenantInvitations(tenantId: string) {
+    const items = await tenancyRepository.listTenantInvitations(tenantId);
+    return items.map((item: any) => ({ ...item, status: item.status === 'pending' && new Date(item.expiresAt).getTime() <= Date.now() ? 'expired' : item.status }));
+  },
+  async revokeTenantInvitation(tenantId: string, invitationId: string, userId: string) {
+    const invitation = await tenancyRepository.findTenantInvitationById(tenantId, invitationId);
+    if (!invitation || invitation.status !== 'pending') return null;
+    const updated = await tenancyRepository.updateTenantInvitation(tenantId, invitationId, { status: 'revoked', revokedAt: new Date(), revokedBy: userId });
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.revoked', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
+    return updated;
+  },
+  async resendTenantInvitation(tenantId: string, invitationId: string, userId: string) {
+    const invitation = await tenancyRepository.findTenantInvitationById(tenantId, invitationId);
+    if (!invitation || !['pending', 'expired'].includes(invitation.status)) return null;
+    const token = randomBytes(32).toString('base64url');
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const updated = await tenancyRepository.updateTenantInvitation(tenantId, invitationId, {
+      tokenHash, status: 'pending', expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), revokedAt: null, revokedBy: null,
+    });
+    if (!updated) return null;
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.resent', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
+    return { invitation: updated, invitationToken: token, acceptanceEndpoint: '/auth/invitations/accept', delivery: 'manual' };
+  },
   listTenantMemberships(tenantId: string) {
     return tenancyRepository.listTenantMemberships(tenantId);
   },
