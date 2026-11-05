@@ -36,7 +36,7 @@ describe('tenant document service', () => {
   beforeEach(() => vi.resetAllMocks());
 
   it('stores validated document bytes privately and persists tenant ownership metadata', async () => {
-    vi.mocked(storePrivateTenantDocument).mockResolvedValue(\`\${tenantId}/file.pdf\`);
+    vi.mocked(storePrivateTenantDocument).mockResolvedValue(tenantId + '/file.pdf');
     vi.mocked(tenancyRepository.createTenantDocument).mockImplementation(async (data: any) => data as any);
 
     const result = await tenancyService.createTenantDocument(tenantId, userId, {
@@ -51,7 +51,7 @@ describe('tenant document service', () => {
       uploadedBy: userId,
       category: 'registration',
       mimeType: 'application/pdf',
-      storageKey: \`\${tenantId}/file.pdf\`,
+      storageKey: tenantId + '/file.pdf',
     }));
     expect(result).toMatchObject({ tenantId, mimeType: 'application/pdf' });
   });
@@ -67,7 +67,7 @@ describe('tenant document service', () => {
   });
 
   it('removes the stored file if document metadata persistence fails', async () => {
-    vi.mocked(storePrivateTenantDocument).mockResolvedValue(\`\${tenantId}/orphan.pdf\`);
+    vi.mocked(storePrivateTenantDocument).mockResolvedValue(tenantId + '/orphan.pdf');
     vi.mocked(tenancyRepository.createTenantDocument).mockRejectedValue(new Error('database unavailable'));
 
     await expect(tenancyService.createTenantDocument(tenantId, userId, {
@@ -76,12 +76,12 @@ describe('tenant document service', () => {
       fileBase64: pdfBase64,
     })).rejects.toThrow('database unavailable');
 
-    expect(removePrivateTenantDocument).toHaveBeenCalledWith(\`\${tenantId}/orphan.pdf\`);
+    expect(removePrivateTenantDocument).toHaveBeenCalledWith(tenantId + '/orphan.pdf');
   });
 
   it('downloads only a document found under the requested tenant', async () => {
     vi.mocked(tenancyRepository.findTenantDocument).mockResolvedValue({
-      storageKey: \`\${tenantId}/document.pdf\`,
+      storageKey: tenantId + '/document.pdf',
       tenantId,
       mimeType: 'application/pdf',
     } as any);
