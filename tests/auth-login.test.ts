@@ -23,6 +23,7 @@ vi.mock('../src/modules/auth/services/token-revocation.service.js', () => ({
 import { authService, AuthError } from '../src/modules/auth/services/auth.service.js';
 import { authRepository } from '../src/modules/auth/repositories/auth.repository.js';
 import { signAccessToken, verifyPassword } from '../src/modules/auth/services/auth.security.js';
+import { userSessionService } from '../src/modules/auth/services/user-session.service.js';
 
 describe('regular user login', () => {
   beforeEach(() => {
@@ -64,7 +65,7 @@ describe('regular user login', () => {
       expiresAt: new Date(Date.now() + 60_000), revokedAt: null,
     }] as any);
 
-    const sessions = await authService.listUserSessionSummaries('user-1');
+    const sessions = await userSessionService.listSummaries('user-1');
 
     expect(sessions).toMatchObject([{ sessionId: 'session-1', userAgent: 'Chrome', status: 'active' }]);
     expect(sessions[0]).not.toHaveProperty('token');
