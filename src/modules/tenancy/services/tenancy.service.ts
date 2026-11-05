@@ -989,8 +989,8 @@ export const tenancyService = {
       : hasAddressCity
         ? (input.addressDetails.cityId ?? null)
         : (currentData.cityId ?? currentData.addressDetails?.cityId ?? null);
-    if (hasTopLevelCity || hasAddressCity) {
-      update.cityId = resolvedCityId;
+    if (hasTopLevelCity || hasAddressCity) update.cityId = resolvedCityId;
+    if (hasTopLevelCity || hasAddressCity || input.addressDetails) {
       update.addressDetails = {
         ...(currentData.addressDetails?.toObject?.() ?? currentData.addressDetails ?? {}),
         ...(mergedAddress ?? {}),
