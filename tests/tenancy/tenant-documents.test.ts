@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     createTenantAuditEvent: vi.fn().mockResolvedValue({}),
+    findClinicById: vi.fn(),
     createTenantDocument: vi.fn(),
     listTenantDocuments: vi.fn(),
     findTenantDocument: vi.fn(),
@@ -56,6 +57,52 @@ describe('tenant document service', () => {
       storageKey: tenantId + '/file.pdf',
     }));
     expect(result).toMatchObject({ tenantId, mimeType: 'application/pdf' });
+  });
+
+  it('stores clinic documents with both tenant and clinic ownership', async () => {
+    const clinicId = '64b000000000000000000005';
+    vi.mocked(tenancyRepository.findClinicById).mockResolvedValue({ _id: clinicId } as any);
+    vi.mocked(storePrivateTenantDocument).mockResolvedValue(tenantId + '/clinic-file.pdf');
+    vi.mocked(tenancyRepository.createTenantDocument).mockImplementation(async (data: any) => data as any);
+
+    const result = await tenancyService.createTenantDocument(tenantId, userId, {
+      name: 'Clinic License.pdf',
+      category: 'license',
+      fileBase64: pdfBase64,
+    }, clinicId);
+
+    expect(tenancyRepository.findClinicById).toHaveBeenCalledWith(clinicId, tenantId);
+    expect(tenancyRepository.createTenantDocument).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId,
+      clinicId,
+      category: 'license',
+      uploadedBy: userId,
+    }));
+    expect(result).toMatchObject({ tenantId, clinicId });
+  });
+
+  it('does not store a clinic document when the clinic is outside the tenant', async () => {
+    const clinicId = '64b000000000000000000005';
+    vi.mocked(tenancyRepository.findClinicById).mockResolvedValue(null as any);
+
+    await expect(tenancyService.createTenantDocument(tenantId, userId, {
+      name: 'Clinic License.pdf',
+      category: 'license',
+      fileBase64: pdfBase64,
+    }, clinicId)).resolves.toBeNull();
+
+    expect(storePrivateTenantDocument).not.toHaveBeenCalled();
+    expect(tenancyRepository.createTenantDocument).not.toHaveBeenCalled();
+  });
+
+  it('uses clinic scope for document downloads to prevent cross-clinic access', async () => {
+    const clinicId = '64b000000000000000000005';
+    vi.mocked(tenancyRepository.findTenantDocument).mockResolvedValue(null as any);
+
+    await expect(tenancyService.getTenantDocument(tenantId, documentId, clinicId)).resolves.toBeNull();
+
+    expect(tenancyRepository.findTenantDocument).toHaveBeenCalledWith(tenantId, documentId, clinicId);
+    expect(readPrivateTenantDocument).not.toHaveBeenCalled();
   });
 
   it('rejects content that is not a supported file before writing it', async () => {
