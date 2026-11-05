@@ -350,13 +350,35 @@ export const tenancyRepository = {
   deleteTenantMembershipById(id: string) { return TenantMembership.deleteOne({ _id: id }); },
   findTenantMembershipForUser(userId: string, tenantId: string) { return TenantMembership.findOne({ userId, tenantId, status: { $in: ['active', 'invited'] } }); },
   findExistingMembershipForInvitation(userId: string, tenantId: string, clinicId: string | null) { return TenantMembership.findOne({ userId, tenantId, clinicId, status: { $in: ['active', 'invited'] } }); },
-  listTenantMemberships(tenantId: string) {
-    return TenantMembership.find({ tenantId })
-      .populate('userId', 'name email isActive')
-      .populate('clinicId', 'name slug status')
-      .populate('branchIds', 'name slug status')
-      .sort({ createdAt: -1 })
-      .lean();
+  async listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; page: number; perPage: number } = { page: 1, perPage: 25 }) {
+    const filter: Record<string, unknown> = { tenantId };
+    if (query.status) filter.status = query.status;
+    if (query.role) filter.role = query.role;
+    if (query.scope) filter.scope = query.scope;
+    if (query.clinicId) filter.clinicId = query.clinicId;
+    if (query.search) {
+      const escaped = [...query.search].map((char) => '.*+?^$()|[]{}\\'.includes(char) ? '\\' + char : char).join('');
+      const userIds = await User.find({
+        $or: [
+          { name: { $regex: escaped, $options: 'i' } },
+          { email: { $regex: escaped, $options: 'i' } },
+        ],
+      }).distinct('_id');
+      filter.userId = { $in: userIds };
+    }
+    const skip = (query.page - 1) * query.perPage;
+    const [items, total] = await Promise.all([
+      TenantMembership.find(filter)
+        .populate('userId', 'name email isActive')
+        .populate('clinicId', 'name slug status')
+        .populate('branchIds', 'name slug status')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(query.perPage)
+        .lean(),
+      TenantMembership.countDocuments(filter),
+    ]);
+    return { items, pagination: { page: query.page, perPage: query.perPage, total, pages: Math.ceil(total / query.perPage) } };
   },
   findTenantMembershipById(tenantId: string, membershipId: string) {
     return TenantMembership.findOne({ _id: membershipId, tenantId });
