@@ -35,7 +35,7 @@ export const tenancyRepository = {
   },
   applyTenantConfigurationToClinic(tenantId: string, clinicId: string, values: Record<string, unknown>, version: number) {
     return Clinic.findOneAndUpdate(
-      { _id: clinicId, tenantId },
+      { _id: clinicId, tenantId, $or: [{ 'settings.organizationDefaultsVersion': { $lt: version } }, { 'settings.organizationDefaultsVersion': { $exists: false } }] },
       { $set: { 'settings.organizationDefaults': values, 'settings.organizationDefaultsVersion': version } },
       { new: true, runValidators: true },
     );
