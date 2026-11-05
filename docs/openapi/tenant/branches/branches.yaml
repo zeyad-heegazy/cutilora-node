@@ -141,3 +141,83 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
+
+  /tenant/branches/{branchId}/business-hours:
+    get:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches"
+      summary: Get branch business hours
+      description: Returns the branch timezone and weekly operating schedule. Branch-scoped users can only read their selected branch.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - name: branchId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Branch business hours
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      timezone: { type: string }
+                      operatingHours:
+                        type: array
+                        items: { $ref: "../../../openapi.yaml#/components/schemas/OperatingHoursDay" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    put:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches"
+      summary: Replace branch weekly business hours
+      description: Replaces the complete weekly schedule. Each weekday may appear once; open days require valid open/close times and non-overlapping breaks. Overnight hours are not supported. Requires branch.update permission.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - name: branchId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [operatingHours]
+              properties:
+                operatingHours:
+                  type: array
+                  maxItems: 7
+                  items: { $ref: "../../../openapi.yaml#/components/schemas/OperatingHoursDay" }
+      responses:
+        "200":
+          description: Updated branch business hours
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      timezone: { type: string }
+                      operatingHours:
+                        type: array
+                        items: { $ref: "../../../openapi.yaml#/components/schemas/OperatingHoursDay" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
