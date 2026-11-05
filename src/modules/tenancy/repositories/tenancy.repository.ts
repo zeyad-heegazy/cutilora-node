@@ -7,6 +7,7 @@ import { SubscriptionPayment } from '../models/subscription-payment.model.js';
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { User } from '../../auth/models/user.model.js';
 import { TenantDocument } from '../models/tenant-document.model.js';
+import { BranchHoliday } from '../models/branch-holiday.model.js';
 
 export const tenancyRepository = {
   createTenantDocument(data: Record<string, unknown>) {
@@ -163,6 +164,27 @@ export const tenancyRepository = {
     return Clinic.findOneAndUpdate(
       { _id: id, tenantId },
       { $set: data },
+      { new: true, runValidators: true },
+    );
+  },
+  listBranchHolidays(filter: Record<string, unknown>) {
+    return BranchHoliday.find({ ...filter, status: 'active' }).sort({ startDate: 1 }).lean();
+  },
+  findOverlappingBranchHoliday(filter: Record<string, unknown>, startDate: Date, endDate: Date) {
+    return BranchHoliday.findOne({
+      ...filter,
+      status: 'active',
+      startDate: { $lte: endDate },
+      endDate: { $gte: startDate },
+    }).select('_id title startDate endDate');
+  },
+  createBranchHoliday(data: Record<string, unknown>) {
+    return BranchHoliday.create(data);
+  },
+  cancelBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, userId: string) {
+    return BranchHoliday.findOneAndUpdate(
+      { _id: holidayId, tenantId, clinicId, branchId, status: 'active' },
+      { $set: { status: 'cancelled', cancelledAt: new Date(), cancelledBy: userId } },
       { new: true, runValidators: true },
     );
   },
