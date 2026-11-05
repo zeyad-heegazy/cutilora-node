@@ -16,10 +16,14 @@ Clinic invoices, patient collections/refunds and operating expenses are owned by
 - Approved cash sessions are immutable/locked; opener and closer cannot approve their own close.
 - Immutable financial event history embedded in invoice/expense records.
 - Currency-separated summary with invoiced, collected, refunded, outstanding, expense and cash operating result totals.
+- Aggregate accounts-receivable aging buckets based on invoice due date (or issue date fallback), with no patient-level data.
+- Bounded financial reports for collections/payment methods, refunds, expenses by category, service-reference revenue and day/month trends.
 - Clinic/branch scope derived from authenticated membership context, never request body ownership fields.
 
 ## API
 - GET /api/v1/clinic/finance/summary
+- GET /api/v1/clinic/finance/receivables
+- GET /api/v1/clinic/finance/reports
 - GET/POST /api/v1/clinic/invoices
 - GET/PATCH /api/v1/clinic/invoices/:invoiceId
 - POST /api/v1/clinic/invoices/:invoiceId/issue
