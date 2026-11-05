@@ -253,25 +253,6 @@ paths:
             image/webp: { schema: { type: string, format: binary } }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
-components:
-  schemas:
-    ClinicDocument:
-      type: object
-      properties:
-        _id: { type: string }
-        tenantId: { type: string }
-        clinicId: { type: string }
-        category: { type: string, enum: [registration, tax, license, insurance, contract, other] }
-        name: { type: string }
-        mimeType: { type: string, enum: [application/pdf, image/jpeg, image/png, image/webp] }
-        sizeBytes: { type: integer }
-        expiresAt: { type: string, format: date-time, nullable: true }
-        version: { type: integer }
-        status: { type: string, enum: [active, archived] }
-        uploadedBy: { type: string }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-
   /tenant/clinics/{clinicId}/users:
     get:
       tags: [Clinics]
@@ -300,3 +281,22 @@ components:
                   pagination: { type: object, additionalProperties: true }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
+components:
+  schemas:
+    ClinicDocument:
+      type: object
+      properties:
+        _id: { type: string }
+        tenantId: { type: string }
+        clinicId: { type: string }
+        category: { type: string, enum: [registration, tax, license, insurance, contract, other] }
+        name: { type: string }
+        mimeType: { type: string, enum: [application/pdf, image/jpeg, image/png, image/webp] }
+        sizeBytes: { type: integer }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer }
+        status: { type: string, enum: [active, archived] }
+        uploadedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
