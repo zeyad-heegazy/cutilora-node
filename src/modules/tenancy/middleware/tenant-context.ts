@@ -5,7 +5,7 @@ import { tenancyRepository } from '../repositories/tenancy.repository.js';
 const deny = (res: Response, status: number, code: string, message: string) =>
   res.status(status).json({ success: false, error: { code, message } });
 
-const isValidId = (value: string) => Types.ObjectId.isValid(value) && /^[a-f\\d]{24}$/i.test(value);
+const isValidId = (value: string) => Types.ObjectId.isValid(value) && /^[a-f\d]{24}$/i.test(value);
 
 export async function resolveTenantContext(req: Request, res: Response, next: NextFunction) {
   try {
