@@ -268,6 +268,10 @@ export const createBranchSchema = z.object({
   openingDate: branchFields.openingDate,
 });
 
+export const updateBranchOperatingHoursSchema = z.object({
+  operatingHours: operatingHoursArraySchema,
+});
+
 export const updateBranchSchema = z.object({
   name: branchFields.name.optional(),
   code: branchFields.code,
