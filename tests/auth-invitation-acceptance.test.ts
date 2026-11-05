@@ -135,4 +135,17 @@ describe('tenant invitation acceptance', () => {
     expect(tenancyRepository.createTenantMembership).not.toHaveBeenCalled();
   });
 
+  it('keeps the accepted membership active if audit persistence is temporarily unavailable', async () => {
+    vi.mocked(authRepository.findUserByEmail).mockResolvedValue({
+      _id: userId, name: 'Existing User', email: invitation.email, isActive: true, platformRole: 'user',
+    } as any);
+    vi.mocked(tenancyRepository.createTenantAuditEvent).mockRejectedValue(new Error('audit store unavailable'));
+
+    const result = await authService.acceptInvitation({ token: 'x'.repeat(40) });
+
+    expect(result).toMatchObject({ membership: { status: 'active' } });
+    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, expect.objectContaining({ status: 'accepted' }));
+    expect(tenancyRepository.deleteTenantMembershipById).not.toHaveBeenCalled();
+  });
+
 });
