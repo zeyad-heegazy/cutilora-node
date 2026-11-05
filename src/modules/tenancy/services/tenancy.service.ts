@@ -263,6 +263,35 @@ export const tenancyService = {
     if (newCoverUrl && oldCoverUrl && oldCoverUrl !== newCoverUrl) await removeBrandingImage(oldCoverUrl);
     return updated;
   },
+  async listBranchHolidays(tenantId: string, clinicId: string, branchId: string) {
+    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+    if (!branch) return null;
+    return tenancyRepository.listBranchHolidays({ tenantId, clinicId, branchId });
+  },
+  async createBranchHoliday(tenantId: string, clinicId: string, branchId: string, userId: string, input: Record<string, any>) {
+    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+    if (!branch) return null;
+    const startDate = new Date(`${input.startDate}T00:00:00.000Z`);
+    const endDate = new Date(`${input.endDate}T00:00:00.000Z`);
+    if (startDate > endDate) throw { status: 400, code: 'INVALID_DATE_RANGE', message: 'endDate must be on or after startDate.' };
+    const scope = { tenantId, clinicId, branchId };
+    const overlap = await tenancyRepository.findOverlappingBranchHoliday(scope, startDate, endDate);
+    if (overlap) throw { status: 409, code: 'BRANCH_HOLIDAY_OVERLAP', message: 'This date range overlaps an existing active holiday or closure.' };
+    return tenancyRepository.createBranchHoliday({
+      ...input,
+      tenantId,
+      clinicId,
+      branchId,
+      createdBy: userId,
+      startDate,
+      endDate,
+    });
+  },
+  async cancelBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, userId: string) {
+    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+    if (!branch) return null;
+    return tenancyRepository.cancelBranchHoliday(tenantId, clinicId, branchId, holidayId, userId);
+  },
   listBranches(tenantId: string, clinicId: string, branchId: string | null) {
     return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) });
   },
