@@ -56,3 +56,22 @@ export function getTenantRoleCatalog(actorRole: string) {
     customizable: false,
   }));
 }
+
+
+export function getTenantRoleGrants(
+  role: string,
+  context: { scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string | null; branchId?: string | null },
+) {
+  const permissions = getTenantRolePermissions(role);
+  return permissions.map((permission) => ({
+    permission,
+    scope: context.scope,
+    ...(context.clinicId ? { clinicId: context.clinicId } : {}),
+    ...(context.branchId ? { branchId: context.branchId } : {}),
+  })) as Array<{
+    permission: string;
+    scope: 'tenant' | 'clinic' | 'branch';
+    clinicId?: string;
+    branchId?: string;
+  }>;
+}
