@@ -220,7 +220,7 @@ export const tenancyService = {
     if (invalid.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more permissions are not in the tenant permission catalog.', details: { permissions: invalid } };
     const actorPermissions = getTenantRolePermissions(actorRole);
     if (!input.permissions.every((permission) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
-    const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+    const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
     if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
     try {
       const role = await tenancyRepository.createTenantRole({
@@ -248,7 +248,7 @@ export const tenancyService = {
     const update: Record<string, unknown> = { updatedBy: actorUserId, permissions: [...new Set(permissions)].sort() };
     if (input.description !== undefined) update.description = input.description;
     if (input.name !== undefined) {
-      const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+      const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
       if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
       update.name = input.name.trim(); update.key = key;
     }
