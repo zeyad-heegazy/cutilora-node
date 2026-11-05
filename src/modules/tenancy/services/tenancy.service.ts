@@ -15,6 +15,20 @@ async function assertTenantLimit(tenantId: string, key: 'maxClinics' | 'maxBranc
   }
 }
 
+async function withBranchHolidayMutationLock<T>(tenantId: string, clinicId: string, branchId: string, work: () => Promise<T>): Promise<T> {
+  const token = randomBytes(24).toString('hex');
+  const now = new Date();
+  const acquired = await tenancyRepository.acquireBranchHolidayMutationLock(
+    tenantId, clinicId, branchId, token, now, new Date(now.getTime() + 30_000),
+  );
+  if (!acquired) throw { status: 409, code: 'BRANCH_HOLIDAY_MUTATION_BUSY', message: 'Branch holiday settings are being updated. Retry shortly.' };
+  try {
+    return await work();
+  } finally {
+    await tenancyRepository.releaseBranchHolidayMutationLock(tenantId, clinicId, branchId, token).catch(() => null);
+  }
+}
+
 async function withTenantEntitlementLock<T>(tenantId: string, work: () => Promise<T>): Promise<T> {
   const lock = await tenancyRepository.acquireTenantEntitlementLock(tenantId, new Date(), 30_000);
   if (!lock) throw { status: 409, code: 'TENANT_LIMIT_CHECK_BUSY', message: 'Tenant provisioning is busy. Retry shortly.' };
@@ -804,54 +818,50 @@ export const tenancyService = {
     return tenancyRepository.listBranchHolidays({ tenantId, clinicId, branchId });
   },
   async createBranchHoliday(tenantId: string, clinicId: string, branchId: string, userId: string, input: Record<string, any>) {
-    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
-    if (!branch) return null;
-    const startDate = new Date(`${input.startDate}T00:00:00.000Z`);
-    const endDate = new Date(`${input.endDate}T00:00:00.000Z`);
-    if (startDate > endDate) throw { status: 400, code: 'INVALID_DATE_RANGE', message: 'endDate must be on or after startDate.' };
-    const scope = { tenantId, clinicId, branchId };
-    const overlap = await tenancyRepository.findOverlappingBranchHoliday(scope, startDate, endDate);
-    if (overlap) throw { status: 409, code: 'BRANCH_HOLIDAY_OVERLAP', message: 'This date range overlaps an existing active holiday or closure.' };
-    const holiday = await tenancyRepository.createBranchHoliday({
-      ...input,
-      tenantId,
-      clinicId,
-      branchId,
-      createdBy: userId,
-      startDate,
-      endDate,
+    return withBranchHolidayMutationLock(tenantId, clinicId, branchId, async () => {
+      const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+      if (!branch) return null;
+      const startDate = new Date(`${input.startDate}T00:00:00.000Z`);
+      const endDate = new Date(`${input.endDate}T00:00:00.000Z`);
+      if (startDate > endDate) throw { status: 400, code: 'INVALID_DATE_RANGE', message: 'endDate must be on or after startDate.' };
+      const scope = { tenantId, clinicId, branchId };
+      const overlap = await tenancyRepository.findOverlappingBranchHoliday(scope, startDate, endDate);
+      if (overlap) throw { status: 409, code: 'BRANCH_HOLIDAY_OVERLAP', message: 'This date range overlaps an existing active holiday or closure.' };
+      const holiday = await tenancyRepository.createBranchHoliday({
+        ...input, tenantId, clinicId, branchId, createdBy: userId, startDate, endDate,
+      });
+      await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.created', targetType: 'branch_holiday', targetId: String(holiday._id), clinicId, branchId, metadata: { type: input.type, startDate: input.startDate, endDate: input.endDate } });
+      return holiday;
     });
-    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.created', targetType: 'branch_holiday', targetId: String(holiday._id), clinicId, branchId, metadata: { type: input.type, startDate: input.startDate, endDate: input.endDate } });
-    return holiday;
   },
   async updateBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, userId: string, input: Record<string, any>) {
-    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
-    if (!branch) return null;
-    const startDate = new Date(`${input.startDate}T00:00:00.000Z`);
-    const endDate = new Date(`${input.endDate}T00:00:00.000Z`);
-    if (startDate > endDate) throw { status: 400, code: 'INVALID_DATE_RANGE', message: 'endDate must be on or after startDate.' };
-    const scope = { tenantId, clinicId, branchId };
-    const overlap = await tenancyRepository.findOverlappingBranchHoliday(scope, startDate, endDate, holidayId);
-    if (overlap) throw { status: 409, code: 'BRANCH_HOLIDAY_OVERLAP', message: 'This date range overlaps an existing active holiday or closure.' };
-    const holiday = await tenancyRepository.updateBranchHoliday(tenantId, clinicId, branchId, holidayId, {
-      title: input.title,
-      type: input.type,
-      startDate,
-      endDate,
-      isAllDay: input.isAllDay,
-      startTime: input.isAllDay ? null : input.startTime,
-      endTime: input.isAllDay ? null : input.endTime,
-      reason: input.reason ?? '',
+    return withBranchHolidayMutationLock(tenantId, clinicId, branchId, async () => {
+      const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+      if (!branch) return null;
+      const startDate = new Date(`${input.startDate}T00:00:00.000Z`);
+      const endDate = new Date(`${input.endDate}T00:00:00.000Z`);
+      if (startDate > endDate) throw { status: 400, code: 'INVALID_DATE_RANGE', message: 'endDate must be on or after startDate.' };
+      const scope = { tenantId, clinicId, branchId };
+      const overlap = await tenancyRepository.findOverlappingBranchHoliday(scope, startDate, endDate, holidayId);
+      if (overlap) throw { status: 409, code: 'BRANCH_HOLIDAY_OVERLAP', message: 'This date range overlaps an existing active holiday or closure.' };
+      const holiday = await tenancyRepository.updateBranchHoliday(tenantId, clinicId, branchId, holidayId, {
+        title: input.title, type: input.type, startDate, endDate, isAllDay: input.isAllDay,
+        startTime: input.isAllDay ? null : input.startTime,
+        endTime: input.isAllDay ? null : input.endTime,
+        reason: input.reason ?? '',
+      });
+      if (holiday) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.updated', targetType: 'branch_holiday', targetId: holidayId, clinicId, branchId, metadata: { type: input.type, startDate: input.startDate, endDate: input.endDate } });
+      return holiday;
     });
-    if (holiday) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.updated', targetType: 'branch_holiday', targetId: holidayId, clinicId, branchId, metadata: { type: input.type, startDate: input.startDate, endDate: input.endDate } });
-    return holiday;
   },
   async cancelBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, userId: string) {
-    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
-    if (!branch) return null;
-    const holiday = await tenancyRepository.cancelBranchHoliday(tenantId, clinicId, branchId, holidayId, userId);
-    if (holiday) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.cancelled', targetType: 'branch_holiday', targetId: holidayId, clinicId, branchId });
-    return holiday;
+    return withBranchHolidayMutationLock(tenantId, clinicId, branchId, async () => {
+      const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+      if (!branch) return null;
+      const holiday = await tenancyRepository.cancelBranchHoliday(tenantId, clinicId, branchId, holidayId, userId);
+      if (holiday) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.cancelled', targetType: 'branch_holiday', targetId: holidayId, clinicId, branchId });
+      return holiday;
+    });
   },
   async listClinicBranches(tenantId: string, clinicId: string, branchId: string | null, query: { search?: string; status?: string; page: number; perPage: number }) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
