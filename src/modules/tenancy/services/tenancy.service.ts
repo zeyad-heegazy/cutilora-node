@@ -221,11 +221,7 @@ export const tenancyService = {
   async listTenantMembershipHistory(tenantId: string, membershipId: string, page = 1, perPage = 25) {
     const membership = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
     if (!membership) return null;
-    return tenancyRepository.listTenantAuditEvents({
-      tenantId,
-      targetType: 'tenant_membership',
-      targetId: membershipId,
-    }, page, perPage);
+    return tenancyRepository.listTenantMembershipHistory(tenantId, membershipId, page, perPage);
   },
   async updateTenantMembership(tenantId: string, membershipId: string, actorUserId: string, actorRole: string, input: Record<string, any>) {
     const current = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
