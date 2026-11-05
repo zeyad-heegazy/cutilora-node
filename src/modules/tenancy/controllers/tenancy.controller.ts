@@ -650,6 +650,18 @@ export const tenancyController = {
       res.status(201).json({ success: true, data: item });
     } catch (e) { next(e); }
   },
+  async updateBranchHoliday(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      const input = createBranchHolidaySchema.parse(req.body);
+      const item = await tenancyService.updateBranchHoliday(context.tenantId, context.clinicId, branchId, String(req.params.holidayId ?? ''), req.auth!.userId, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Active holiday not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
   async cancelBranchHoliday(req: Request, res: Response, next: NextFunction) {
     try {
       const context = req.tenantContext!;
