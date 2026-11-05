@@ -35,6 +35,12 @@ describe('tenant permission matrix', () => {
     expect(runPermission('branch_manager', 'clinic.settings.manage', { scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }).next).not.toHaveBeenCalled();
   });
 
+  it('uses tenant custom-role permissions and enforces their declared scope', () => {
+    expect(runPermission('custom', 'branch.read', { scope: 'branch', customPermissions: ['branch.read'] }).next).toHaveBeenCalledOnce();
+    expect(runPermission('custom', 'clinic.settings.manage', { scope: 'branch', customPermissions: ['branch.read'] }).next).not.toHaveBeenCalled();
+    expect(runPermission('custom', 'branch.read', { scope: 'branch', customPermissions: [] }).next).not.toHaveBeenCalled();
+  });
+
   it('does not grant permissions to unknown roles', () => {
     expect(getTenantRolePermissions('custom_unknown_role')).toEqual([]);
     expect(runPermission('custom_unknown_role', 'organization.manage').next).not.toHaveBeenCalled();
