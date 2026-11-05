@@ -54,6 +54,18 @@ paths:
                       generatedAt: { type: string, format: date-time }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/dashboard/activity:
+    get:
+      tags: [Tenant Dashboard]
+      summary: Get recent organization activity
+      description: Returns the latest tenant-scoped audit events. This is not a clinic operational activity feed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Recent tenant activity events }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/dashboard/clinics:
     get:
       tags: [Tenant Dashboard]
