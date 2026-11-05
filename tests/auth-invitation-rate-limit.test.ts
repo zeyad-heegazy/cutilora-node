@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const buckets = new Map<string, { count: number; expiresAt: Date }>();
+vi.mock('../src/config/env.js', () => ({ env: { JWT_SECRET: 'unit-test-key' } }));
 vi.mock('../src/modules/auth/repositories/auth.repository.js', () => ({
   authRepository: {
     consumeInvitationAttempt: vi.fn(async (key: string, now: Date, windowMs: number) => {
