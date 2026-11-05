@@ -543,16 +543,16 @@ export const tenancyService = {
       tenancyRepository.findSubscriptionByTenantId(tenantId),
     ]);
     return {
-      plan: subscription ? { code: subscription.plan?.code, name: subscription.plan?.name } : null,
+      plan: subscription ? { code: subscription.plan?.code, name: subscription.plan?.name, features: subscription.plan?.features ?? [] } : null,
       usage: {
         clinics: counts.clinics.total,
         branches: counts.branches.total,
         activeMembers: counts.activeMembers,
         pendingInvitations: counts.pendingInvitations,
       },
-      limits: null,
-      limitsAvailable: false,
-      limitsMessage: 'Plan entitlements are not yet represented in the current subscription schema.',
+      limits: subscription?.plan?.limits ?? null,
+      limitsAvailable: Boolean(subscription?.plan?.limits),
+      limitsMessage: subscription?.plan?.limits ? null : 'No usage limits are configured for this subscription.',
     };
   },
   listTenantInvoices(tenantId: string) {
