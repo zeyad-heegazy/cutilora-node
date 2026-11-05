@@ -61,6 +61,7 @@ export async function resolveTenantContext(req: Request, res: Response, next: Ne
       membershipId: String(membership._id),
       customRoleId: membership.customRoleId ? String(membership.customRoleId) : null,
       ...(customPermissions ? { customPermissions } : {}),
+      permissionOverrides: { allow: membership.permissionOverrides?.allow ?? [], deny: membership.permissionOverrides?.deny ?? [] },
     };
     req.tenantId = tenantId;
     req.auth.activeClinicId = clinicId;
