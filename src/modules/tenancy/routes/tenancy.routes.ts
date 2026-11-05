@@ -76,6 +76,7 @@ tenantRouter.get('/branches/:branchId/settings', requireTenantPermission('branch
 tenantRouter.patch('/branches/:branchId/settings', requireTenantPermission('branch.settings.manage'), tenancyController.updateBranchSettings);
 tenantRouter.get('/branches/:branchId/holidays', requireTenantPermission('branch.holidays.read'), tenancyController.listBranchHolidays);
 tenantRouter.post('/branches/:branchId/holidays', requireTenantPermission('branch.holidays.manage'), tenancyController.createBranchHoliday);
+tenantRouter.put('/branches/:branchId/holidays/:holidayId', requireTenantPermission('branch.holidays.manage'), tenancyController.updateBranchHoliday);
 tenantRouter.delete('/branches/:branchId/holidays/:holidayId', requireTenantPermission('branch.holidays.manage'), tenancyController.cancelBranchHoliday);
 tenantRouter.get('/branches/:branchId', requireTenantPermission('branch.read'), tenancyController.getBranch);
 tenantRouter.patch('/branches/:branchId', requireTenantPermission('branch.update'), tenancyController.updateBranch);
