@@ -47,10 +47,6 @@ export async function resolveTenantContext(req: Request, res: Response, next: Ne
       if (!await tenancyRepository.findActiveBranch(branchId, tenantId, clinicId!)) {
         return deny(res, 404, 'BRANCH_NOT_FOUND', 'Branch not found in this clinic.');
       }
-      if (membership.scope === 'branch') {
-        const allowed = (membership.branchIds || []).map((id: unknown) => String(id));
-        if (!allowed.includes(branchId)) return deny(res, 403, 'BRANCH_ACCESS_DENIED', 'You do not have access to this branch.');
-      }
     }
 
     req.tenantContext = { tenantId, clinicId, branchId, role: membership.role, scope: membership.scope };
