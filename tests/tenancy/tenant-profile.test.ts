@@ -138,6 +138,28 @@ describe('tenant organization profile', () => {
     expect(removeBrandingImage).not.toHaveBeenCalledWith(oldLogo);
   });
 
+  it('updates preferences without overwriting unspecified organization defaults', async () => {
+    vi.mocked(tenancyRepository.findTenantById).mockResolvedValue(
+      makeTenant() as any,
+    );
+    vi.mocked(tenancyRepository.updateTenant).mockResolvedValue({
+      _id: tenantId,
+      preferences: { locale: 'ar', currency: 'EGP' },
+    } as any);
+
+    await tenancyService.updatePreferences(tenantId, userId, {
+      locale: 'ar',
+    });
+
+    expect(tenancyRepository.updateTenant).toHaveBeenCalledWith(
+      tenantId,
+      expect.objectContaining({
+        updatedBy: userId,
+        preferences: { locale: 'ar', currency: 'EGP' },
+      }),
+    );
+  });
+
   it('applies complete default organization preferences when none are supplied', () => {
     const tenant = new Tenant({ name: 'Example Clinic', slug: 'example-clinic' });
 
