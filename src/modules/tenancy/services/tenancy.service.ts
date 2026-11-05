@@ -551,6 +551,8 @@ export const tenancyService = {
       tenancyRepository.getDashboardCounts(tenantId),
       tenancyRepository.findSubscriptionByTenantId(tenantId),
     ]);
+    const limits = subscription?.plan?.limits ?? null;
+    const limitsAvailable = Boolean(limits && Object.values(limits).some((value) => typeof value === 'number'));
     return {
       plan: subscription ? { code: subscription.plan?.code, name: subscription.plan?.name, features: subscription.plan?.features ?? [] } : null,
       usage: {
@@ -559,9 +561,9 @@ export const tenancyService = {
         activeMembers: counts.activeMembers,
         pendingInvitations: counts.pendingInvitations,
       },
-      limits: subscription?.plan?.limits ?? null,
-      limitsAvailable: Boolean(subscription?.plan?.limits),
-      limitsMessage: subscription?.plan?.limits ? null : 'No usage limits are configured for this subscription.',
+      limits,
+      limitsAvailable,
+      limitsMessage: limitsAvailable ? null : 'No usage limits are configured for this subscription.',
     };
   },
   listTenantInvoices(tenantId: string) {
