@@ -5,7 +5,7 @@ import { requireTenantPermission } from '../middleware/tenant-permissions.js';
 import { tenancyController } from '../controllers/tenancy.controller.js';
 import { tenantRolesController } from '../controllers/tenant-roles.controller.js';
 import { tenantCatalogController } from '../controllers/tenant-catalog.controller.js';
-import { clinicFinanceController } from '../controllers/clinic-finance.controller.js';
+import { tenantFinanceController } from '../controllers/tenant-finance.controller.js';
 
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
@@ -47,12 +47,11 @@ tenantRouter.get('/subscription', requireTenantScope, requireTenantPermission('b
 tenantRouter.get('/subscription/usage', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantSubscriptionUsage);
 tenantRouter.get('/invoices', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.listTenantInvoices);
 tenantRouter.get('/invoices/:invoiceId', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantInvoice);
-tenantRouter.get('/finance/overview', requireTenantPermission('finance.read'), clinicFinanceController.overview);
-tenantRouter.get('/finance/entries', requireTenantPermission('finance.read'), clinicFinanceController.list);
-tenantRouter.post('/finance/invoices', requireTenantPermission('finance.manage'), clinicFinanceController.createInvoice);
-tenantRouter.post('/finance/payments', requireTenantPermission('finance.manage'), clinicFinanceController.payment);
-tenantRouter.post('/finance/refunds', requireTenantPermission('finance.manage'), clinicFinanceController.refund);
-tenantRouter.post('/finance/expenses', requireTenantPermission('finance.manage'), clinicFinanceController.expense);
+tenantRouter.get('/finance/summary', requireTenantPermission('finance.read'), tenantFinanceController.summary);
+tenantRouter.get('/finance/clinic-comparison', requireTenantPermission('finance.read'), tenantFinanceController.clinicComparison);
+tenantRouter.get('/finance/revenue-trends', requireTenantPermission('finance.read'), tenantFinanceController.revenueTrends);
+tenantRouter.get('/finance/expense-summary', requireTenantPermission('finance.read'), tenantFinanceController.expenseSummary);
+tenantRouter.get('/finance/reports', requireTenantPermission('finance.read'), tenantFinanceController.exportReport);
 tenantRouter.get('/dashboard/summary', requireTenantScope, requireTenantPermission('dashboard.read'), tenancyController.dashboardSummary);
 tenantRouter.get('/dashboard/activity', requireTenantScope, requireTenantPermission('dashboard.read'), tenancyController.dashboardActivity);
 tenantRouter.get('/dashboard/clinics', requireTenantScope, requireTenantPermission('dashboard.read'), tenancyController.dashboardClinics);
