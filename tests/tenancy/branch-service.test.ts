@@ -11,7 +11,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   },
 }));
 vi.mock('../../src/modules/geo/services/geo.service.js', () => ({
-  geoService: { listForClinic: vi.fn(), validateClinicLocation: vi.fn() },
+  geoService: { listForClinic: vi.fn(), validateClinicLocation: vi.fn(), validateCity: vi.fn() },
 }));
 vi.mock('../../src/shared/storage/branding-image.storage.js', () => ({
   storeBrandingLogo: vi.fn(),
