@@ -4,6 +4,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     createTenantAuditEvent: vi.fn().mockResolvedValue({}),
     getDashboardCounts: vi.fn(),
+    findTenantById: vi.fn(),
     listTenantAuditEvents: vi.fn(),
     listDashboardClinics: vi.fn(),
     findSubscriptionByTenantId: vi.fn(),
@@ -25,6 +26,20 @@ const tenantId = '64b000000000000000000001';
 
 describe('tenant dashboard service', () => {
   beforeEach(() => vi.resetAllMocks());
+
+  it('returns only safe organization profile fields', async () => {
+    vi.mocked(tenancyRepository.findTenantById).mockResolvedValue({
+      toObject: () => ({
+        _id: tenantId, name: 'Tenant', displayName: 'Tenant Display', legalName: 'Legal Tenant',
+        businessType: 'clinic_group', status: 'active', contact: {}, address: {}, legal: {}, branding: {}, preferences: {},
+        ownerUserId: 'private-owner', internalNotes: 'must not leak', createdAt: new Date(), updatedAt: new Date(),
+      }),
+    } as any);
+    const profile = await tenancyService.getProfile(tenantId);
+    expect(profile).toMatchObject({ name: 'Tenant', legalName: 'Legal Tenant', businessType: 'clinic_group' });
+    expect(profile).not.toHaveProperty('ownerUserId');
+    expect(profile).not.toHaveProperty('internalNotes');
+  });
 
   it('lists audit events with the active tenant forcibly applied to all filters', async () => {
     vi.mocked(tenancyRepository.listTenantAuditEvents).mockResolvedValue({ items: [], pagination: { page: 1, perPage: 25, total: 0, pages: 0 } } as any);
