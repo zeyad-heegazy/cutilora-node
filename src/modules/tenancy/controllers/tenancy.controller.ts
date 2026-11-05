@@ -116,7 +116,6 @@ export const tenancyController = {
         tenancyService.getProfile(tenantId),
         tenancyService.getDashboardCounts(tenantId),
         tenancyService.getSubscriptionOverview(tenantId),
-        tenancyService.countExpiringTenantDocuments(tenantId, now, expiryLimit),
       ]);
       if (!tenant) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant not found.' } });
       res.json({ success: true, data: {
