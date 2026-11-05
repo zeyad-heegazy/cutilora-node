@@ -49,6 +49,13 @@ tenantRouter.post('/clinics', requireTenantScope, requireTenantPermission('clini
 tenantRouter.post('/clinics/:clinicId/activate', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.activateClinic);
 tenantRouter.post('/clinics/:clinicId/deactivate', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.deactivateClinic);
 tenantRouter.get('/clinics/:clinicId/branches', requireTenantPermission('branch.read'), tenancyController.listClinicBranches);
+tenantRouter.get('/clinics/:clinicId/documents', requireTenantPermission('clinic.documents.read'), tenancyController.listClinicDocuments);
+tenantRouter.post('/clinics/:clinicId/documents', requireTenantPermission('clinic.documents.manage'), tenancyController.createClinicDocument);
+tenantRouter.put('/clinics/:clinicId/documents/:documentId/replace', requireTenantPermission('clinic.documents.manage'), tenancyController.replaceClinicDocument);
+tenantRouter.get('/clinics/:clinicId/documents/:documentId/versions', requireTenantPermission('clinic.documents.read'), tenancyController.getClinicDocumentVersions);
+tenantRouter.get('/clinics/:clinicId/documents/:documentId/download', requireTenantPermission('clinic.documents.read'), tenancyController.downloadClinicDocument);
+tenantRouter.get('/clinics/:clinicId/documents/:documentId', requireTenantPermission('clinic.documents.read'), tenancyController.getClinicDocument);
+tenantRouter.delete('/clinics/:clinicId/documents/:documentId', requireTenantPermission('clinic.documents.manage'), tenancyController.archiveClinicDocument);
 tenantRouter.get('/clinics/:clinicId/settings', requireTenantPermission('clinic.settings.read'), tenancyController.getClinicSettings);
 tenantRouter.patch('/clinics/:clinicId/settings', requireTenantPermission('clinic.settings.manage'), tenancyController.updateClinicSettings);
 tenantRouter.get('/clinics/:clinicId', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.getClinic);
