@@ -450,6 +450,10 @@ export const updateTenantMembershipSchema = z.object({
   status: z.enum(['active', 'suspended']).optional(),
 }).refine((value) => Object.keys(value).length > 0, {
   message: 'At least one membership field must be supplied.',
+}).refine((value) => value.role !== 'custom' || Boolean(value.customRoleId), {
+  message: 'customRoleId is required when assigning a custom role.', path: ['customRoleId'],
+}).refine((value) => value.customRoleId === undefined || value.role === 'custom', {
+  message: 'customRoleId can only be supplied when role=custom.', path: ['customRoleId'],
 });
 
 export const updateBranchSettingsSchema = z.object({
