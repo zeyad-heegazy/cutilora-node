@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRoleCatalog, getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -474,6 +474,33 @@ export const tenancyController = {
       const item = await tenancyService.cancelBranchHoliday(context.tenantId, context.clinicId, branchId, String(req.params.holidayId ?? ''), req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Holiday not found.' } });
       res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async getBranchBusinessHours(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) {
+        return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      }
+      const branch = await tenancyService.getBranch(branchId, context.tenantId, context.clinicId);
+      if (!branch) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: { timezone: branch.timezone, operatingHours: branch.operatingHours ?? [] } });
+    } catch (e) { next(e); }
+  },
+  async updateBranchBusinessHours(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) {
+        return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      }
+      const input = updateBranchOperatingHoursSchema.parse(req.body);
+      const branch = await tenancyService.updateBranch(branchId, input, context.tenantId, context.clinicId, req.auth!.userId);
+      if (!branch) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: { timezone: branch.timezone, operatingHours: branch.operatingHours ?? [] } });
     } catch (e) { next(e); }
   },
   async getBranch(req: Request, res: Response, next: NextFunction) {
