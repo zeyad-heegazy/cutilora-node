@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -188,6 +188,40 @@ export const tenancyController = {
       const context = req.tenantContext!;
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
       res.json({ success: true, data: await tenancyService.listBranches(context.tenantId, context.clinicId, context.branchId) });
+    } catch (e) { next(e); }
+  },
+  async listBranchHolidays(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      const items = await tenancyService.listBranchHolidays(context.tenantId, context.clinicId, branchId);
+      if (!items) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: items });
+    } catch (e) { next(e); }
+  },
+  async createBranchHoliday(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      const input = createBranchHolidaySchema.parse(req.body);
+      const item = await tenancyService.createBranchHoliday(context.tenantId, context.clinicId, branchId, req.auth!.userId, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async cancelBranchHoliday(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      const item = await tenancyService.cancelBranchHoliday(context.tenantId, context.clinicId, branchId, String(req.params.holidayId ?? ''), req.auth!.userId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Holiday not found.' } });
+      res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
   async getBranch(req: Request, res: Response, next: NextFunction) {
