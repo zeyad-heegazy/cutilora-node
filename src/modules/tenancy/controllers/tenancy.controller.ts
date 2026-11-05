@@ -719,10 +719,10 @@ export const tenancyController = {
       if (context.scope === 'branch' && context.branchId !== branchId) {
         return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
       }
-      const input = updateBranchSchema.parse(req.body);
-      if (context.scope === 'branch' && 'status' in input) {
+      if (context.scope === 'branch' && req.body && Object.prototype.hasOwnProperty.call(req.body, 'status')) {
         return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Branch managers cannot change branch lifecycle status.' } });
       }
+      const input = updateBranchSchema.parse(req.body);
       const item = await tenancyService.updateBranch(branchId, input, context.tenantId, context.clinicId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
       res.json({ success: true, data: item });
