@@ -19,6 +19,16 @@ export const TENANT_PERMISSION_CATALOG = [
 ] as const;
 
 const permissionKeys = new Set(TENANT_PERMISSION_CATALOG.flatMap((item) => item.actions));
+export const TENANT_ROLE_TEMPLATES = [
+  { key: 'tenant-admin', name: 'Tenant Admin', scope: 'tenant', permissions: getTenantRolePermissions('tenant_admin'), description: 'Tenant-wide administration using the current tenant-admin permission set.' },
+  { key: 'organization-manager', name: 'Organization Manager', scope: 'tenant', permissions: ['organization.manage', 'dashboard.read', 'clinic.manage', 'clinic.settings.read', 'clinic.settings.manage', 'branch.manage', 'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.lifecycle.manage', 'branch.read', 'branch.holidays.read', 'branch.holidays.manage', 'documents.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'branch.members.read', 'branch.activity.read', 'configuration.manage', 'memberships.manage', 'audit.read'], description: 'Manages tenant organization structure and users without billing access.' },
+  { key: 'clinic-manager', name: 'Clinic Manager', scope: 'clinic', permissions: getTenantRolePermissions('clinic_manager'), description: 'Manages one selected clinic and its branches.' },
+  { key: 'branch-manager', name: 'Branch Manager', scope: 'branch', permissions: getTenantRolePermissions('branch_manager'), description: 'Manages only the explicitly selected branches.' },
+  { key: 'finance-viewer', name: 'Finance Viewer', scope: 'tenant', permissions: ['billing.read'], description: 'Read-only access to existing subscription and invoice APIs.' },
+  { key: 'finance-manager', name: 'Finance Manager', scope: 'tenant', permissions: ['billing.read'], description: 'Current billing APIs are read-only; management grants will be added with the Finance domain.' },
+  { key: 'read-only-analyst', name: 'Read-only Analyst', scope: 'tenant', permissions: ['dashboard.read', 'audit.read', 'clinic.members.read', 'clinic.activity.read', 'branch.read', 'branch.members.read', 'branch.activity.read'], description: 'Read-only operational visibility without mutation or membership-management permissions.' },
+] as const;
+
 const builtInScopes: Record<string, 'tenant' | 'clinic' | 'branch'> = {
   tenant_owner: 'tenant', tenant_admin: 'tenant', billing_admin: 'tenant',
   clinic_admin: 'clinic', clinic_manager: 'clinic', branch_manager: 'branch',
@@ -140,6 +150,21 @@ export const tenantRolesService = {
     return serialize(updated.toObject());
   },
   async clone(tenantId: string, actorId: string, actorClinicId: string | null, roleId: string, input: any) {
+    if (roleId.startsWith('template:')) {
+      const template = TENANT_ROLE_TEMPLATES.find((item) => item.key === roleId.slice('template:'.length));
+      if (!template) return null;
+      let grants: PermissionGrant[];
+      if (template.scope === 'tenant') {
+        grants = template.permissions.map((permission) => ({ permission, scope: 'tenant' }));
+      } else if (template.scope === 'clinic') {
+        if (!input.clinicId) fail(400, 'CLINIC_REQUIRED', 'Cloning a clinic role template requires clinicId.');
+        grants = template.permissions.map((permission) => ({ permission, scope: 'clinic', clinicId: input.clinicId }));
+      } else {
+        if (!input.clinicId || !input.branchIds?.length) fail(400, 'BRANCH_REQUIRED', 'Cloning a branch role template requires clinicId and at least one branchId.');
+        grants = input.branchIds.flatMap((branchId: string) => template.permissions.map((permission) => ({ permission, scope: 'branch' as const, clinicId: input.clinicId, branchId })));
+      }
+      return this.create(tenantId, actorId, actorClinicId, { key: input.key, name: input.name, description: input.description ?? template.description, scope: template.scope, permissions: grants });
+    }
     if (!objectId(roleId)) return null;
     const source = await TenantRole.findOne({ _id: roleId, tenantId, status: 'active' }).lean() as any;
     if (!source) return null;
