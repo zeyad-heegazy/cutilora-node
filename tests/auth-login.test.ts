@@ -5,6 +5,7 @@ vi.mock('../src/modules/auth/repositories/auth.repository.js', () => ({
     findUserByEmail: vi.fn(),
     findActiveMemberships: vi.fn(),
     updateLastLogin: vi.fn(),
+    createUserSession: vi.fn(),
   },
 }));
 vi.mock('../src/modules/auth/services/auth.security.js', () => ({
@@ -27,6 +28,7 @@ describe('regular user login', () => {
     vi.mocked(signAccessToken).mockReturnValue('signed-access-token');
     vi.mocked(verifyPassword).mockResolvedValue(true);
     vi.mocked(authRepository.updateLastLogin).mockResolvedValue({ modifiedCount: 1 } as any);
+    vi.mocked(authRepository.createUserSession).mockResolvedValue({} as any);
     vi.mocked(authRepository.findActiveMemberships).mockResolvedValue([{ tenantId: 'tenant-1', clinicId: null, branchIds: [], scope: 'tenant', role: 'tenant_admin' }] as any);
   });
 
@@ -39,6 +41,8 @@ describe('regular user login', () => {
 
     expect(authRepository.findUserByEmail).toHaveBeenCalledWith('user@example.com');
     expect(authRepository.updateLastLogin).toHaveBeenCalledWith('user-1', expect.any(Date));
+    expect(authRepository.createUserSession).toHaveBeenCalledWith(expect.objectContaining({ userId: 'user-1', userAgent: null, lastSeenAt: expect.any(Date), expiresAt: expect.any(Date) }));
+    expect(signAccessToken).toHaveBeenCalledWith('user-1', 'user', expect.any(String));
     expect(result).toMatchObject({ access_token: 'signed-access-token', user: { id: 'user-1' } });
   });
 
