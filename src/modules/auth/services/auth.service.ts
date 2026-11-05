@@ -32,6 +32,12 @@ export const authService = {
         'Email or password is incorrect.',
       );
     }
+    await authRepository.updateLastLogin(user.id, new Date()).catch((error) => {
+      logger.warn('Failed to update user last login timestamp.', {
+        userId: user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    });
     const memberships = await authRepository.findActiveMemberships(user.id);
     return {
       access_token: signAccessToken(user.id, 'user'),
