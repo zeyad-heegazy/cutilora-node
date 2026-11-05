@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { clinicFinanceService } from './clinic-finance.service.js';
-import { createExpenseSchema, createInvoiceSchema, expenseListQuerySchema, invoiceListQuerySchema, payExpenseSchema, recordPaymentSchema, refundPaymentSchema, updateInvoiceSchema, voidExpenseSchema, voidInvoiceSchema } from './clinic-finance.validation.js';
+import { createExpenseSchema, createInvoiceSchema, expenseListQuerySchema, invoiceListQuerySchema, summaryQuerySchema, payExpenseSchema, recordPaymentSchema, refundPaymentSchema, updateInvoiceSchema, voidExpenseSchema, voidInvoiceSchema } from './clinic-finance.validation.js';
 
 function scope(req: Request) {
   const context = req.tenantContext!;
@@ -10,7 +10,7 @@ function scope(req: Request) {
 function notFound(res: Response, code: string, message: string) { return res.status(404).json({ success: false, error: { code, message } }); }
 
 export const clinicFinanceController = {
-  async summary(req: Request, res: Response, next: NextFunction) { try { res.json({ success: true, data: await clinicFinanceService.summary(scope(req), { from: req.query.from ? new Date(String(req.query.from)) : undefined, to: req.query.to ? new Date(String(req.query.to)) : undefined, branchId: req.query.branchId ? String(req.query.branchId) : undefined }) }); } catch (e) { next(e); } },
+  async summary(req: Request, res: Response, next: NextFunction) { try { res.json({ success: true, data: await clinicFinanceService.summary(scope(req), summaryQuerySchema.parse(req.query)) }); } catch (e) { next(e); } },
   async listInvoices(req: Request, res: Response, next: NextFunction) { try { const result = await clinicFinanceService.listInvoices(scope(req), invoiceListQuerySchema.parse(req.query)); res.json({ success: true, data: result.items, pagination: result.pagination }); } catch (e) { next(e); } },
   async createInvoice(req: Request, res: Response, next: NextFunction) { try { const item = await clinicFinanceService.createInvoice(scope(req), createInvoiceSchema.parse(req.body)); res.status(201).json({ success: true, data: item }); } catch (e) { next(e); } },
   async getInvoice(req: Request, res: Response, next: NextFunction) { try { const item = await clinicFinanceService.getInvoice(scope(req), String(req.params.invoiceId)); return item ? res.json({ success: true, data: item }) : notFound(res, 'INVOICE_NOT_FOUND', 'Invoice not found.'); } catch (e) { next(e); } },
