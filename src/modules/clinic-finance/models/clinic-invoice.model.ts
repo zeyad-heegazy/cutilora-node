@@ -47,6 +47,8 @@ const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, immutable: true },
   clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', required: true, immutable: true },
   branchId: { type: Schema.Types.ObjectId, ref: 'Branch', default: null, immutable: true },
+  idempotencyKey: { type: String, required: true, trim: true, maxlength: 128, immutable: true },
+  requestFingerprint: { type: String, required: true, immutable: true, select: false },
   invoiceNumber: { type: String, trim: true, default: null },
   dueAt: { type: Date, default: null },
   customer: {
@@ -77,6 +79,8 @@ const schema = new Schema({
 
 schema.index({ tenantId: 1, clinicId: 1, createdAt: -1 });
 schema.index({ tenantId: 1, clinicId: 1, status: 1, createdAt: -1 });
+schema.index({ tenantId: 1, clinicId: 1, idempotencyKey: 1 }, { unique: true });
+schema.set('toJSON', { transform: (_doc: unknown, ret: any) => { delete ret.requestFingerprint; return ret; } });
 schema.index({ tenantId: 1, clinicId: 1, invoiceNumber: 1 }, { unique: true, partialFilterExpression: { invoiceNumber: { $type: 'string' } } });
 schema.index({ tenantId: 1, clinicId: 1, branchId: 1, issuedAt: -1 });
 export const ClinicInvoice = (models.ClinicInvoice || model('ClinicInvoice', schema)) as Model<any>;
