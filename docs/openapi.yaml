@@ -220,6 +220,8 @@ paths:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}~1payments"
   /clinic/invoices/{invoiceId}/payments/{paymentId}/refunds:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}~1payments~1{paymentId}~1refunds"
+  /clinic/invoices/{invoiceId}/credit-notes:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}~1credit-notes"
   /clinic/invoices/{invoiceId}/void:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}~1void"
   /clinic/expenses:
