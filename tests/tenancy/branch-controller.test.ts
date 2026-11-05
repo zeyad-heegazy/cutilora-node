@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/modules/tenancy/services/tenancy.service.js', () => ({
   tenancyService: { updateBranch: vi.fn(), getBranch: vi.fn(), listBranches: vi.fn() },
@@ -17,6 +17,8 @@ function response() {
 }
 
 describe('branch controller access checks', () => {
+  beforeEach(() => vi.resetAllMocks());
+
   it('allows tenant-scoped users to list branches across clinics without a clinic header', async () => {
     vi.mocked(tenancyService.listBranches).mockResolvedValue({
       items: [{ _id: 'branch-1', clinicId: 'clinic-1' }],
