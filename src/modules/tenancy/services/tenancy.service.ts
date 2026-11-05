@@ -521,7 +521,7 @@ export const tenancyService = {
     if (!clinic) return null;
     return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) }, query);
   },
-  listBranches(tenantId: string, clinicId: string, branchId: string | null, query: { search?: string; status?: string; page: number; perPage: number }) {
+  listBranches(tenantId: string, clinicId: string, branchId: string | null, query: { search?: string; status?: string; page: number; perPage: number } = { page: 1, perPage: 25 }) {
     return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) }, query);
   },
   getBranch(id: string, tenantId: string, clinicId: string) {
