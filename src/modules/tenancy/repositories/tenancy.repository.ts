@@ -608,7 +608,7 @@ export const tenancyRepository = {
         : { clinicId: null }),
     })
       .sort({ clinicId: clinicId ? -1 : 1 })
-      .select('role scope tenantId clinicId branchIds customRoleId');
+      .select('role scope tenantId clinicId branchIds customRoleId permissionOverrides');
   },
   findActiveTenant(id: string) {
     return Tenant.findOne({ _id: id, status: 'active' }).select('_id');
