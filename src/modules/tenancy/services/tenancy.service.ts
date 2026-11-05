@@ -326,7 +326,13 @@ export const tenancyService = {
     const slug = await generateUniqueClinicSlug(tenantId, name);
     const address = { ...(input.address ?? {}), ...location };
     const { logoBase64, coverImageBase64, ...branding } = input.branding ?? {};
-    const clinic = await tenancyRepository.createClinic({ ...input, branding, preferences: deepMerge(DEFAULT_CLINIC_PREFERENCES, input.preferences), bookingSettings: deepMerge(DEFAULT_BOOKING_SETTINGS, input.bookingSettings), settings: deepMerge({}, input.settings), address, ...location, name, slug, tenantId });
+    const configuration = await tenancyRepository.findTenantConfiguration(tenantId);
+    const providedSettings = { ...(input.settings ?? {}) };
+    delete providedSettings.organizationDefaults;
+    delete providedSettings.organizationDefaultsVersion;
+    delete providedSettings.organizationOverrides;
+    const settings = deepMerge({ organizationDefaults: configuration?.values ?? {}, organizationDefaultsVersion: configuration?.version ?? 0 }, providedSettings);
+    const clinic = await tenancyRepository.createClinic({ ...input, branding, preferences: deepMerge(DEFAULT_CLINIC_PREFERENCES, input.preferences), bookingSettings: deepMerge(DEFAULT_BOOKING_SETTINGS, input.bookingSettings), settings, address, ...location, name, slug, tenantId });
     let logoUrl = '';
     let coverUrl = '';
     try {
