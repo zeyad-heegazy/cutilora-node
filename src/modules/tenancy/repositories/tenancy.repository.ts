@@ -10,6 +10,7 @@ import { TenantDocument } from '../models/tenant-document.model.js';
 import { BranchHoliday } from '../models/branch-holiday.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { TenantConfiguration } from '../models/tenant-configuration.model.js';
+import { TenantInvitation } from '../models/tenant-invitation.model.js';
 
 export const tenancyRepository = {
   findTenantConfiguration(tenantId: string) {
@@ -336,6 +337,15 @@ export const tenancyRepository = {
         : null,
     ]);
   },
+  createTenantInvitation(data: Record<string, unknown>) { return TenantInvitation.create(data); },
+  findTenantInvitationById(tenantId: string, invitationId: string) { return TenantInvitation.findOne({ _id: invitationId, tenantId }); },
+  findTenantInvitationByTokenHash(tokenHash: string) { return TenantInvitation.findOne({ tokenHash }).select('+tokenHash'); },
+  listTenantInvitations(tenantId: string) { return TenantInvitation.find({ tenantId }).select('-tokenHash').populate('invitedBy', 'name email').populate('acceptedBy', 'name email').sort({ createdAt: -1 }).lean(); },
+  updateTenantInvitation(tenantId: string, invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId }, { $set: update }, { new: true, runValidators: true }).select('-tokenHash'); },
+  claimTenantInvitation(tokenHash: string, now: Date) { return TenantInvitation.findOneAndUpdate({ tokenHash, status: 'pending', expiresAt: { $gt: now } }, { $set: { status: 'processing' } }, { new: true }).select('+tokenHash'); },
+  updateClaimedTenantInvitation(invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, status: 'processing' }, { $set: update }, { new: true, runValidators: true }); },
+  createTenantMembership(data: Record<string, unknown>) { return TenantMembership.create(data); },
+  findTenantMembershipForUser(userId: string, tenantId: string) { return TenantMembership.findOne({ userId, tenantId, status: { $in: ['active', 'invited'] } }); },
   listTenantMemberships(tenantId: string) {
     return TenantMembership.find({ tenantId })
       .populate('userId', 'name email isActive')
