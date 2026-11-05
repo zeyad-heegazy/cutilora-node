@@ -32,11 +32,18 @@ function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
 }
 
 function getSettingSources(layers: Array<{ source: string; values: Record<string, unknown> }>) {
-  const keys = new Set(layers.flatMap((layer) => Object.keys(layer.values ?? {})));
-  return Object.fromEntries([...keys].map((key) => {
-    const layer = [...layers].reverse().find((item) => Object.prototype.hasOwnProperty.call(item.values ?? {}, key));
-    return [key, layer?.source ?? 'unknown'];
-  }));
+  const result: Record<string, string> = {};
+  const visit = (value: unknown, source: string, path: string) => {
+    if (value && typeof value === 'object' && !Array.isArray(value)) {
+      const entries = Object.entries(value as Record<string, unknown>);
+      if (!entries.length && path) result[path] = source;
+      for (const [key, nested] of entries) visit(nested, source, path ? `${path}.${key}` : key);
+      return;
+    }
+    if (path) result[path] = source;
+  };
+  for (const layer of layers) visit(layer.values ?? {}, layer.source, '');
+  return result;
 }
 
 const DEFAULT_CLINIC_PREFERENCES = { timezone: 'Africa/Cairo', locale: 'en', currency: 'EGP', dateFormat: 'YYYY-MM-DD', weekStartsOn: 6, supportedLanguages: ['en', 'ar'] };
