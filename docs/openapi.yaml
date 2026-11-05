@@ -6,8 +6,8 @@ info:
     API documentation for the Cutilora Node.js backend.
     Base path: /api/v1.
     Authentication uses Bearer access tokens.
-    Tenant-scoped endpoints require X-Tenant-Id. X-Clinic-Id and X-Branch-Id
-    select optional clinic and branch context; branch context requires clinic context.
+    Tenant-scoped endpoints require X-Tenant-Id. X-Clinic-Id selects an optional clinic context.
+    X-Branch-Id selects a branch and requires X-Clinic-Id; branch-scoped memberships must select an authorized branch.
     The development bootstrap endpoint is unavailable when NODE_ENV=production.
 servers:
   - url: http://localhost:3000/api/v1
@@ -123,7 +123,7 @@ components:
       name: X-Branch-Id
       in: header
       required: false
-      description: Optional branch scope; requires X-Clinic-Id.
+      description: Optional branch scope; requires X-Clinic-Id. Required for branch-scoped memberships.
       schema: { type: string }
     GeoResource:
       name: resource
