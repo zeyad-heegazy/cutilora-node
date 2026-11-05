@@ -491,6 +491,7 @@ export const tenantUserListQuerySchema = z.object({
   role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
   clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  branchId: z.string().regex(/^[a-f\\d]{24}$/i).optional(),
   lastLoginFrom: z.coerce.date().optional(),
   lastLoginTo: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).default(1),
