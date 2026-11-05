@@ -989,11 +989,11 @@ export const tenancyService = {
     if (!current) return null;
     if (current.status === 'closed') throw { status: 409, code: 'BRANCH_PERMANENTLY_CLOSED', message: 'A permanently closed branch cannot be reactivated.' };
     if (current.status === 'active') return current;
-    const updated = await tenancyRepository.transitionBranchStatus(id, tenantId, clinicId, ['temporarily_closed', 'suspended'], {
+    const updated = await tenancyRepository.transitionBranchStatus(id, tenantId, clinicId, ['draft', 'temporarily_closed', 'suspended'], {
       status: 'active', updatedBy: userId,
     });
     if (!updated) throw { status: 409, code: 'BRANCH_STATUS_CHANGED', message: 'Branch status changed concurrently. Refresh and retry.' };
-    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.reactivated', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { previousStatus: current.status, status: 'active' } });
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: current.status === 'draft' ? 'branch.activated' : 'branch.reactivated', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { previousStatus: current.status, status: 'active' } });
     return updated;
   },
   async deactivateBranch(id: string, tenantId: string, clinicId: string, userId: string) {
@@ -1024,7 +1024,7 @@ export const tenancyService = {
     const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
     if (!current) return null;
     if (current.status === 'closed') return current;
-    const updated = await tenancyRepository.transitionBranchStatus(id, tenantId, clinicId, ['active', 'temporarily_closed', 'suspended'], {
+    const updated = await tenancyRepository.transitionBranchStatus(id, tenantId, clinicId, ['draft', 'active', 'temporarily_closed', 'suspended'], {
       status: 'closed', closureReason: reason, closedAt: new Date(), updatedBy: userId,
     });
     if (!updated) throw { status: 409, code: 'BRANCH_STATUS_CHANGED', message: 'Branch status changed concurrently. Refresh and retry.' };
