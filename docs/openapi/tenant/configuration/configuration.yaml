@@ -81,3 +81,116 @@ paths:
         "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { description: A selected clinic does not belong to this tenant }
+
+  /tenant/catalog-templates:
+    get:
+      tags: [Tenant Configuration]
+      summary: List shared catalog and policy templates
+      description: Lists tenant-owned service/treatment, pricing, appointment, cancellation, rescheduling, message, notification and operational policy templates.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: type, in: query, schema: { type: string, enum: [service_treatment, pricing, appointment_policy, cancellation_policy, rescheduling_policy, message_template, notification_template, operational_policy] } }
+        - { name: status, in: query, schema: { type: string, enum: [draft, published, archived] } }
+      responses:
+        "200": { description: Tenant templates }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    post:
+      tags: [Tenant Configuration]
+      summary: Create a shared catalog or policy template
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, key, type, content]
+              properties:
+                name: { type: string, maxLength: 120 }
+                key: { type: string, maxLength: 140 }
+                type: { type: string, enum: [service_treatment, pricing, appointment_policy, cancellation_policy, rescheduling_policy, message_template, notification_template, operational_policy] }
+                description: { type: string, maxLength: 1000 }
+                content: { type: object, additionalProperties: true }
+      responses:
+        "201": { description: Draft template created }
+        "409": { description: Template key already exists }
+  /tenant/catalog-templates/{templateId}:
+    parameters:
+      - { name: templateId, in: path, required: true, schema: { type: string } }
+      - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+    get:
+      tags: [Tenant Configuration]
+      summary: Get a tenant template
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200": { description: Template details and version history }
+        "404": { description: Template not found in this tenant }
+    patch:
+      tags: [Tenant Configuration]
+      summary: Update a draft or published template
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string }
+                key: { type: string }
+                type: { type: string, enum: [service_treatment, pricing, appointment_policy, cancellation_policy, rescheduling_policy, message_template, notification_template, operational_policy] }
+                description: { type: string }
+                content: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Updated template }
+        "409": { description: Optimistic version conflict or archived template }
+  /tenant/catalog-templates/{templateId}/archive:
+    post:
+      tags: [Tenant Configuration]
+      summary: Archive a template
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: templateId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+      responses:
+        "200": { description: Archived template }
+        "409": { description: Version conflict }
+  /tenant/catalog-templates/{templateId}/publish:
+    post:
+      tags: [Tenant Configuration]
+      summary: Publish a template and optionally apply it to clinics
+      description: Requires explicit confirmation. Selected clinic IDs are validated against the authenticated tenant. Applying a template writes a versioned organization template snapshot and does not overwrite clinic preferences or other template keys.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: templateId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, applyTo, confirm]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                applyTo: { type: string, enum: [none, all, selected] }
+                clinicIds: { type: array, maxItems: 100, uniqueItems: true, items: { type: string } }
+                confirm: { type: boolean, enum: [true] }
+      responses:
+        "200": { description: Published template and per-clinic applied/skipped counts }
+        "404": { description: Template or selected clinic not found }
+        "409": { description: Version conflict or archived template }
