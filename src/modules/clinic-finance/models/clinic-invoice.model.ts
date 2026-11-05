@@ -36,6 +36,15 @@ const paymentSchema = new Schema({
   refunds: { type: [refundSchema], default: [] },
 }, { timestamps: false });
 
+const creditNoteSchema = new Schema({
+  idempotencyKey: { type: String, required: true, trim: true, maxlength: 128 },
+  noteNumber: { type: String, required: true, trim: true, maxlength: 80 },
+  amountMinor: { type: Number, required: true, min: 1 },
+  reason: { type: String, required: true, trim: true, maxlength: 500 },
+  issuedAt: { type: Date, required: true },
+  recordedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+}, { timestamps: false });
+
 const eventSchema = new Schema({
   type: { type: String, required: true, maxlength: 80 },
   actorUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
@@ -65,12 +74,15 @@ const schema = new Schema({
   totalMinor: { type: Number, required: true, min: 0 },
   paidMinor: { type: Number, default: 0, min: 0 },
   refundedMinor: { type: Number, default: 0, min: 0 },
+  creditedMinor: { type: Number, default: 0, min: 0 },
+  creditBalanceMinor: { type: Number, default: 0, min: 0 },
   balanceDueMinor: { type: Number, required: true, min: 0 },
-  status: { type: String, enum: ['draft', 'issued', 'partially_paid', 'paid', 'void'], default: 'draft', required: true },
+  status: { type: String, enum: ['draft', 'issued', 'partially_paid', 'partially_credited', 'paid', 'credited', 'void'], default: 'draft', required: true },
   issuedAt: { type: Date, default: null },
   voidedAt: { type: Date, default: null },
   voidReason: { type: String, trim: true, maxlength: 500, default: '' },
   payments: { type: [paymentSchema], default: [] },
+  creditNotes: { type: [creditNoteSchema], default: [] },
   events: { type: [eventSchema], default: [] },
   version: { type: Number, default: 1, min: 1 },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, immutable: true },
