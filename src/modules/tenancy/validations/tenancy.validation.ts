@@ -431,3 +431,9 @@ export const branchListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
 });
+
+export const replaceTenantDocumentSchema = z.object({
+  name: z.string().trim().min(1).max(180).optional(),
+  fileBase64: z.string().min(1).max(4_200_000),
+  expiresAt: z.coerce.date().nullable().optional(),
+});
