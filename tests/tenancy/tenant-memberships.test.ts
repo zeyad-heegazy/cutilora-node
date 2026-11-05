@@ -209,6 +209,35 @@ describe('tenant membership administration', () => {
     });
   });
 
+  it('stores direct permission overrides within the membership scope', async () => {
+    vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
+      _id: membershipId, userId: targetId, role: 'branch_manager', scope: 'branch', status: 'active',
+      clinicId, branchIds: [branchId], permissionOverrides: { allow: [], deny: [] },
+    } as any);
+    vi.mocked(tenancyRepository.findClinicById).mockResolvedValue({ _id: clinicId } as any);
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId } as any);
+    vi.mocked(tenancyRepository.updateTenantMembership).mockResolvedValue({ _id: membershipId } as any);
+
+    await tenancyService.updateTenantMembership(tenantId, membershipId, actorId, 'tenant_owner', {
+      permissionOverrides: { allow: ['branch.schedule.manage'], deny: ['branch.read'] },
+    });
+    expect(tenancyRepository.updateTenantMembership).toHaveBeenCalledWith(tenantId, membershipId, expect.objectContaining({
+      permissionOverrides: { allow: ['branch.schedule.manage'], deny: ['branch.read'] },
+    }));
+  });
+
+  it('rejects direct permission grants beyond the actor authority', async () => {
+    vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
+      _id: membershipId, userId: targetId, role: 'clinic_manager', scope: 'clinic', status: 'active',
+      clinicId, branchIds: [], permissionOverrides: { allow: [], deny: [] },
+    } as any);
+    vi.mocked(tenancyRepository.findClinicById).mockResolvedValue({ _id: clinicId } as any);
+    await expect(tenancyService.updateTenantMembership(tenantId, membershipId, actorId, 'clinic_manager', {
+      permissionOverrides: { allow: ['organization.manage'] },
+    })).rejects.toMatchObject({ status: 403, code: 'PERMISSION_GRANT_ESCALATION' });
+    expect(tenancyRepository.updateTenantMembership).not.toHaveBeenCalled();
+  });
+
   it('prevents demoting or suspending the last active Tenant Owner', async () => {
     vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
       _id: membershipId, userId: targetId, role: 'tenant_owner', scope: 'tenant', status: 'active',
