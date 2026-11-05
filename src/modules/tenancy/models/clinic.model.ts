@@ -58,6 +58,16 @@ const operatingHoursSchema = new Schema(
         endTime: { type: String, match: [TIME_REGEX, 'endTime must be HH:mm'] },
       },
     ],
+    shifts: [{
+      _id: false,
+      startTime: { type: String, match: [TIME_REGEX, 'shift startTime must be HH:mm'] },
+      endTime: { type: String, match: [TIME_REGEX, 'shift endTime must be HH:mm'] },
+      breakTimes: [{
+        _id: false,
+        startTime: { type: String, match: [TIME_REGEX, 'startTime must be HH:mm'] },
+        endTime: { type: String, match: [TIME_REGEX, 'endTime must be HH:mm'] },
+      }],
+    }],
   },
   { _id: false },
 );
