@@ -437,3 +437,12 @@ export const replaceTenantDocumentSchema = z.object({
   fileBase64: z.string().min(1).max(4_200_000),
   expiresAt: z.coerce.date().nullable().optional(),
 });
+
+export const createTenantInvitationSchema = z.object({
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  role: z.enum(['tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']),
+  scope: z.enum(['tenant', 'clinic', 'branch']),
+  clinicId: z.string().regex(/^[a-f0-9]{24}$/i).optional(),
+  branchIds: z.array(z.string().regex(/^[a-f0-9]{24}$/i)).max(100).optional(),
+  expiresInDays: z.coerce.number().int().min(1).max(30).default(7),
+});
