@@ -44,7 +44,7 @@ paths:
       tags: [Authentication]
       x-apidog-folder: "Tenant/Auth"
       summary: Accept a tenant invitation
-      description: Uses the single-use invitation token as proof of invitation. Existing active user accounts are linked by the invited email. New users must provide a name and password. The invitation token must be delivered privately by the tenant.
+      description: Uses the single-use invitation token as proof of invitation. Existing active user accounts are linked by the invited email. New users must provide a name and password. The invitation token must be delivered privately by the tenant. Acceptance attempts are limited to 10 per IP per 15 minutes on each API process.
       requestBody:
         required: true
         content:
@@ -61,6 +61,7 @@ paths:
         "400": { description: Invalid, expired, or already-used invitation token }
         "409": { description: Membership or invitation state conflict }
         "422": { description: Account details required for a new user }
+        "429": { description: Invitation acceptance rate limit exceeded }
   /auth/logout:
     post:
       tags: [Authentication]
