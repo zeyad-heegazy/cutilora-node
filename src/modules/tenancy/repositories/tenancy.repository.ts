@@ -447,6 +447,16 @@ export const tenancyRepository = {
   findTenantMembershipById(tenantId: string, membershipId: string) {
     return TenantMembership.findOne({ _id: membershipId, tenantId });
   },
+  acquireTenantEntitlementLock(tenantId: string, now: Date, leaseMs: number) {
+    return Tenant.findOneAndUpdate(
+      { _id: tenantId, $or: [{ entitlementMutationLockExpiresAt: null }, { entitlementMutationLockExpiresAt: { $lte: now } }] },
+      { $set: { entitlementMutationLockExpiresAt: new Date(now.getTime() + leaseMs) } },
+      { new: true },
+    ).select('_id');
+  },
+  releaseTenantEntitlementLock(tenantId: string) {
+    return Tenant.updateOne({ _id: tenantId }, { $set: { entitlementMutationLockExpiresAt: null } });
+  },
   acquireTenantOwnerMutationLock(tenantId: string, now: Date, leaseMs: number) {
     return Tenant.findOneAndUpdate(
       { _id: tenantId, $or: [{ ownerMutationLockExpiresAt: null }, { ownerMutationLockExpiresAt: { $lte: now } }] },
