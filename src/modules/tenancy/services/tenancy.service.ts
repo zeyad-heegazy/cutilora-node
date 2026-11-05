@@ -3,6 +3,7 @@ import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
 import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
 import { readPrivateTenantDocument, removePrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
+import { logger } from '../../../shared/logger/logger.js';
 
 function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>): Record<string, any> {
   const result = { ...defaults };
@@ -60,12 +61,36 @@ function decodeTenantDocument(input: string): { content: Buffer; mimeType: strin
   return { content, mimeType, extension };
 }
 
+async function recordTenantAuditEvent(input: Record<string, unknown>): Promise<void> {
+  try { await tenancyRepository.createTenantAuditEvent(input); }
+  catch (error) {
+    logger.error('Failed to persist tenant audit event', {
+      error: error instanceof Error ? error.message : 'unknown',
+      action: input.action,
+      tenantId: input.tenantId,
+    });
+  }
+}
+
 export const tenancyService = {
+  listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
+    const filter: Record<string, any> = { tenantId };
+    if (query.actorId) filter.actorUserId = query.actorId;
+    if (query.action) filter.action = { $regex: query.action, $options: 'i' };
+    if (query.targetType) filter.targetType = query.targetType;
+    if (query.clinicId) filter.clinicId = query.clinicId;
+    if (query.branchId) filter.branchId = query.branchId;
+    if (query.from || query.to) filter.createdAt = {
+      ...(query.from ? { $gte: query.from } : {}),
+      ...(query.to ? { $lte: query.to } : {}),
+    };
+    return tenancyRepository.listTenantAuditEvents(filter, query.page, query.perPage);
+  },
   async createTenantDocument(tenantId: string, userId: string, input: Record<string, any>) {
     const decoded = decodeTenantDocument(input.fileBase64);
     const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
     try {
-      return await tenancyRepository.createTenantDocument({
+      const document = await tenancyRepository.createTenantDocument({
         tenantId,
         uploadedBy: userId,
         category: input.category,
@@ -75,6 +100,8 @@ export const tenancyService = {
         storageKey,
         expiresAt: input.expiresAt ?? null,
       });
+      await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.document.uploaded', targetType: 'tenant_document', targetId: String(document._id), metadata: { category: input.category, mimeType: decoded.mimeType, sizeBytes: decoded.content.length } });
+      return document;
     } catch (error) {
       await removePrivateTenantDocument(storageKey);
       throw error;
@@ -93,7 +120,10 @@ export const tenancyService = {
     return tenancyRepository.findTenantDocumentMetadata(tenantId, documentId);
   },
   archiveTenantDocument(tenantId: string, documentId: string, userId: string) {
-    return tenancyRepository.archiveTenantDocument(tenantId, documentId, userId);
+    return tenancyRepository.archiveTenantDocument(tenantId, documentId, userId).then(async (item) => {
+      if (item) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.document.archived', targetType: 'tenant_document', targetId: documentId });
+      return item;
+    });
   },
   getProfile(tenantId: string) {
     return tenancyRepository.findTenantById(tenantId);
@@ -137,6 +167,7 @@ export const tenancyService = {
       }
       if (newLogoUrl && oldBranding.logoUrl) await removeBrandingImage(oldBranding.logoUrl);
       if (newCoverUrl && oldBranding.coverImageUrl) await removeBrandingImage(oldBranding.coverImageUrl);
+      await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.profile.updated', targetType: 'tenant', targetId: tenantId, metadata: { changedFields: Object.keys(input) } });
       return updated;
     } catch (error) {
       await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
@@ -147,10 +178,12 @@ export const tenancyService = {
     const current = await tenancyRepository.findTenantById(tenantId);
     if (!current) return null;
     const existing = current.preferences?.toObject?.() ?? current.preferences ?? {};
-    return tenancyRepository.updateTenant(tenantId, {
+    const updated = await tenancyRepository.updateTenant(tenantId, {
       preferences: deepMerge(existing, preferences),
       updatedBy: userId,
     });
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.preferences.updated', targetType: 'tenant', targetId: tenantId, metadata: { changedFields: Object.keys(preferences) } });
+    return updated;
   },
   async getSubscriptionOverview(tenantId: string) {
     const subscription = await tenancyRepository.findSubscriptionByTenantId(tenantId);
