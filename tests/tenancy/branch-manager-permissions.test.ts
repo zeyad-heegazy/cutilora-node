@@ -8,6 +8,7 @@ describe('branch manager permissions', () => {
     expect(permissions).toContain('branch.read');
     expect(permissions).toContain('branch.schedule.manage');
     expect(permissions).toContain('branch.settings.manage');
+    expect(permissions).toContain('branch.members.read');
     expect(permissions).not.toContain('branch.update');
     expect(permissions).toContain('branch.holidays.read');
     expect(permissions).toContain('branch.holidays.manage');
