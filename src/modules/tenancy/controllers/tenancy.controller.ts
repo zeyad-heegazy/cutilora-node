@@ -151,6 +151,38 @@ export const tenancyController = {
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
+  async activateClinic(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.updateClinic(String(req.params.clinicId ?? ''), { status: 'active' }, req.tenantContext!.tenantId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async deactivateClinic(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.updateClinic(String(req.params.clinicId ?? ''), { status: 'suspended' }, req.tenantContext!.tenantId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async activateBranch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const item = await tenancyService.updateBranch(String(req.params.branchId ?? ''), { status: 'active' }, context.tenantId, context.clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async deactivateBranch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const item = await tenancyService.updateBranch(String(req.params.branchId ?? ''), { status: 'suspended' }, context.tenantId, context.clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
   async listBranches(req: Request, res: Response, next: NextFunction) {
     try {
       const context = req.tenantContext!;
