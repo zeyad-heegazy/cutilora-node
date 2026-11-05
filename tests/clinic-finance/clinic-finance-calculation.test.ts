@@ -27,4 +27,13 @@ describe('clinic invoice calculations', () => {
     ]);
     expect(result.totals.totalMinor).toBe(0);
   });
+
+  it('uses exact basis-point arithmetic for large valid minor-unit values', () => {
+    const result = calculateInvoiceLines([
+      { description: 'High value', quantity: 1, unitPriceMinor: 9000000000000000, discountBps: 3333, taxBps: 1750 },
+    ]);
+    expect(result.lines[0].discountMinor).toBe(2999700000000000);
+    expect(result.lines[0].taxMinor).toBe(1050052500000000);
+    expect(Number.isSafeInteger(result.lines[0].totalMinor)).toBe(true);
+  });
 });
