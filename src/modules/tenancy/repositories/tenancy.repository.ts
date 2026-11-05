@@ -58,7 +58,7 @@ export const tenancyRepository = {
     const nextVersion = expectedVersion + 1;
     return TenantCatalogTemplate.findOneAndUpdate(
       { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
-      { $set: { ...data, version: nextVersion }, $push: { history: { $each: [{ version: nextVersion, content: data.content, changedBy, changedAt: new Date() }], $slice: -50 } } },
+      { $set: { ...data, status: 'draft', publishedAt: null, publishedBy: null, version: nextVersion }, $push: { history: { $each: [{ version: nextVersion, content: data.content, changedBy, changedAt: new Date() }], $slice: -50 } } },
       { new: true, runValidators: true },
     );
   },
