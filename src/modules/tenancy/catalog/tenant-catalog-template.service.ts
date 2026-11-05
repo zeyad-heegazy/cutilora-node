@@ -211,7 +211,6 @@ export const tenantCatalogTemplateService = {
     return archived;
   },
 };
-, '*', '+', '?', '(', ')', '[', ']', '{', '}', '|', '\\\\'].includes(char) ? `\\\\${char}` : char).join(''); filter.name = { $regex: escaped, $options: 'i' }; }
     const [items, total] = await Promise.all([
       TenantCatalogTemplate.find(filter).select('-history').sort({ updatedAt: -1 }).skip((query.page - 1) * query.perPage).limit(query.perPage).lean(),
       TenantCatalogTemplate.countDocuments(filter),
