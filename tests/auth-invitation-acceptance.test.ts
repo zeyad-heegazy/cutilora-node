@@ -30,6 +30,7 @@ vi.mock('../src/modules/auth/services/token-revocation.service.js', () => ({
 }));
 
 import { authService } from '../src/modules/auth/services/auth.service.js';
+import { hashPassword } from '../src/modules/auth/services/auth.security.js';
 import { authRepository } from '../src/modules/auth/repositories/auth.repository.js';
 import { tenancyRepository } from '../src/modules/tenancy/repositories/tenancy.repository.js';
 
@@ -50,6 +51,7 @@ const invitation = {
 describe('tenant invitation acceptance', () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    vi.mocked(hashPassword).mockResolvedValue('hashed-password');
     vi.mocked(tenancyRepository.claimTenantInvitation).mockResolvedValue(invitation as any);
     vi.mocked(tenancyRepository.findActiveTenant).mockResolvedValue({ _id: tenantId } as any);
     vi.mocked(tenancyRepository.findActiveClinic).mockResolvedValue({ _id: invitation.clinicId } as any);
