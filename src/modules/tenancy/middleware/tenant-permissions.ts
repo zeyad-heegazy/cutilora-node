@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { hasPermission, hasScopedPermission, type PermissionGrant } from '../../../shared/authorization/permission.engine.js';
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { TenantRole } from '../models/tenant-role.model.js';
+import { Branch } from '../models/branch.model.js';
 import { getTenantRolePermissions } from '../services/tenant-access.service.js';
 export { getTenantRoleCatalog, getTenantRolePermissions, TENANT_ROLE_PERMISSIONS } from '../services/tenant-access.service.js';
 
@@ -23,11 +24,29 @@ export function requireTenantPermission(permission: string) {
         success: false,
         error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission}.` },
       });
+      let resourceClinicId = String(req.params.clinicId ?? req.query.clinicId ?? context.clinicId ?? membership.clinicId ?? '') || null;
+      let resourceBranchId = String(req.params.branchId ?? context.branchId ?? '') || null;
+      if (resourceBranchId) {
+        const branch = await Branch.findOne({ _id: resourceBranchId, tenantId: context.tenantId }).select('clinicId').lean() as any;
+        if (!branch) return res.status(404).json({ success: false, error: { code: 'BRANCH_NOT_FOUND', message: 'Branch not found in this tenant.' } });
+        const branchClinicId = String(branch.clinicId);
+        if (resourceClinicId && resourceClinicId !== branchClinicId) return res.status(403).json({ success: false, error: { code: 'BRANCH_SCOPE_DENIED', message: 'The selected branch does not belong to the requested clinic.' } });
+        resourceClinicId = branchClinicId;
+      }
+      if (membership.scope === 'clinic' && resourceClinicId && String(membership.clinicId) !== resourceClinicId) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic resource.' } });
+      }
+      if (membership.scope === 'branch') {
+        const allowedBranches = (membership.branchIds ?? []).map((id: unknown) => String(id));
+        if (!resourceClinicId || String(membership.clinicId) !== resourceClinicId || !resourceBranchId || !allowedBranches.includes(resourceBranchId)) {
+          return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch resource.' } });
+        }
+      }
       if (membership.roleId) {
         const role = await TenantRole.findOne({ _id: membership.roleId, tenantId: context.tenantId, status: 'active' }).select('permissions scope').lean() as any;
-        const requestedScope = context.branchId ? 'branch' : context.clinicId ? 'clinic' : 'tenant';
+        const requestedScope = resourceBranchId ? 'branch' : resourceClinicId ? 'clinic' : 'tenant';
         const grants = (role?.permissions ?? []) as PermissionGrant[];
-        if (!role || !hasScopedPermission(grants, permission, { scope: requestedScope, clinicId: context.clinicId, branchId: context.branchId })) {
+        if (!role || !hasScopedPermission(grants, permission, { scope: requestedScope, clinicId: resourceClinicId, branchId: resourceBranchId })) {
           return res.status(403).json({
             success: false,
             error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission} at the selected scope.` },
