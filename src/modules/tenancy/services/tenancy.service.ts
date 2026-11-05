@@ -182,28 +182,18 @@ export const tenancyService = {
   async revokeTenantInvitation(tenantId: string, invitationId: string, userId: string) {
     const invitation = await tenancyRepository.findTenantInvitationById(tenantId, invitationId);
     if (!invitation) return null;
-    const staleProcessing = invitation.status === 'processing'
-      && (!invitation.processingAt || new Date(invitation.processingAt).getTime() <= Date.now() - 10 * 60 * 1000);
-    if (!['pending', 'expired'].includes(invitation.status) && !staleProcessing) {
-      throw { status: 409, code: 'INVITATION_PROCESSING', message: 'This invitation is currently being accepted. Try again shortly.' };
-    }
-    const updated = await tenancyRepository.updateTenantInvitation(tenantId, invitationId, { status: 'revoked', processingAt: null, revokedAt: new Date(), revokedBy: userId });
+    const updated = await tenancyRepository.revokeTenantInvitationIfAvailable(tenantId, invitationId, new Date(), userId);
+    if (!updated) throw { status: 409, code: 'INVITATION_PROCESSING', message: 'This invitation is currently being accepted or has already changed. Refresh and retry.' };
     if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.revoked', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
     return updated;
   },
   async resendTenantInvitation(tenantId: string, invitationId: string, userId: string) {
     const invitation = await tenancyRepository.findTenantInvitationById(tenantId, invitationId);
     if (!invitation) return null;
-    const staleProcessing = invitation.status === 'processing'
-      && (!invitation.processingAt || new Date(invitation.processingAt).getTime() <= Date.now() - 10 * 60 * 1000);
-    if (!['pending', 'expired'].includes(invitation.status) && !staleProcessing) {
-      throw { status: 409, code: 'INVITATION_PROCESSING', message: 'This invitation is currently being accepted. Try again shortly.' };
-    }
     const token = randomBytes(32).toString('base64url');
     const tokenHash = createHash('sha256').update(token).digest('hex');
-    const updated = await tenancyRepository.updateTenantInvitation(tenantId, invitationId, {
-      tokenHash, status: 'pending', processingAt: null, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), revokedAt: null, revokedBy: null,
-    });
+    const updated = await tenancyRepository.rotateTenantInvitationIfAvailable(tenantId, invitationId, new Date(), tokenHash);
+    if (!updated) throw { status: 409, code: 'INVITATION_PROCESSING', message: 'This invitation is currently being accepted or has already changed. Refresh and retry.' };
     if (!updated) return null;
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.resent', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
     return { invitation: updated, invitationToken: token, acceptanceEndpoint: '/auth/invitations/accept', delivery: 'manual' };
