@@ -442,6 +442,14 @@ components:
             name: { type: string }
             amount: { type: number }
             currency: { type: string }
+            limits:
+              type: object
+              properties:
+                maxClinics: { type: integer, minimum: 0, nullable: true }
+                maxBranches: { type: integer, minimum: 0, nullable: true }
+                maxUsers: { type: integer, minimum: 0, nullable: true }
+                maxStorageBytes: { type: integer, minimum: 0, nullable: true }
+            features: { type: array, items: { type: string } }
         billingCycle: { type: string, enum: [monthly, quarterly, yearly] }
         status: { type: string, enum: [pending, trialing, active, past_due, canceled, expired] }
         trialStartsAt: { type: string, format: date-time, nullable: true }
@@ -467,6 +475,14 @@ components:
             name: { type: string }
             amount: { type: number, minimum: 0 }
             currency: { type: string, minLength: 3, maxLength: 3 }
+            limits:
+              type: object
+              properties:
+                maxClinics: { type: integer, minimum: 0, nullable: true }
+                maxBranches: { type: integer, minimum: 0, nullable: true }
+                maxUsers: { type: integer, minimum: 0, nullable: true }
+                maxStorageBytes: { type: integer, minimum: 0, nullable: true }
+            features: { type: array, items: { type: string } }
         billingCycle: { type: string, enum: [monthly, quarterly, yearly] }
         status: { type: string, enum: [pending, trialing, active, past_due, canceled, expired] }
         trialStartsAt: { type: string, format: date-time, nullable: true }
