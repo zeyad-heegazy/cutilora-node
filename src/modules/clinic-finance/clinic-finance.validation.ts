@@ -24,7 +24,7 @@ export const invoiceListQuerySchema = z.object({
   branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
-});
+}).refine((v) => !v.from || !v.to || v.from <= v.to, 'from must be before or equal to to');
 export const recordPaymentSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(128),
   amountMinor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
@@ -56,4 +56,4 @@ export const expenseListQuerySchema = z.object({
   branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
-});
+}).refine((v) => !v.from || !v.to || v.from <= v.to, 'from must be before or equal to to');
