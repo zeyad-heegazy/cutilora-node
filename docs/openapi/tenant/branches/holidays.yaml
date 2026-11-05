@@ -1,0 +1,63 @@
+paths:
+  /tenant/branches/{branchId}/holidays:
+    get:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches/Holidays"
+      summary: List active branch holidays and closures
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Active holidays and exceptional hours }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    post:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches/Holidays"
+      summary: Create branch holiday or exceptional hours
+      description: Creates a branch-local closure or modified-hours window. Active overlapping date ranges are rejected. Dates are interpreted as calendar dates in the branch's local schedule.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, type, startDate, endDate]
+              properties:
+                title: { type: string, maxLength: 160 }
+                type: { type: string, enum: [closure, modified_hours] }
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date }
+                isAllDay: { type: boolean, default: true }
+                startTime: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+                endTime: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "201": { description: Holiday created }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { description: Date range overlaps an existing active holiday }
+  /tenant/branches/{branchId}/holidays/{holidayId}:
+    delete:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches/Holidays"
+      summary: Cancel a branch holiday
+      description: Cancels the holiday record without deleting its history.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+        - { name: holidayId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Holiday cancelled }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
