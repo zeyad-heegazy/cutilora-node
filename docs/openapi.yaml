@@ -147,6 +147,8 @@ paths:
     $ref: "./openapi/tenant/clinics/lifecycle.yaml#/paths/~1tenant~1clinics~1{clinicId}~1deactivate"
   /tenant/clinics/{clinicId}:
     $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}"
+  /tenant/clinics/{clinicId}/activity:
+    $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}~1activity"
   /tenant/clinics/{clinicId}/users:
     $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}~1users"
   /tenant/clinics/{clinicId}/documents:
@@ -161,6 +163,8 @@ paths:
     $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}~1documents~1{documentId}~1download"
   /tenant/branches:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches"
+  /tenant/branches/{branchId}/activity:
+    $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches~1{branchId}~1activity"
   /tenant/branches/{branchId}/users:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches~1{branchId}~1users"
   /tenant/branches/{branchId}/business-hours:
