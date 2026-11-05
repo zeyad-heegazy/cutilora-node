@@ -4,7 +4,7 @@ paths:
       tags: [Tenant Access Control]
       x-apidog-folder: "Tenant/Access Control"
       summary: List built-in and tenant custom roles
-      description: Returns built-in role templates and tenant-owned custom roles. Custom roles are scoped, versioned and permission-validated.
+      description: Returns built-in role templates and tenant-owned custom roles. Custom roles are scoped, versioned and permission-validated. The latest 100 role snapshots are retained on the role record; all changes also emit tenant audit events.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
