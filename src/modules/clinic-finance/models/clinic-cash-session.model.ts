@@ -35,6 +35,7 @@ const schema = new Schema({
   reviewedAt: { type: Date, default: null },
   reviewedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   events: { type: [eventSchema], default: [] },
+  pendingMutations: { type: Number, default: 0, min: 0 },
   version: { type: Number, default: 1, min: 1 },
 }, { timestamps: true, minimize: false });
 
