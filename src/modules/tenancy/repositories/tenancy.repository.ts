@@ -214,6 +214,9 @@ export const tenancyRepository = {
       { $sort: { name: 1 } },
     ]);
   },
+  listAllClinics(tenantId: string) {
+    return Clinic.find({ tenantId }).sort({ name: 1 });
+  },
   async listClinics(tenantId: string, query: { search?: string; status?: string; page: number; perPage: number }) {
     const filter: Record<string, unknown> = { tenantId };
     if (query.status) filter.status = query.status;
