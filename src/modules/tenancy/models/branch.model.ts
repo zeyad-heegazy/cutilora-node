@@ -22,15 +22,22 @@ const addressDetailsSchema = new Schema({
   latitude: { type: Number, min: -90, max: 90, default: null },
   longitude: { type: Number, min: -180, max: 180, default: null },
 }, { _id: false });
+const breakTimesSchema = {
+  _id: false,
+  startTime: { type: String, match: [TIME_REGEX, 'startTime must be HH:mm'] },
+  endTime: { type: String, match: [TIME_REGEX, 'endTime must be HH:mm'] },
+};
 const operatingHoursSchema = new Schema({
   dayOfWeek: { type: Number, min: 0, max: 6, required: true },
   isClosed: { type: Boolean, default: false },
   openTime: { type: String, match: [TIME_REGEX, 'openTime must be HH:mm'] },
   closeTime: { type: String, match: [TIME_REGEX, 'closeTime must be HH:mm'] },
-  breakTimes: [{
+  breakTimes: [breakTimesSchema],
+  shifts: [{
     _id: false,
-    startTime: { type: String, match: [TIME_REGEX, 'startTime must be HH:mm'] },
-    endTime: { type: String, match: [TIME_REGEX, 'endTime must be HH:mm'] },
+    startTime: { type: String, match: [TIME_REGEX, 'shift startTime must be HH:mm'] },
+    endTime: { type: String, match: [TIME_REGEX, 'shift endTime must be HH:mm'] },
+    breakTimes: [breakTimesSchema],
   }],
 }, { _id: false });
 
