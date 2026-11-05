@@ -120,6 +120,17 @@ export const tenancyController = {
       res.json({ success: true, data: result });
     } catch (e) { next(e); }
   },
+  async exportTenantAuditEvents(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = tenantAuditQuerySchema.parse(req.query);
+      const result = await tenancyService.exportTenantAuditEvents(req.tenantContext!.tenantId, query);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', 'attachment; filename="tenant-audit-logs.csv"');
+      res.setHeader('X-Export-Truncated', String(result.truncated));
+      res.setHeader('X-Exported-Rows', String(result.exported));
+      res.send(result.csv);
+    } catch (e) { next(e); }
+  },
   async listTenantAuditEvents(req: Request, res: Response, next: NextFunction) {
     try {
       const query = tenantAuditQuerySchema.parse(req.query);
