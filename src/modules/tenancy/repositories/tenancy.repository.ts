@@ -247,12 +247,12 @@ export const tenancyRepository = {
     return Clinic.aggregate([
       { $match: { tenantId: new Types.ObjectId(tenantId) } },
       { $lookup: { from: 'branches', let: { clinicId: '$_id', tenantId: '$tenantId' }, pipeline: [
-        { $match: { $expr: { $and: [{ $eq: ['$clinicId', '$clinicId'] }, { $eq: ['$tenantId', '$tenantId'] }] } } },
+        { $match: { $expr: { $and: [{ $eq: ['$clinicId', '$$clinicId'] }, { $eq: ['$tenantId', '$$tenantId'] }] } } },
         { $group: { _id: null, total: { $sum: 1 }, active: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } } } },
       ], as: 'branchStats' } },
       { $addFields: { branchStats: { $ifNull: [{ $arrayElemAt: ['$branchStats', 0] }, { total: 0, active: 0 }] } } },
       { $lookup: { from: 'tenantmemberships', let: { clinicId: '$_id', tenantId: '$tenantId' }, pipeline: [
-        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$tenantId'] }, { $eq: ['$clinicId', '$clinicId'] }, { $eq: ['$scope', 'clinic'] }, { $eq: ['$role', 'clinic_manager'] }, { $eq: ['$status', 'active'] }] } } },
+        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$$tenantId'] }, { $eq: ['$clinicId', '$$clinicId'] }, { $eq: ['$scope', 'clinic'] }, { $eq: ['$role', 'clinic_manager'] }, { $eq: ['$status', 'active'] }] } } },
         { $sort: { createdAt: 1 } },
         { $limit: 1 },
         { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'user' } },
@@ -260,7 +260,7 @@ export const tenancyRepository = {
         { $project: { _id: 0, name: '$user.name', email: '$user.email' } },
       ], as: 'clinicManager' } },
       { $lookup: { from: 'tenantauditevents', let: { clinicId: '$_id', clinicIdString: { $toString: '$_id' }, tenantId: '$tenantId' }, pipeline: [
-        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$tenantId'] }, { $or: [{ $eq: ['$clinicId', '$clinicId'] }, { $eq: ['$targetId', '$clinicIdString'] }] }] } } },
+        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$$tenantId'] }, { $or: [{ $eq: ['$clinicId', '$$clinicId'] }, { $eq: ['$targetId', '$$clinicIdString'] }] }] } } },
         { $sort: { createdAt: -1 } },
         { $limit: 1 },
         { $project: { _id: 0, createdAt: 1, action: 1 } },
