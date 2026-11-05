@@ -296,6 +296,18 @@ export const tenancyController = {
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
+  async listClinicBranches(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'clinic' && context.clinicId !== clinicId) return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      if (context.scope === 'branch' && context.clinicId !== clinicId) return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      const query = branchListQuerySchema.parse(req.query);
+      const result = await tenancyService.listClinicBranches(context.tenantId, clinicId, context.scope === 'branch' ? context.branchId : null, query);
+      if (!result) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (e) { next(e); }
+  },
   async listBranches(req: Request, res: Response, next: NextFunction) {
     try {
       const context = req.tenantContext!;
