@@ -43,6 +43,7 @@ const invitation = {
   _id: invitationId,
   tenantId,
   email: 'invite@example.com',
+  processingAt: new Date('2026-11-05T10:00:00.000Z'),
   role: 'clinic_manager',
   scope: 'clinic',
   clinicId: '64b000000000000000000005',
@@ -74,7 +75,7 @@ describe('tenant invitation acceptance', () => {
     expect(tenancyRepository.createTenantMembership).toHaveBeenCalledWith(expect.objectContaining({
       userId, tenantId, clinicId: invitation.clinicId, scope: 'clinic', role: 'clinic_manager', status: 'active',
     }));
-    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, expect.objectContaining({
+    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, invitation.processingAt, expect.objectContaining({
       status: 'accepted', acceptedBy: userId,
     }));
     expect(result).toMatchObject({ user: { id: userId, email: invitation.email }, accountCreated: false });
@@ -102,7 +103,7 @@ describe('tenant invitation acceptance', () => {
     await expect(authService.acceptInvitation({ token: 'x'.repeat(40) }))
       .rejects.toMatchObject({ code: 'ACCOUNT_DETAILS_REQUIRED', status: 422 });
 
-    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, { status: 'pending', processingAt: null });
+    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, invitation.processingAt, { status: 'pending', processingAt: null });
     expect(tenancyRepository.createTenantMembership).not.toHaveBeenCalled();
   });
 
