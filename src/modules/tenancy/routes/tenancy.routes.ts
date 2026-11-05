@@ -6,6 +6,7 @@ import { tenancyController } from '../controllers/tenancy.controller.js';
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
 tenantRouter.get('/context', tenancyController.context);
+tenantRouter.get('/audit-logs', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.listTenantAuditEvents);
 tenantRouter.get('/subscription', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin', 'billing_admin'), tenancyController.getTenantSubscription);
 tenantRouter.get('/subscription/usage', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin', 'billing_admin'), tenancyController.getTenantSubscriptionUsage);
 tenantRouter.get('/invoices', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin', 'billing_admin'), tenancyController.listTenantInvoices);
