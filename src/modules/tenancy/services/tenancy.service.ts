@@ -911,7 +911,7 @@ export const tenancyService = {
       settings: { ...currentSettings, organizationOverrides: mergedOverrides },
       updatedBy: userId,
     });
-    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.settings.overridden', targetType: 'branch', targetId: branchId, clinicId, metadata: { changedKeys: Object.keys(settings) } });
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.settings.overridden', targetType: 'branch', targetId: branchId, clinicId, branchId, metadata: { changedKeys: Object.keys(settings) } });
     if (!updated) return null;
     const updatedSettings = updated.settings?.toObject?.() ?? updated.settings ?? {};
     const clinicSettings = clinic.settings?.toObject?.() ?? clinic.settings ?? {};
@@ -959,7 +959,7 @@ export const tenancyService = {
       clinicId,
       });
     });
-    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.created', targetType: 'branch', targetId: String(branch._id), clinicId, metadata: { name: branch.name } });
+    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.created', targetType: 'branch', targetId: String(branch._id), clinicId, branchId: String(branch._id), metadata: { name: branch.name } });
     return branch;
   },
   async updateBranch(id: string, input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
@@ -1023,7 +1023,7 @@ export const tenancyService = {
       update.slug = candidate;
     }
     const branch = await tenancyRepository.updateBranch(id, tenantId, clinicId, update);
-    if (branch && userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: input.status ? 'branch.status.changed' : 'branch.updated', targetType: 'branch', targetId: id, clinicId, metadata: { changedFields: Object.keys(input), ...(input.status ? { status: input.status } : {}) } });
+    if (branch && userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: input.status ? 'branch.status.changed' : 'branch.updated', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { changedFields: Object.keys(input), ...(input.status ? { status: input.status } : {}) } });
     return branch;
   },
 };
