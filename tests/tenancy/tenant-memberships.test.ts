@@ -434,4 +434,46 @@ describe('tenant membership administration', () => {
     expect(result.delivery).toBe('manual');
   });
 
+
+  it('preserves configured delivery channels and phone when resending an invitation', async () => {
+    const invitationId = '64b000000000000000000007';
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    vi.mocked(tenancyRepository.findTenantInvitationById).mockResolvedValue({
+      _id: invitationId,
+      email: 'member@example.com',
+      phone: '+201000000000',
+      channels: ['email', 'sms'],
+    } as any);
+    vi.mocked(tenancyRepository.rotateTenantInvitationIfAvailable).mockResolvedValue({
+      _id: invitationId,
+      email: 'member@example.com',
+      phone: '+201000000000',
+      channels: ['email', 'sms'],
+      role: 'billing_admin',
+      scope: 'tenant',
+      clinicId: null,
+      branchIds: [],
+      status: 'pending',
+      expiresAt,
+    } as any);
+
+    const result = await tenancyService.resendTenantInvitation(tenantId, invitationId, actorId);
+
+    expect(result).toMatchObject({
+      invitation: {
+        id: invitationId,
+        email: 'member@example.com',
+        phone: '+201000000000',
+        channels: ['email', 'sms'],
+        status: 'pending',
+      },
+      acceptanceEndpoint: '/auth/invitations/accept',
+      delivery: 'manual',
+    });
+    expect(tenancyRepository.createTenantAuditEvent).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'membership.invitation.resent',
+      metadata: { email: 'member@example.com', channels: ['email', 'sms'] },
+    }));
+  });
+
 });
