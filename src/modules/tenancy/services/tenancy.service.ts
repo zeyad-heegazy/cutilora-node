@@ -353,13 +353,13 @@ export const tenancyService = {
         replacesDocumentId: existing._id,
       });
     } catch (error) {
-      await removePrivateTenantDocument(storageKey);
+      await removePrivateTenantDocument(storageKey).catch(() => null);
       throw error;
     }
     const archived = await tenancyRepository.archiveTenantDocument(tenantId, documentId, userId);
     if (!archived) {
-      await tenancyRepository.archiveTenantDocument(tenantId, String(replacement._id), userId);
-      await removePrivateTenantDocument(storageKey);
+      await tenancyRepository.archiveTenantDocument(tenantId, String(replacement._id), userId).catch(() => null);
+      await removePrivateTenantDocument(storageKey).catch(() => null);
       throw { status: 409, code: 'DOCUMENT_REPLACEMENT_CONFLICT', message: 'The original document changed while the replacement was being saved.' };
     }
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.document.replaced', targetType: 'tenant_document', targetId: documentId, metadata: { replacementDocumentId: String(replacement._id), version: replacement.version } });
