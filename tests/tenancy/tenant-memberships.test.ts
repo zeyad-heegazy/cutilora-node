@@ -18,6 +18,10 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     findBranchById: vi.fn(),
     updateTenantMembership: vi.fn(),
     createTenantAuditEvent: vi.fn().mockResolvedValue({}),
+    getDashboardCounts: vi.fn(),
+    findSubscriptionByTenantId: vi.fn(),
+    acquireTenantEntitlementLock: vi.fn(),
+    releaseTenantEntitlementLock: vi.fn(),
   },
 }));
 vi.mock('../../src/modules/geo/services/geo.service.js', () => ({
@@ -49,6 +53,10 @@ describe('tenant membership administration', () => {
     vi.resetAllMocks();
     vi.mocked(tenancyRepository.acquireTenantOwnerMutationLock).mockResolvedValue({ _id: tenantId } as any);
     vi.mocked(tenancyRepository.releaseTenantOwnerMutationLock).mockResolvedValue({ modifiedCount: 1 } as any);
+    vi.mocked(tenancyRepository.getDashboardCounts).mockResolvedValue({ clinics: { total: 0 }, branches: { total: 0 }, activeMembers: 0, pendingInvitations: 0 } as any);
+    vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue(null as any);
+    vi.mocked(tenancyRepository.acquireTenantEntitlementLock).mockResolvedValue({ _id: tenantId } as any);
+    vi.mocked(tenancyRepository.releaseTenantEntitlementLock).mockResolvedValue({ modifiedCount: 1 } as any);
   });
 
   it('prevents demoting or suspending the last active Tenant Owner', async () => {
