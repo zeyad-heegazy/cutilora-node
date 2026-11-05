@@ -10,6 +10,10 @@ vi.mock('../../src/modules/auth/repositories/auth.repository.js', () => ({
 vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     claimTenantInvitation: vi.fn(),
+    findActiveTenant: vi.fn(),
+    findActiveClinic: vi.fn(),
+    findActiveBranch: vi.fn(),
+    findExistingMembershipForInvitation: vi.fn(),
     createTenantMembership: vi.fn(),
     updateClaimedTenantInvitation: vi.fn(),
     deleteTenantMembershipById: vi.fn(),
@@ -47,6 +51,9 @@ describe('tenant invitation acceptance', () => {
   beforeEach(() => {
     vi.resetAllMocks();
     vi.mocked(tenancyRepository.claimTenantInvitation).mockResolvedValue(invitation as any);
+    vi.mocked(tenancyRepository.findActiveTenant).mockResolvedValue({ _id: tenantId } as any);
+    vi.mocked(tenancyRepository.findActiveClinic).mockResolvedValue({ _id: invitation.clinicId } as any);
+    vi.mocked(tenancyRepository.findExistingMembershipForInvitation).mockResolvedValue(null as any);
     vi.mocked(tenancyRepository.createTenantMembership).mockResolvedValue({ _id: membershipId } as any);
     vi.mocked(tenancyRepository.updateClaimedTenantInvitation).mockResolvedValue({ _id: invitationId } as any);
     vi.mocked(tenancyRepository.deleteTenantMembershipById).mockResolvedValue({ deletedCount: 1 } as any);
