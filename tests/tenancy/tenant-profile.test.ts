@@ -48,6 +48,7 @@ function makeTenant(branding: Record<string, unknown> = {}) {
   };
 
   return {
+    preferences: values.preferences,
     get: (key: string) => values[key],
   };
 }
