@@ -88,6 +88,7 @@ export const tenancyService = {
       branchIds: input.branchIds === undefined ? (current.branchIds ?? []).map((id: unknown) => String(id)) : input.branchIds,
       status: input.status ?? current.status,
     };
+    if (current.status === 'invited' && next.status === 'active') throw { status: 409, code: 'INVITATION_ACCEPTANCE_REQUIRED', message: 'An invited membership can only become active through the invitation acceptance flow.' };
     const tenantRoles = ['tenant_owner', 'tenant_admin', 'billing_admin'];
     const clinicRoles = ['clinic_admin', 'clinic_manager', 'staff', 'provider', 'receptionist'];
     const branchRoles = ['branch_manager', 'staff', 'provider', 'receptionist'];
@@ -242,8 +243,24 @@ export const tenancyService = {
       return item;
     });
   },
-  getProfile(tenantId: string) {
-    return tenancyRepository.findTenantById(tenantId);
+  async getProfile(tenantId: string) {
+    const tenant = await tenancyRepository.findTenantById(tenantId);
+    if (!tenant) return null;
+    const data = tenant.toObject?.() ?? tenant;
+    return {
+      _id: data._id,
+      name: data.name,
+      displayName: data.displayName,
+      slug: data.slug,
+      status: data.status,
+      contact: data.contact,
+      address: data.address,
+      legal: data.legal,
+      branding: data.branding,
+      preferences: data.preferences,
+      createdAt: data.createdAt,
+      updatedAt: data.updatedAt,
+    };
   },
   async updateProfile(tenantId: string, userId: string, input: Record<string, any>) {
     const current = await tenancyRepository.findTenantById(tenantId);
