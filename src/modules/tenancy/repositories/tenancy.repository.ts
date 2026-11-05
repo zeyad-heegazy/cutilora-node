@@ -302,16 +302,24 @@ export const tenancyRepository = {
   listBranchHolidays(filter: Record<string, unknown>) {
     return BranchHoliday.find({ ...filter, status: 'active' }).sort({ startDate: 1 }).lean();
   },
-  findOverlappingBranchHoliday(filter: Record<string, unknown>, startDate: Date, endDate: Date) {
+  findOverlappingBranchHoliday(filter: Record<string, unknown>, startDate: Date, endDate: Date, excludeHolidayId?: string) {
     return BranchHoliday.findOne({
       ...filter,
       status: 'active',
+      ...(excludeHolidayId ? { _id: { $ne: excludeHolidayId } } : {}),
       startDate: { $lte: endDate },
       endDate: { $gte: startDate },
     }).select('_id title startDate endDate');
   },
   createBranchHoliday(data: Record<string, unknown>) {
     return BranchHoliday.create(data);
+  },
+  updateBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, data: Record<string, unknown>) {
+    return BranchHoliday.findOneAndUpdate(
+      { _id: holidayId, tenantId, clinicId, branchId, status: 'active' },
+      { $set: data },
+      { new: true, runValidators: true },
+    );
   },
   cancelBranchHoliday(tenantId: string, clinicId: string, branchId: string, holidayId: string, userId: string) {
     return BranchHoliday.findOneAndUpdate(
