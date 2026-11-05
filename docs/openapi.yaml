@@ -99,6 +99,10 @@ paths:
     $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}"
   /tenant/branches:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches"
+  /tenant/branches/{branchId}/holidays:
+    $ref: "./openapi/tenant/branches/holidays.yaml#/paths/~1tenant~1branches~1{branchId}~1holidays"
+  /tenant/branches/{branchId}/holidays/{holidayId}:
+    $ref: "./openapi/tenant/branches/holidays.yaml#/paths/~1tenant~1branches~1{branchId}~1holidays~1{holidayId}"
   /tenant/branches/{branchId}/activate:
     $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1activate"
   /tenant/branches/{branchId}/deactivate:
