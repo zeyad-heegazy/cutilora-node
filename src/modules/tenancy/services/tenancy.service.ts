@@ -516,6 +516,11 @@ export const tenancyService = {
     if (holiday) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.cancelled', targetType: 'branch_holiday', targetId: holidayId, clinicId, branchId });
     return holiday;
   },
+  async listClinicBranches(tenantId: string, clinicId: string, branchId: string | null, query: { search?: string; status?: string; page: number; perPage: number }) {
+    const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
+    if (!clinic) return null;
+    return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) }, query);
+  },
   listBranches(tenantId: string, clinicId: string, branchId: string | null, query: { search?: string; status?: string; page: number; perPage: number }) {
     return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) }, query);
   },
