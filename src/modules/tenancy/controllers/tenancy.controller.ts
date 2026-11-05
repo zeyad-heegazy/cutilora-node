@@ -171,27 +171,27 @@ export const tenancyController = {
   async createClinic(req: Request, res: Response, next: NextFunction) {
     try {
       const input = createClinicSchema.parse(req.body);
-      res.status(201).json({ success: true, data: await tenancyService.createClinic(input, req.tenantContext!.tenantId) });
+      res.status(201).json({ success: true, data: await tenancyService.createClinic(input, req.tenantContext!.tenantId, req.auth!.userId) });
     } catch (e) { next(e); }
   },
   async updateClinic(req: Request, res: Response, next: NextFunction) {
     try {
       const input = updateClinicSchema.parse(req.body);
-      const item = await tenancyService.updateClinic(String(req.params.clinicId ?? ''), input, req.tenantContext!.tenantId);
+      const item = await tenancyService.updateClinic(String(req.params.clinicId ?? ''), input, req.tenantContext!.tenantId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
   async activateClinic(req: Request, res: Response, next: NextFunction) {
     try {
-      const item = await tenancyService.updateClinic(String(req.params.clinicId ?? ''), { status: 'active' }, req.tenantContext!.tenantId);
+      const item = await tenancyService.updateClinic(String(req.params.clinicId ?? ''), { status: 'active' }, req.tenantContext!.tenantId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
   async deactivateClinic(req: Request, res: Response, next: NextFunction) {
     try {
-      const item = await tenancyService.updateClinic(String(req.params.clinicId ?? ''), { status: 'suspended' }, req.tenantContext!.tenantId);
+      const item = await tenancyService.updateClinic(String(req.params.clinicId ?? ''), { status: 'suspended' }, req.tenantContext!.tenantId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
@@ -200,7 +200,7 @@ export const tenancyController = {
     try {
       const context = req.tenantContext!;
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
-      const item = await tenancyService.updateBranch(String(req.params.branchId ?? ''), { status: 'active' }, context.tenantId, context.clinicId);
+      const item = await tenancyService.updateBranch(String(req.params.branchId ?? ''), { status: 'active' }, context.tenantId, context.clinicId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
@@ -209,7 +209,7 @@ export const tenancyController = {
     try {
       const context = req.tenantContext!;
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
-      const item = await tenancyService.updateBranch(String(req.params.branchId ?? ''), { status: 'suspended' }, context.tenantId, context.clinicId);
+      const item = await tenancyService.updateBranch(String(req.params.branchId ?? ''), { status: 'suspended' }, context.tenantId, context.clinicId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
@@ -273,7 +273,7 @@ export const tenancyController = {
       const context = req.tenantContext!;
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
       const input = createBranchSchema.parse(req.body);
-      const item = await tenancyService.createBranch(input, context.tenantId, context.clinicId);
+      const item = await tenancyService.createBranch(input, context.tenantId, context.clinicId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'CLINIC_NOT_FOUND', message: 'Clinic not found.' } });
       res.status(201).json({ success: true, data: item });
     } catch (e) { next(e); }
@@ -290,7 +290,7 @@ export const tenancyController = {
       if (context.scope === 'branch' && 'status' in input) {
         return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Branch managers cannot change branch lifecycle status.' } });
       }
-      const item = await tenancyService.updateBranch(branchId, input, context.tenantId, context.clinicId);
+      const item = await tenancyService.updateBranch(branchId, input, context.tenantId, context.clinicId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
