@@ -139,6 +139,9 @@ export const tenancyService = {
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'configuration.defaults.applied', targetType: 'tenant_configuration', targetId: tenantId, metadata: { version: configuration.version, applyTo: input.applyTo, updated, skipped } });
     return { version: configuration.version, updated, skipped };
   },
+  countExpiringTenantDocuments(tenantId: string, from: Date, to: Date) {
+    return tenancyRepository.countExpiringTenantDocuments(tenantId, from, to);
+  },
   listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
     const filter: Record<string, any> = { tenantId };
     if (query.actorId) filter.actorUserId = query.actorId;
