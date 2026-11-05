@@ -39,6 +39,17 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
   /tenant/roles/{roleId}:
+    get:
+      tags: [Tenant Access Control]
+      x-apidog-folder: "Tenant/Access Control"
+      summary: Get a tenant custom role and its version history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: roleId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      responses:
+        "200": { description: Custom role with immutable version history and assignment count }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [Tenant Access Control]
       x-apidog-folder: "Tenant/Access Control"
@@ -64,6 +75,52 @@ paths:
         "200": { description: Custom role updated }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
+  /tenant/roles/{roleId}/permissions:
+    put:
+      tags: [Tenant Access Control]
+      x-apidog-folder: "Tenant/Access Control"
+      summary: Replace a custom role permission set
+      description: Requires optimistic version and records the permission snapshot in role history.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: roleId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [version, permissions]
+              properties:
+                version: { type: integer, minimum: 1 }
+                permissions: { type: array, uniqueItems: true, items: { type: string } }
+      responses:
+        "200": { description: Permission set replaced }
+        "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
+  /tenant/roles/{roleId}/clone:
+    post:
+      tags: [Tenant Access Control]
+      x-apidog-folder: "Tenant/Access Control"
+      summary: Clone an existing custom role
+      description: Creates a new custom role with the source scope and permissions. The actor must be authorized to grant every copied permission.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: roleId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 2, maxLength: 80 }
+                description: { type: string, maxLength: 500 }
+      responses:
+        "201": { description: Cloned custom role created }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/roles/{roleId}/archive:
     post:
       tags: [Tenant Access Control]
@@ -126,7 +183,7 @@ paths:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
         - { name: search, in: query, schema: { type: string, maxLength: 100 } }
         - { name: status, in: query, schema: { type: string, enum: [active, invited, suspended] } }
-        - { name: role, in: query, schema: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] } }
+        - { name: role, in: query, schema: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist, custom] } }
         - { name: scope, in: query, schema: { type: string, enum: [tenant, clinic, branch] } }
         - { name: clinicId, in: query, schema: { type: string } }
         - { name: lastLoginFrom, in: query, schema: { type: string, format: date-time } }
@@ -233,7 +290,13 @@ paths:
             schema:
               type: object
               properties:
-                role: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] }
+                role: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist, custom] }
+                customRoleId: { type: string, nullable: true }
+                permissionOverrides:
+                  type: object
+                  properties:
+                    allow: { type: array, items: { type: string } }
+                    deny: { type: array, items: { type: string } }
                 scope: { type: string, enum: [tenant, clinic, branch] }
                 clinicId: { type: string, nullable: true }
                 branchIds: { type: array, items: { type: string }, maxItems: 50 }
