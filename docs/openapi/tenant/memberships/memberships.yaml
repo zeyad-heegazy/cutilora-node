@@ -25,6 +25,18 @@ paths:
         "200": { description: Tenant-scoped effective access preview }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/users/{userId}:
+    get:
+      tags: [Tenant Organization]
+      summary: Get tenant user details and memberships
+      description: Returns global identity details and memberships belonging only to the active tenant. Session data is not included.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Tenant user details and tenant-scoped memberships }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
   /tenant/users:
     get:
       tags: [Tenant Memberships]
