@@ -284,6 +284,7 @@ components:
         address: { $ref: "#/components/schemas/BusinessAddress" }
         timezone: { type: string, default: Africa/Cairo }
         preferences: { $ref: "#/components/schemas/TenantPreferences" }
+        settings: { type: object, additionalProperties: true, description: Clinic-specific custom settings }
         operatingHours:
           type: array
           maxItems: 7
@@ -320,6 +321,7 @@ components:
         address: { $ref: "#/components/schemas/BusinessAddress" }
         timezone: { type: string }
         preferences: { $ref: "#/components/schemas/TenantPreferences" }
+        settings: { type: object, additionalProperties: true }
         countryId: { type: string, description: Optional legacy top-level location field accepted by PATCH }
         governorateId: { type: string }
         cityId: { type: string }
@@ -428,6 +430,23 @@ components:
         invoiceUrl: { type: string, format: uri }
         paidAt: { type: string, format: date-time, nullable: true }
         failureReason: { type: string }
+    OperatingHoursDay:
+      type: object
+      required: [dayOfWeek]
+      properties:
+        dayOfWeek: { type: integer, minimum: 0, maximum: 6 }
+        isClosed: { type: boolean }
+        openTime: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+        closeTime: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+        breakTimes:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            required: [startTime, endTime]
+            properties:
+              startTime: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
+              endTime: { type: string, pattern: "^([01]\\d|2[0-3]):[0-5]\\d$" }
     Branch:
       type: object
       properties:
@@ -439,7 +458,19 @@ components:
         address: { type: string, nullable: true }
         cityId: { type: string, nullable: true }
         timezone: { type: string }
-        status: { type: string }
+        operatingHours: { type: array, items: { $ref: "#/components/schemas/OperatingHoursDay" } }
+        status: { type: string, enum: [active, suspended] }
+    BranchUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 2, maxLength: 160 }
+        slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$" }
+        status: { type: string, enum: [active, suspended] }
+        address: { type: string, maxLength: 500 }
+        cityId: { type: string, nullable: true }
+        timezone: { type: string, description: Valid IANA timezone }
+        operatingHours: { type: array, maxItems: 7, items: { $ref: "#/components/schemas/OperatingHoursDay" } }
     CountryInput:
       type: object
       required: [name_en]
