@@ -10,6 +10,7 @@ Clinic invoices, patient collections/refunds and operating expenses are owned by
 - Full and partial manual payment recording, payment references and partial refunds.
 - Idempotency keys for payment and refund retries.
 - Draft-only edits; voiding is allowed only before any collection.
+- Idempotent credit notes against issued invoices, with invoice balance recalculation and customer credit-balance tracking.
 - Expense recording, payment marking and voiding before payment.
 - Cash sessions with opening balances, cash-in/out movements, expected-vs-counted close, variance reasons and independent reviewer approval.
 - Cash collections, cash refunds and cash expense payments are linked to an open cash session; closing computes the expected drawer balance from those linked records.
@@ -27,6 +28,7 @@ Clinic invoices, patient collections/refunds and operating expenses are owned by
 - GET/POST /api/v1/clinic/invoices
 - GET/PATCH /api/v1/clinic/invoices/:invoiceId
 - POST /api/v1/clinic/invoices/:invoiceId/issue
+- POST /api/v1/clinic/invoices/:invoiceId/credit-notes
 - POST /api/v1/clinic/invoices/:invoiceId/payments
 - POST /api/v1/clinic/invoices/:invoiceId/payments/:paymentId/refunds
 - POST /api/v1/clinic/invoices/:invoiceId/void
@@ -43,6 +45,6 @@ Clinic invoices, patient collections/refunds and operating expenses are owned by
 - The current repository has no Patient, Service, Provider, Supplier, Inventory, or accounting-period source modules. Invoice customer and service details are snapshots; externalPatientReference is an opaque optional integration reference and is not validated against a Patient collection.
 - Payment capture is manual record-keeping only. No gateway, terminal, webhook, settlement or bank reconciliation integration is claimed.
 - This slice does not implement credit notes, reversals after posting, packages/prepaid liabilities, supplier payable lifecycle, commissions, tax registration/configuration, or accounting-period locks.
-- The summary's operating result is a cash-basis operational indicator (net collections less paid expenses), not statutory/accrual profit.
+- The summary's operating result is a cash-basis operational indicator (net collections less paid expenses), not statutory/accrual profit. Service-reference revenue remains gross line billing; credit notes are not allocated back to individual services.
 - Amounts are integer minor units. Currency totals are never combined across currencies; no FX conversion is performed.
 - Do not use these records as Platform subscription payment records.
