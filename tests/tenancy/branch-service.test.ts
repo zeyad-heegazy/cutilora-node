@@ -32,13 +32,13 @@ describe('branch service', () => {
   it('lists branches strictly inside the selected tenant and clinic', async () => {
     vi.mocked(tenancyRepository.listBranches).mockResolvedValue([] as any);
     await tenancyService.listBranches(tenantId, clinicId, null);
-    expect(tenancyRepository.listBranches).toHaveBeenCalledWith({ tenantId, clinicId });
+    expect(tenancyRepository.listBranches).toHaveBeenCalledWith({ tenantId, clinicId }, { page: 1, perPage: 25 });
   });
 
   it('restricts branch listing to the selected branch when branch context exists', async () => {
     vi.mocked(tenancyRepository.listBranches).mockResolvedValue([] as any);
     await tenancyService.listBranches(tenantId, clinicId, branchId);
-    expect(tenancyRepository.listBranches).toHaveBeenCalledWith({ tenantId, clinicId, _id: branchId });
+    expect(tenancyRepository.listBranches).toHaveBeenCalledWith({ tenantId, clinicId, _id: branchId }, { page: 1, perPage: 25 });
   });
 
   it('generates a unique slug and inherits the clinic timezone when creating a branch', async () => {
