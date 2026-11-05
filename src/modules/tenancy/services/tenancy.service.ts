@@ -317,12 +317,12 @@ export const tenancyService = {
         if (await tenancyRepository.countActiveTenantOwners(tenantId) <= 1) {
           throw { status: 409, code: 'LAST_TENANT_OWNER_REQUIRED', message: 'The last active Tenant Owner cannot be demoted or suspended.' };
         }
-        updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
+        updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, ...(input.role ? { roleId: null } : {}), updatedBy: actorUserId });
       } finally {
         await tenancyRepository.releaseTenantOwnerMutationLock(tenantId).catch(() => null);
       }
     } else {
-      updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
+      updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, ...(input.role ? { roleId: null } : {}), updatedBy: actorUserId });
     }
     if (updated) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'membership.updated', targetType: 'tenant_membership', targetId: membershipId, clinicId: next.clinicId, metadata: { role: next.role, scope: next.scope, status: next.status } });
     return updated;
