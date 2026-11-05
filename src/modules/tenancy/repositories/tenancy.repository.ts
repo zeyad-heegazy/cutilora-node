@@ -339,6 +339,7 @@ export const tenancyRepository = {
   },
   createTenantInvitation(data: Record<string, unknown>) { return TenantInvitation.create(data); },
   findTenantInvitationById(tenantId: string, invitationId: string) { return TenantInvitation.findOne({ _id: invitationId, tenantId }); },
+  findPendingTenantInvitation(tenantId: string, email: string) { return TenantInvitation.findOne({ tenantId, email, status: 'pending' }); },
   findTenantInvitationByTokenHash(tokenHash: string) { return TenantInvitation.findOne({ tokenHash }).select('+tokenHash'); },
   listTenantInvitations(tenantId: string) { return TenantInvitation.find({ tenantId }).select('-tokenHash').populate('invitedBy', 'name email').populate('acceptedBy', 'name email').sort({ createdAt: -1 }).lean(); },
   updateTenantInvitation(tenantId: string, invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId }, { $set: update }, { new: true, runValidators: true }).select('-tokenHash'); },
