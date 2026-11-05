@@ -26,7 +26,7 @@ This document tracks backend scope for Trello cards TEN-00 through TEN-12. It do
 - Platform and Tenant adapters use the same shared permission evaluator; role catalogs and domain-specific grants remain isolated. Platform and Tenant routes must declare explicit permission keys.
 - Clinic and branch access is checked against membership scope and tenant ownership.
 - Invitation tokens are stored as hashes, are single-use and expire. Acceptance has a processing lease so stale claims can be retried safely.
-- Invitation acceptance rate limiting uses an atomic MongoDB counter with a TTL index, shared across API instances; if the store is unavailable, acceptance fails closed with HTTP 503. IP addresses are SHA-256 hashed before persistence.
+- Invitation acceptance rate limiting uses an atomic MongoDB counter with a TTL index, shared across API instances; if the store is unavailable, acceptance fails closed with HTTP 503. IP addresses are HMAC-SHA-256 keyed with the server secret before persistence.
 - Audit exports include only safe identifiers/action fields, are tenant-filtered, capped at 5,000 rows and neutralize spreadsheet formulas.
 - Last Tenant Owner demotion/suspension is serialized with a short tenant-scoped database lease; stale leases expire automatically.
 - Subscription data is exposed read-only to Tenant APIs. Platform owns plan limits/features, entitlement assignment, invoice issuance and payment collection. Clinic/branch/user quota checks are serialized per tenant; storage metering is not implemented.
