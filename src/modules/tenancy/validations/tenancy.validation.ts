@@ -291,6 +291,6 @@ export const updateTenantPreferencesSchema = z.object({ preferences: preferences
 export const createTenantDocumentSchema = z.object({
   name: z.string().trim().min(1).max(180),
   category: z.enum(['registration', 'tax', 'license', 'insurance', 'contract', 'other']),
-  fileBase64: z.string().min(1).max(14_000_000),
+  fileBase64: z.string().min(1).max(4_200_000),
   expiresAt: z.coerce.date().nullable().optional(),
 });
