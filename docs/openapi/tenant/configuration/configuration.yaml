@@ -194,3 +194,27 @@ paths:
         "200": { description: Published template and per-clinic applied/skipped counts }
         "404": { description: Template or selected clinic not found }
         "409": { description: Version conflict or archived template }
+
+  /tenant/catalog-templates/{templateId}/rollback:
+    post:
+      tags: [Tenant Configuration]
+      summary: Restore a retained template version
+      description: Restores a retained content snapshot as a new draft version. Existing clinic snapshots are not silently changed; republish after reviewing the restored draft.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: templateId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [expectedVersion, targetVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                targetVersion: { type: integer, minimum: 1 }
+      responses:
+        "200": { description: Restored content as a new draft version }
+        "404": { description: Template or retained version not found }
+        "409": { description: Version conflict or archived template }
