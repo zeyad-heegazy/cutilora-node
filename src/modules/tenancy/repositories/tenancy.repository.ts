@@ -10,6 +10,7 @@ import { TenantDocument } from '../models/tenant-document.model.js';
 import { BranchHoliday } from '../models/branch-holiday.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { TenantConfiguration } from '../models/tenant-configuration.model.js';
+import { TenantCatalogTemplate } from '../models/tenant-catalog-template.model.js';
 import { TenantInvitation } from '../models/tenant-invitation.model.js';
 
 export const tenancyRepository = {
@@ -38,6 +39,45 @@ export const tenancyRepository = {
     return Clinic.findOneAndUpdate(
       { _id: clinicId, tenantId, $or: [{ 'settings.organizationDefaultsVersion': { $lt: version } }, { 'settings.organizationDefaultsVersion': { $exists: false } }] },
       { $set: { 'settings.organizationDefaults': values, 'settings.organizationDefaultsVersion': version } },
+      { new: true, runValidators: true },
+    );
+  },
+  listTenantCatalogTemplates(tenantId: string, query: { type?: string; status?: string }) {
+    return TenantCatalogTemplate.find({ tenantId, ...(query.type ? { type: query.type } : {}), ...(query.status ? { status: query.status } : {}) }).sort({ type: 1, name: 1 }).lean();
+  },
+  findTenantCatalogTemplate(tenantId: string, templateId: string) {
+    return TenantCatalogTemplate.findOne({ _id: templateId, tenantId }).lean();
+  },
+  createTenantCatalogTemplate(data: Record<string, unknown>) {
+    return TenantCatalogTemplate.create(data);
+  },
+  updateTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number, data: Record<string, unknown>, changedBy: string) {
+    const nextVersion = expectedVersion + 1;
+    return TenantCatalogTemplate.findOneAndUpdate(
+      { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
+      { $set: { ...data, version: nextVersion }, $push: { history: { $each: [{ version: nextVersion, content: data.content, changedBy, changedAt: new Date() }], $slice: -50 } } },
+      { new: true, runValidators: true },
+    );
+  },
+  archiveTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number) {
+    return TenantCatalogTemplate.findOneAndUpdate(
+      { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
+      { $set: { status: 'archived', version: expectedVersion + 1 } },
+      { new: true, runValidators: true },
+    );
+  },
+  publishTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number, userId: string) {
+    return TenantCatalogTemplate.findOneAndUpdate(
+      { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
+      { $set: { status: 'published', publishedAt: new Date(), publishedBy: userId } },
+      { new: true, runValidators: true },
+    );
+  },
+  applyCatalogTemplateToClinic(tenantId: string, clinicId: string, template: Record<string, any>) {
+    const path = `settings.organizationTemplates.${template.key.replace(/[^a-z0-9_-]/gi, '_')}`;
+    return Clinic.findOneAndUpdate(
+      { _id: clinicId, tenantId, [`${path}.version`]: { $ne: template.version } },
+      { $set: { [path]: { templateId: String(template._id), type: template.type, version: template.version, content: template.content, appliedAt: new Date() } } },
       { new: true, runValidators: true },
     );
   },
