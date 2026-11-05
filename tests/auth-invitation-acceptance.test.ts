@@ -102,7 +102,7 @@ describe('tenant invitation acceptance', () => {
     await expect(authService.acceptInvitation({ token: 'x'.repeat(40) }))
       .rejects.toMatchObject({ code: 'ACCOUNT_DETAILS_REQUIRED', status: 422 });
 
-    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, { status: 'pending' });
+    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, { status: 'pending', processingAt: null });
     expect(tenancyRepository.createTenantMembership).not.toHaveBeenCalled();
   });
 
