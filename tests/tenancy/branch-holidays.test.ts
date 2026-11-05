@@ -7,6 +7,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     listBranchHolidays: vi.fn(),
     findOverlappingBranchHoliday: vi.fn(),
     createBranchHoliday: vi.fn(),
+    updateBranchHoliday: vi.fn(),
     cancelBranchHoliday: vi.fn(),
   },
 }));
@@ -87,6 +88,66 @@ describe('branch holiday service', () => {
     })).rejects.toMatchObject({ status: 409, code: 'BRANCH_HOLIDAY_OVERLAP' });
 
     expect(tenancyRepository.createBranchHoliday).not.toHaveBeenCalled();
+  });
+
+  it('updates an active holiday while excluding itself from overlap detection', async () => {
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId } as any);
+    vi.mocked(tenancyRepository.findOverlappingBranchHoliday).mockResolvedValue(null as any);
+    vi.mocked(tenancyRepository.updateBranchHoliday).mockImplementation(async (_tenantId: string, _clinicId: string, _branchId: string, _holidayId: string, data: any) => data as any);
+
+    const result = await tenancyService.updateBranchHoliday(tenantId, clinicId, branchId, '64b000000000000000000005', userId, {
+      title: 'Updated hours',
+      type: 'modified_hours',
+      startDate: '2026-12-25',
+      endDate: '2026-12-25',
+      isAllDay: false,
+      startTime: '10:00',
+      endTime: '16:00',
+      reason: 'Seasonal hours',
+    });
+
+    expect(tenancyRepository.findOverlappingBranchHoliday).toHaveBeenCalledWith(
+      { tenantId, clinicId, branchId },
+      new Date('2026-12-25T00:00:00.000Z'),
+      new Date('2026-12-25T00:00:00.000Z'),
+      '64b000000000000000000005',
+    );
+    expect(tenancyRepository.updateBranchHoliday).toHaveBeenCalledWith(
+      tenantId, clinicId, branchId, '64b000000000000000000005',
+      expect.objectContaining({ title: 'Updated hours', startTime: '10:00', endTime: '16:00' }),
+    );
+    expect(result).toMatchObject({ title: 'Updated hours', type: 'modified_hours' });
+  });
+
+  it('rejects a holiday update that overlaps another active holiday', async () => {
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId } as any);
+    vi.mocked(tenancyRepository.findOverlappingBranchHoliday).mockResolvedValue({ _id: 'another-holiday' } as any);
+
+    await expect(tenancyService.updateBranchHoliday(tenantId, clinicId, branchId, '64b000000000000000000005', userId, {
+      title: 'Updated closure',
+      type: 'closure',
+      startDate: '2026-12-25',
+      endDate: '2026-12-26',
+      isAllDay: true,
+    })).rejects.toMatchObject({ status: 409, code: 'BRANCH_HOLIDAY_OVERLAP' });
+
+    expect(tenancyRepository.updateBranchHoliday).not.toHaveBeenCalled();
+  });
+
+  it('does not update a holiday when its branch is outside the tenant and clinic', async () => {
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue(null as any);
+
+    const result = await tenancyService.updateBranchHoliday(tenantId, clinicId, branchId, '64b000000000000000000005', userId, {
+      title: 'Updated closure',
+      type: 'closure',
+      startDate: '2026-12-25',
+      endDate: '2026-12-25',
+      isAllDay: true,
+    });
+
+    expect(result).toBeNull();
+    expect(tenancyRepository.findOverlappingBranchHoliday).not.toHaveBeenCalled();
+    expect(tenancyRepository.updateBranchHoliday).not.toHaveBeenCalled();
   });
 
   it('does not create a holiday for a branch outside the active tenant and clinic', async () => {
