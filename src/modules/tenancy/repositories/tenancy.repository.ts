@@ -278,7 +278,16 @@ export const tenancyRepository = {
     if (query.status) scopedFilter.status = query.status;
     if (query.search) {
       const slash = String.fromCharCode(92);
-      const regexMeta = '.*+?^
+      const regexMeta = '.*+?^$' + '{}' + '()|[]' + slash;
+      const escaped = query.search.split('').map((character) => regexMeta.includes(character) ? slash + character : character).join('');
+      scopedFilter.$or = [{ name: { $regex: escaped, $options: 'i' } }, { code: { $regex: escaped, $options: 'i' } }];
+    }
+    const [items, total] = await Promise.all([
+      Branch.find(scopedFilter).sort({ name: 1 }).skip((query.page - 1) * query.perPage).limit(query.perPage).lean(),
+      Branch.countDocuments(scopedFilter),
+    ]);
+    return { items, pagination: { page: query.page, perPage: query.perPage, total, pages: Math.ceil(total / query.perPage) } };
+  },
   createBranch(data: Record<string, unknown>) {
     return Branch.create(data);
   },
