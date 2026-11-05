@@ -212,7 +212,7 @@ const branchFields = {
   slug: slug.optional(),
   status: z.enum(['active', 'suspended']),
   address: z.string().trim().max(500).optional(),
-  cityId: z.string().regex(/^[a-f\\d]{24}$/i).nullable().optional(),
+  cityId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
   timezone: timezoneSchema,
   operatingHours: z.array(operatingHourSchema).max(7),
 };
