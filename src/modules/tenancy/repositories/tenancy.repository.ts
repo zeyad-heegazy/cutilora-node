@@ -11,6 +11,7 @@ import { BranchHoliday } from '../models/branch-holiday.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { TenantConfiguration } from '../models/tenant-configuration.model.js';
 import { TenantInvitation } from '../models/tenant-invitation.model.js';
+import { TenantRole } from '../models/tenant-role.model.js';
 
 export const tenancyRepository = {
   findTenantConfiguration(tenantId: string) {
@@ -576,6 +577,19 @@ export const tenancyRepository = {
       { new: true, runValidators: true },
     ).populate('userId', 'name email isActive').populate('clinicId', 'name slug').populate('branchIds', 'name slug');
   },
+  createTenantRole(data: Record<string, unknown>) { return TenantRole.create(data); },
+  findTenantRoleById(tenantId: string, roleId: string) { return TenantRole.findOne({ _id: roleId, tenantId }); },
+  findActiveTenantRoleById(tenantId: string, roleId: string) { return TenantRole.findOne({ _id: roleId, tenantId, status: 'active' }).lean(); },
+  listTenantRoles(tenantId: string, filters: { status?: string; scope?: string } = {}) {
+    return TenantRole.find({ tenantId, ...(filters.status ? { status: filters.status } : {}), ...(filters.scope ? { scope: filters.scope } : {}) }).sort({ status: 1, scope: 1, name: 1 }).lean();
+  },
+  updateTenantRole(tenantId: string, roleId: string, expectedVersion: number, update: Record<string, unknown>) {
+    return TenantRole.findOneAndUpdate({ _id: roleId, tenantId, version: expectedVersion, status: 'active' }, { $set: { ...update, version: expectedVersion + 1 } }, { new: true, runValidators: true });
+  },
+  archiveTenantRole(tenantId: string, roleId: string) {
+    return TenantRole.findOneAndUpdate({ _id: roleId, tenantId, status: 'active' }, { $set: { status: 'archived' } }, { new: true });
+  },
+  countMembershipsUsingRole(tenantId: string, roleId: string) { return TenantMembership.countDocuments({ tenantId, customRoleId: roleId }); },
   findMembership(userId: string, tenantId: string, clinicId: string | null) {
     return TenantMembership.findOne({
       userId,
@@ -586,7 +600,7 @@ export const tenancyRepository = {
         : { clinicId: null }),
     })
       .sort({ clinicId: clinicId ? -1 : 1 })
-      .select('role scope tenantId clinicId branchIds');
+      .select('role scope tenantId clinicId branchIds customRoleId');
   },
   findActiveTenant(id: string) {
     return Tenant.findOne({ _id: id, status: 'active' }).select('_id');
