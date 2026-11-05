@@ -559,18 +559,31 @@ export const tenancyService = {
   async getBranchSettings(tenantId: string, clinicId: string, branchId: string) {
     const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
     if (!branch) return null;
-    return { settings: branch.settings ?? {}, timezone: branch.timezone, operatingHours: branch.operatingHours ?? [] };
+    const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
+    const clinicSettings = clinic?.settings?.toObject?.() ?? clinic?.settings ?? {};
+    const branchSettings = branch.settings?.toObject?.() ?? branch.settings ?? {};
+    const inheritedValues = deepMerge(clinicSettings.organizationDefaults ?? {}, clinicSettings.organizationOverrides ?? {});
+    const overrides = branchSettings.organizationOverrides ?? {};
+    return {
+      inheritedValues,
+      overrides,
+      effectiveValues: deepMerge(inheritedValues, overrides),
+      inheritedVersion: clinicSettings.organizationDefaultsVersion ?? 0,
+      timezone: branch.timezone,
+      operatingHours: branch.operatingHours ?? [],
+    };
   },
   async updateBranchSettings(tenantId: string, clinicId: string, branchId: string, userId: string, settings: Record<string, any>) {
     const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
     if (!branch) return null;
     const currentSettings = branch.settings?.toObject?.() ?? branch.settings ?? {};
+    const mergedOverrides = deepMerge(currentSettings.organizationOverrides ?? {}, settings);
     const updated = await tenancyRepository.updateBranch(branchId, tenantId, clinicId, {
-      settings: deepMerge(currentSettings, settings),
+      settings: { ...currentSettings, organizationOverrides: mergedOverrides },
       updatedBy: userId,
     });
-    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.settings.updated', targetType: 'branch', targetId: branchId, clinicId, metadata: { changedKeys: Object.keys(settings) } });
-    return updated;
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.settings.overridden', targetType: 'branch', targetId: branchId, clinicId, metadata: { changedKeys: Object.keys(settings) } });
+    return updated ? this.getBranchSettings(tenantId, clinicId, branchId) : null;
   },
   async createBranch(input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
