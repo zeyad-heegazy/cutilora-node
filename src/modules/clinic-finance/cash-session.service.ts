@@ -9,6 +9,13 @@ const scopeFilter = (scope: Scope) => ({ tenantId: scope.tenantId, clinicId: sco
 async function findOpen(scope: Scope) {
   return ClinicCashSession.findOne({ ...scopeFilter(scope), status: 'open' });
 }
+export function calculateCashSessionBalance(input: { openingBalanceMinor: number; collectedMinor: number; refundedMinor: number; cashExpensesMinor: number; movements: Array<{ direction: 'in' | 'out'; amountMinor: number }> }) {
+  const movementNet = input.movements.reduce((sum, movement) => sum + (movement.direction === 'in' ? movement.amountMinor : -movement.amountMinor), 0);
+  const expected = input.openingBalanceMinor + input.collectedMinor - input.refundedMinor - input.cashExpensesMinor + movementNet;
+  if (!Number.isSafeInteger(expected)) throw { status: 409, code: 'CASH_BALANCE_OUT_OF_RANGE', message: 'Expected cash balance exceeds the supported range.' };
+  return expected;
+}
+
 async function calculateExpected(session: any, scope: Scope) {
   const [invoices, expenses] = await Promise.all([
     ClinicInvoice.find({ ...scopeFilter(scope), 'payments.cashSessionId': session._id }).select('payments').lean(),
@@ -26,8 +33,7 @@ async function calculateExpected(session: any, scope: Scope) {
     }
   }
   const cashExpensesMinor = (expenses as any[]).reduce((sum, expense) => sum + expense.amountMinor, 0);
-  const movementNet = (session.movements ?? []).reduce((sum: number, movement: any) => sum + (movement.direction === 'in' ? movement.amountMinor : -movement.amountMinor), 0);
-  return session.openingBalanceMinor + collectedMinor - refundedMinor - cashExpensesMinor + movementNet;
+  return calculateCashSessionBalance({ openingBalanceMinor: session.openingBalanceMinor, collectedMinor, refundedMinor, cashExpensesMinor, movements: session.movements ?? [] });
 }
 
 export const cashSessionService = {
@@ -70,8 +76,12 @@ export const cashSessionService = {
   },
 
   async close(scope: Scope, sessionId: string, input: { countedBalanceMinor: number; varianceReason?: string }) {
-    const session = await ClinicCashSession.findOne({ _id: sessionId, ...scopeFilter(scope), status: 'open' });
-    if (!session) throw { status: 404, code: 'OPEN_CASH_SESSION_NOT_FOUND', message: 'Open cash session not found.' };
+    const session = await ClinicCashSession.findOne({ _id: sessionId, ...scopeFilter(scope) });
+    if (!session) throw { status: 404, code: 'OPEN_CASH_SESSION_NOT_FOUND', message: 'Cash session not found.' };
+    if (session.status !== 'open') {
+      if (['pending_review', 'approved'].includes(session.status) && String(session.closedBy) === scope.userId && session.countedBalanceMinor === input.countedBalanceMinor && session.varianceReason === (input.varianceReason ?? '')) return session;
+      throw { status: 409, code: 'CASH_SESSION_NOT_OPEN', message: 'Cash session is already closed or locked.' };
+    }
     const expectedBalanceMinor = await calculateExpected(session, scope);
     const varianceMinor = input.countedBalanceMinor - expectedBalanceMinor;
     if (varianceMinor !== 0 && !input.varianceReason?.trim()) throw { status: 400, code: 'CASH_VARIANCE_REASON_REQUIRED', message: 'A reason is required when counted cash differs from expected cash.' };
@@ -87,8 +97,10 @@ export const cashSessionService = {
   },
 
   async approve(scope: Scope, sessionId: string) {
-    const session = await ClinicCashSession.findOne({ _id: sessionId, ...scopeFilter(scope), status: 'pending_review' });
-    if (!session) throw { status: 404, code: 'CASH_SESSION_REVIEW_NOT_FOUND', message: 'Cash session awaiting review was not found.' };
+    const session = await ClinicCashSession.findOne({ _id: sessionId, ...scopeFilter(scope) });
+    if (!session) throw { status: 404, code: 'CASH_SESSION_REVIEW_NOT_FOUND', message: 'Cash session not found.' };
+    if (session.status === 'approved' && String(session.reviewedBy) === scope.userId) return session;
+    if (session.status !== 'pending_review') throw { status: 409, code: 'CASH_SESSION_NOT_REVIEWABLE', message: 'Cash session is not awaiting review.' };
     if (String(session.openedBy) === scope.userId || String(session.closedBy) === scope.userId) {
       throw { status: 403, code: 'CASH_SESSION_SEPARATION_OF_DUTIES', message: 'The user who opened or closed a cash session cannot approve it.' };
     }
