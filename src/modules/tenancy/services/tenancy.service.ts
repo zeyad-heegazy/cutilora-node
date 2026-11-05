@@ -516,8 +516,8 @@ export const tenancyService = {
     if (holiday) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.holiday.cancelled', targetType: 'branch_holiday', targetId: holidayId, clinicId, branchId });
     return holiday;
   },
-  listBranches(tenantId: string, clinicId: string, branchId: string | null) {
-    return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) });
+  listBranches(tenantId: string, clinicId: string, branchId: string | null, query: { search?: string; status?: string; page: number; perPage: number }) {
+    return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) }, query);
   },
   getBranch(id: string, tenantId: string, clinicId: string) {
     return tenancyRepository.findBranchById(id, tenantId, clinicId);
