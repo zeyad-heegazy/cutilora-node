@@ -8,8 +8,19 @@ import { TenantMembership } from '../models/tenant-membership.model.js';
 import { User } from '../../auth/models/user.model.js';
 import { TenantDocument } from '../models/tenant-document.model.js';
 import { BranchHoliday } from '../models/branch-holiday.model.js';
+import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 
 export const tenancyRepository = {
+  createTenantAuditEvent(data: Record<string, unknown>) {
+    return TenantAuditEvent.create(data);
+  },
+  async listTenantAuditEvents(filter: Record<string, unknown>, page: number, perPage: number) {
+    const [items, total] = await Promise.all([
+      TenantAuditEvent.find(filter).sort({ createdAt: -1 }).skip((page - 1) * perPage).limit(perPage).lean(),
+      TenantAuditEvent.countDocuments(filter),
+    ]);
+    return { items, pagination: { page, perPage, total, pages: Math.ceil(total / perPage) } };
+  },
   createTenantDocument(data: Record<string, unknown>) {
     return TenantDocument.create(data);
   },
