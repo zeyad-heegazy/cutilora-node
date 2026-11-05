@@ -180,7 +180,7 @@ paths:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches"
       summary: Replace branch weekly business hours
-      description: Replaces the complete weekly schedule. Each weekday may appear once; open days require valid open/close times and non-overlapping breaks. Overnight hours are not supported. Requires branch.update permission.
+      description: Replaces the complete weekly schedule. Exactly seven entries are required, one for every weekday (0-6); mark closed days with isClosed=true. Open days require valid open/close times and non-overlapping breaks. Overnight hours are not supported. Requires branch.update permission.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
