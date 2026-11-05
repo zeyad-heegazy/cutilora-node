@@ -80,7 +80,7 @@ export const tenancyController = {
         return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
       }
       const input = updateBranchSchema.parse(req.body);
-      if (context.role === 'branch_manager' && 'status' in input) {
+      if (context.scope === 'branch' && 'status' in input) {
         return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Branch managers cannot change branch lifecycle status.' } });
       }
       const item = await tenancyService.updateBranch(branchId, input, context.tenantId, context.clinicId);
