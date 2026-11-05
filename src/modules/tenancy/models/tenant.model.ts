@@ -97,6 +97,7 @@ const schema = new Schema(
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     ownerMutationLockExpiresAt: { type: Date, default: null, select: false },
+    entitlementMutationLockExpiresAt: { type: Date, default: null, select: false },
   },
   { timestamps: true, minimize: false },
 );
