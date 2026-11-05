@@ -313,6 +313,26 @@ export const tenancyRepository = {
   listBranchHolidays(filter: Record<string, unknown>) {
     return BranchHoliday.find({ ...filter, status: 'active' }).sort({ startDate: 1 }).lean();
   },
+  acquireBranchHolidayMutationLock(tenantId: string, clinicId: string, branchId: string, token: string, now: Date, expiresAt: Date) {
+    return Branch.findOneAndUpdate(
+      {
+        _id: branchId, tenantId, clinicId,
+        $or: [
+          { holidayMutationLockExpiresAt: { $lte: now } },
+          { holidayMutationLockExpiresAt: null },
+          { holidayMutationLockExpiresAt: { $exists: false } },
+        ],
+      },
+      { $set: { holidayMutationLockToken: token, holidayMutationLockExpiresAt: expiresAt } },
+      { new: true, projection: { _id: 1 } },
+    );
+  },
+  releaseBranchHolidayMutationLock(tenantId: string, clinicId: string, branchId: string, token: string) {
+    return Branch.updateOne(
+      { _id: branchId, tenantId, clinicId, holidayMutationLockToken: token },
+      { $set: { holidayMutationLockToken: null, holidayMutationLockExpiresAt: null } },
+    );
+  },
   findOverlappingBranchHoliday(filter: Record<string, unknown>, startDate: Date, endDate: Date, excludeHolidayId?: string) {
     return BranchHoliday.findOne({
       ...filter,
