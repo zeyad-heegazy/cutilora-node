@@ -49,7 +49,7 @@ export const tenantCatalogService = {
     }
   },
   async update(tenantId: string, userId: string, templateId: string, expectedVersion: number, input: Record<string, any>) {
-    const current = await tenancyRepository.findTenantCatalogTemplate(tenantId, templateId);
+    const current: any = await tenancyRepository.findTenantCatalogTemplate(tenantId, templateId);
     if (!current) return null;
     if (current.status === 'archived') fail(409, 'TEMPLATE_ARCHIVED', 'Archived templates cannot be edited.');
     const data = normalizeTemplate({ ...current, ...input });
@@ -75,7 +75,7 @@ export const tenantCatalogService = {
       clinics = await tenancyRepository.listClinicsForConfiguration(tenantId, input.applyTo === 'selected' ? input.clinicIds : undefined);
       if (input.applyTo === 'selected' && clinics.length !== (input.clinicIds?.length ?? 0)) fail(404, 'CLINIC_NOT_FOUND', 'One or more selected clinics do not belong to this tenant.');
     }
-    const published = await tenancyRepository.publishTenantCatalogTemplate(tenantId, templateId, input.expectedVersion, userId);
+    const published: any = await tenancyRepository.publishTenantCatalogTemplate(tenantId, templateId, input.expectedVersion, userId);
     if (!published) fail(409, 'TEMPLATE_VERSION_CONFLICT', 'Template changed while publishing. Reload and retry.');
     let updated = 0;
     let skipped = 0;
