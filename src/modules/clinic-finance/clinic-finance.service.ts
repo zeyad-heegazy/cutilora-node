@@ -43,6 +43,23 @@ function invoiceFilter(scope: Scope) {
   };
 }
 
+async function reserveCashSession(scope: Scope): Promise<any> {
+  const session = await ClinicCashSession.findOneAndUpdate(
+    { ...invoiceFilter(scope), status: 'open' },
+    { $inc: { pendingMutations: 1, version: 1 } },
+    { new: true, projection: { _id: 1 } },
+  );
+  if (!session) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording a cash transaction.' };
+  return session._id;
+}
+
+async function releaseCashSession(scope: Scope, sessionId: any): Promise<void> {
+  await ClinicCashSession.updateOne(
+    { _id: sessionId, ...invoiceFilter(scope), status: 'open', pendingMutations: { $gt: 0 } },
+    { $inc: { pendingMutations: -1, version: 1 } },
+  );
+}
+
 function dateFilter(from?: Date, to?: Date) {
   return from || to ? { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } : undefined;
 }
