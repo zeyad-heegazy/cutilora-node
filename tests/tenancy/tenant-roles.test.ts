@@ -46,7 +46,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   },
 }));
 
-import { tenantRolesService, TENANT_ROLE_TEMPLATES } from '../../src/modules/tenancy/services/tenant-roles.service.js';
+import { tenantRolesService, TENANT_ROLE_TEMPLATES, TENANT_PERMISSION_CATALOG } from '../../src/modules/tenancy/services/tenant-roles.service.js';
 
 function query(value: any) {
   const chain: any = { sort: () => chain, select: () => chain, lean: async () => value, then: (resolve: any, reject: any) => Promise.resolve(value).then(resolve, reject) };
@@ -111,6 +111,13 @@ describe('tenant custom role service', () => {
     expect(TENANT_ROLE_TEMPLATES.map((template) => template.name)).toEqual(expect.arrayContaining([
       'Tenant Admin', 'Organization Manager', 'Clinic Manager', 'Branch Manager', 'Finance Viewer', 'Finance Manager', 'Read-only Analyst',
     ]));
+  });
+
+  it('keeps every starter template grant inside the exposed permission catalog', () => {
+    const catalog = new Set(TENANT_PERMISSION_CATALOG.flatMap((module) => [...module.actions]));
+    for (const template of TENANT_ROLE_TEMPLATES) {
+      for (const permission of template.permissions) expect(catalog.has(permission)).toBe(true);
+    }
   });
 
   it('clones a branch manager starter template with explicit branch targets', async () => {
