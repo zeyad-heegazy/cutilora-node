@@ -284,8 +284,13 @@ export const tenancyService = {
         scope: membership.scope,
         clinic: membership.clinicId,
         branches: membership.branchIds ?? [],
-        permissions: membership.status === 'active' ? getTenantRolePermissions(membership.role) : [],
-        permissionSource: 'built_in_role',
+        permissions: membership.status === 'active'
+          ? (membership.role === 'custom'
+            ? ((await tenancyRepository.findActiveTenantRoleById(tenantId, String(membership.customRoleId ?? '')))?.permissions ?? [])
+            : getTenantRolePermissions(membership.role))
+          : [],
+        customRoleId: membership.customRoleId ? String(membership.customRoleId) : null,
+        permissionSource: membership.role === 'custom' ? 'custom_role' : 'built_in_role',
       })),
     };
   },
@@ -307,6 +312,7 @@ export const tenancyService = {
     if (actorRole !== 'tenant_owner' && current.scope === 'tenant') throw { status: 403, code: 'MEMBERSHIP_MANAGEMENT_DENIED', message: 'Only the Tenant Owner can manage tenant-wide memberships.' };
     const next = {
       role: input.role ?? current.role,
+      customRoleId: input.role === 'custom' ? (input.customRoleId ?? current.customRoleId ? String(input.customRoleId ?? current.customRoleId) : null) : input.role ? null : (current.customRoleId ? String(current.customRoleId) : null),
       scope: input.scope ?? current.scope,
       clinicId: input.clinicId === undefined ? (current.clinicId ? String(current.clinicId) : null) : input.clinicId,
       branchIds: input.branchIds === undefined ? (current.branchIds ?? []).map((id: unknown) => String(id)) : input.branchIds,
@@ -317,7 +323,11 @@ export const tenancyService = {
     const clinicRoles = ['clinic_admin', 'clinic_manager', 'staff', 'provider', 'receptionist'];
     const branchRoles = ['branch_manager', 'staff', 'provider', 'receptionist'];
     if (next.scope === 'tenant') {
-      if (!tenantRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at tenant scope.' };
+      if (next.role === 'custom') {
+        if (!next.customRoleId) throw { status: 400, code: 'CUSTOM_ROLE_REQUIRED', message: 'Select a custom role to assign.' };
+        const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, next.customRoleId);
+        if (!customRole || customRole.scope !== 'tenant') throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role is not available at tenant scope.' };
+      } else if (!tenantRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at tenant scope.' };
       if (actorRole !== 'tenant_owner') throw { status: 403, code: 'TENANT_OWNER_REQUIRED', message: 'Only the Tenant Owner can assign tenant-wide roles.' };
       next.clinicId = null;
       next.branchIds = [];
@@ -325,10 +335,19 @@ export const tenancyService = {
       if (!next.clinicId) throw { status: 400, code: 'CLINIC_REQUIRED', message: 'Clinic scope requires clinicId.' };
       if (!await tenancyRepository.findClinicById(next.clinicId, tenantId)) throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'Clinic not found in this tenant.' };
       if (next.scope === 'clinic') {
-        if (!clinicRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at clinic scope.' };
+        if (next.role === 'custom') {
+          if (!next.customRoleId) throw { status: 400, code: 'CUSTOM_ROLE_REQUIRED', message: 'Select a custom role to assign.' };
+          const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, next.customRoleId);
+          if (!customRole || customRole.scope !== 'clinic') throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role is not available at clinic scope.' };
+        } else if (!clinicRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at clinic scope.' };
         next.branchIds = [];
       } else {
-        if (!branchRoles.includes(next.role) || !next.branchIds.length) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'Branch scope requires a branch-compatible role and at least one branch.' };
+        if (next.role === 'custom') {
+          if (!next.customRoleId) throw { status: 400, code: 'CUSTOM_ROLE_REQUIRED', message: 'Select a custom role to assign.' };
+          const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, next.customRoleId);
+          if (!customRole || customRole.scope !== 'branch') throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role is not available at branch scope.' };
+        } else if (!branchRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at branch scope.' };
+        if (!next.branchIds.length) throw { status: 400, code: 'BRANCH_REQUIRED', message: 'Branch scope requires at least one branch.' };
         for (const branchId of next.branchIds) {
           if (!await tenancyRepository.findBranchById(branchId, tenantId, next.clinicId)) throw { status: 404, code: 'BRANCH_NOT_FOUND', message: 'A selected branch does not belong to the selected clinic.' };
         }
