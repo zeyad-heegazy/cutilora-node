@@ -86,6 +86,18 @@ describe('tenant membership administration', () => {
     })).rejects.toMatchObject({ status: 403, code: 'TENANT_OWNER_REQUIRED' });
   });
 
+  it('does not allow an invited membership to be activated without invitation acceptance', async () => {
+    vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
+      _id: membershipId, userId: targetId, role: 'clinic_manager', scope: 'clinic', status: 'invited',
+      clinicId, branchIds: [],
+    } as any);
+
+    await expect(tenancyService.updateTenantMembership(tenantId, membershipId, actorId, 'tenant_owner', {
+      status: 'active',
+    })).rejects.toMatchObject({ status: 409, code: 'INVITATION_ACCEPTANCE_REQUIRED' });
+    expect(tenancyRepository.updateTenantMembership).not.toHaveBeenCalled();
+  });
+
   it('prevents users from changing their own membership', async () => {
     vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
       _id: membershipId, userId: actorId, role: 'tenant_owner', scope: 'tenant', status: 'active',
