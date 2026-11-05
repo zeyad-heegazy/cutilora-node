@@ -341,7 +341,7 @@ export const tenancyService = {
     if (!membership) return null;
     return tenancyRepository.listTenantMembershipHistory(tenantId, membershipId, page, perPage);
   },
-  async updateTenantMembership(tenantId: string, membershipId: string, actorUserId: string, actorRole: string, input: Record<string, any>) {
+  async updateTenantMembership(tenantId: string, membershipId: string, actorUserId: string, actorRole: string, input: Record<string, any>, actorPermissions?: string[]) {
     const current = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
     if (!current) return null;
     if (String(current.userId) === actorUserId) throw { status: 403, code: 'SELF_MEMBERSHIP_CHANGE_DENIED', message: 'You cannot change your own membership role, scope or status.' };
@@ -371,7 +371,7 @@ export const tenancyService = {
     const unknownOverrides = overridePermissions.filter((permission) => !TENANT_PERMISSION_CATALOG.includes(permission));
     if (unknownOverrides.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more direct permission overrides are unknown.', details: { permissions: unknownOverrides } };
     if (next.role === 'tenant_owner' && overridePermissions.length) throw { status: 400, code: 'OWNER_PERMISSION_OVERRIDE_DENIED', message: 'Tenant Owner access cannot be altered through direct permission overrides.' };
-    if (!directAllows.every((permission) => hasPermission(getTenantRolePermissions(actorRole), permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'Direct permission grants cannot exceed the current actor permissions.' };
+    if (!directAllows.every((permission) => hasPermission(actorPermissions ?? getTenantRolePermissions(actorRole), permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'Direct permission grants cannot exceed the current actor permissions.' };
     if (next.role === 'custom') {
         if (!next.customRoleId) throw { status: 400, code: 'CUSTOM_ROLE_REQUIRED', message: 'Select a custom role to assign.' };
         const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, next.customRoleId);
