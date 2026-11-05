@@ -145,7 +145,7 @@ describe('tenant invitation acceptance', () => {
     const result = await authService.acceptInvitation({ token: 'x'.repeat(40) });
 
     expect(result).toMatchObject({ membership: { status: 'active' } });
-    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, expect.objectContaining({ status: 'accepted' }));
+    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, invitation.processingAt, expect.objectContaining({ status: 'accepted' }));
     expect(tenancyRepository.deleteTenantMembershipById).not.toHaveBeenCalled();
   });
 
@@ -164,7 +164,7 @@ describe('tenant invitation acceptance', () => {
     const result = await authService.acceptInvitation({ token: 'x'.repeat(40) });
 
     expect(tenancyRepository.createTenantMembership).not.toHaveBeenCalled();
-    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, expect.objectContaining({
+    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, invitation.processingAt, expect.objectContaining({
       status: 'accepted', acceptedBy: userId, processingAt: null,
     }));
     expect(result).toMatchObject({ alreadyMember: true, membership: { id: membershipId, status: 'active' } });
