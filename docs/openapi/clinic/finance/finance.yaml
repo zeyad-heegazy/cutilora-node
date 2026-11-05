@@ -93,3 +93,49 @@ paths:
       summary: Void an unpaid expense
       responses:
         '200': { description: Expense voided }
+
+  /clinic/cash-sessions/open:
+    get:
+      tags: [Clinic Finance]
+      summary: Get the active cash session for the selected clinic/branch
+      responses:
+        '200': { description: Active cash session or null }
+  /clinic/cash-sessions:
+    post:
+      tags: [Clinic Finance]
+      summary: Open a cash session
+      responses:
+        '201': { description: Cash session opened }
+  /clinic/cash-sessions/{sessionId}/movements:
+    parameters:
+      - in: path
+        name: sessionId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Clinic Finance]
+      summary: Record an idempotent cash-in or cash-out movement
+      responses:
+        '200': { description: Cash movement recorded }
+  /clinic/cash-sessions/{sessionId}/close:
+    parameters:
+      - in: path
+        name: sessionId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Clinic Finance]
+      summary: Submit counted cash for independent review
+      responses:
+        '200': { description: Cash session submitted for review }
+  /clinic/cash-sessions/{sessionId}/approve:
+    parameters:
+      - in: path
+        name: sessionId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Clinic Finance]
+      summary: Approve and lock a cash session; opener/closer cannot approve
+      responses:
+        '200': { description: Cash session approved and locked }
