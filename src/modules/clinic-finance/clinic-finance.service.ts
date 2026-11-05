@@ -404,7 +404,7 @@ export const clinicFinanceService = {
     }
     const range = { $gte: query.from, $lte: query.to };
     const [invoices, expenses, clinic] = await Promise.all([
-      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'] }, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }] }).select('currency totalMinor issuedAt createdAt lines payments').lean(),
+      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'] }, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }] }).select('currency totalMinor creditedMinor creditNotes issuedAt createdAt lines payments').lean(),
       ClinicExpense.find({ ...filter, status: { $in: ['recorded', 'paid'] }, $or: [{ incurredAt: range }, { paidAt: range }] }).select('currency amountMinor category status incurredAt paidAt').lean(),
       Clinic.findOne({ _id: scope.clinicId, tenantId: scope.tenantId }).select('timezone').lean(),
     ]);
@@ -428,7 +428,7 @@ export const clinicFinanceService = {
     const trendFor = (currency: string, date: Date) => {
       const key = periodKey(date);
       const mapKey = `${currency}:${key}`;
-      if (!trends.has(mapKey)) trends.set(mapKey, { currency, period: key, invoicedMinor: 0, collectedMinor: 0, refundedMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
+      if (!trends.has(mapKey)) trends.set(mapKey, { currency, period: key, invoicedMinor: 0, creditedMinor: 0, collectedMinor: 0, refundedMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
       return trends.get(mapKey);
     };
     for (const invoice of invoices as any[]) {
@@ -503,7 +503,7 @@ export const clinicFinanceService = {
     }
     const invoiceDate = dateFilter(query.from, query.to);
     const [invoices, expenses] = await Promise.all([
-      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'paid'] }, ...(invoiceDate ? { issuedAt: invoiceDate } : {}) }).select('currency totalMinor paidMinor refundedMinor creditedMinor balanceDueMinor status').lean(),
+      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'] }, ...(invoiceDate ? { issuedAt: invoiceDate } : {}) }).select('currency totalMinor paidMinor refundedMinor creditedMinor balanceDueMinor status').lean(),
       ClinicExpense.find({ ...filter, status: { $in: ['recorded', 'paid'] }, ...(invoiceDate ? { incurredAt: invoiceDate } : {}) }).select('currency amountMinor status').lean(),
     ]);
     const byCurrency = new Map<string, any>();
@@ -524,6 +524,6 @@ export const clinicFinanceService = {
       row.expensesMinor += expense.amountMinor;
       if (expense.status === 'paid') row.paidExpensesMinor += expense.amountMinor;
     }
-    return { currencies: [...byCurrency.values()].map((row) => ({ ...row, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })), period: { from: query.from ?? null, to: query.to ?? null } };
+    return { currencies: [...byCurrency.values()].map((row) => ({ ...row, netInvoicedMinor: row.invoicedMinor - row.creditedMinor, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })), period: { from: query.from ?? null, to: query.to ?? null } };
   },
 };
