@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     listTenantMemberships: vi.fn(),
+    listTenantInvitations: vi.fn(),
     findTenantMembershipById: vi.fn(),
     countActiveTenantOwners: vi.fn(),
     findClinicById: vi.fn(),
@@ -122,6 +123,22 @@ describe('tenant membership administration', () => {
       search: 'manager', status: 'active', role: 'clinic_manager', scope: 'clinic', clinicId, page: 2, perPage: 10,
     });
     expect(result.pagination).toMatchObject({ page: 2, perPage: 10, total: 21 });
+  });
+
+  it('returns paginated tenant invitation results through the service', async () => {
+    vi.mocked(tenancyRepository.listTenantInvitations).mockResolvedValue({
+      items: [{ _id: 'invite-1', status: 'pending', expiresAt: new Date(Date.now() + 60_000) }],
+      pagination: { page: 1, perPage: 10, total: 1, pages: 1 },
+    } as any);
+
+    const result = await tenancyService.listTenantInvitations(tenantId, {
+      search: 'clinic@example.com', status: 'pending', page: 1, perPage: 10,
+    });
+
+    expect(tenancyRepository.listTenantInvitations).toHaveBeenCalledWith(tenantId, {
+      search: 'clinic@example.com', status: 'pending', page: 1, perPage: 10,
+    });
+    expect(result.pagination.total).toBe(1);
   });
 
 });
