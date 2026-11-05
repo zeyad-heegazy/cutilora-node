@@ -18,6 +18,9 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     expirePendingTenantInvitations: vi.fn(),
     findPendingTenantInvitation: vi.fn(),
     createTenantInvitation: vi.fn(),
+    findTenantInvitationById: vi.fn(),
+    revokeTenantInvitationIfAvailable: vi.fn(),
+    rotateTenantInvitationIfAvailable: vi.fn(),
     findBranchById: vi.fn(),
     transitionBranchStatus: vi.fn(),
     updateTenantMembership: vi.fn(),
@@ -353,6 +356,35 @@ describe('tenant membership administration', () => {
   it('returns no tenant user when the identity has no membership in the active tenant', async () => {
     vi.mocked(tenancyRepository.findTenantUserDetails).mockResolvedValue(null as any);
     await expect(tenancyService.getTenantUserDetails(tenantId, targetId)).resolves.toBeNull();
+  });
+
+
+  it('uses an atomic conditional transition when revoking an invitation', async () => {
+    vi.mocked(tenancyRepository.findTenantInvitationById).mockResolvedValue({
+      _id: '64b000000000000000000007', email: 'member@example.com', status: 'pending',
+    } as any);
+    vi.mocked(tenancyRepository.revokeTenantInvitationIfAvailable).mockResolvedValue(null as any);
+
+    await expect(tenancyService.revokeTenantInvitation(tenantId, '64b000000000000000000007', actorId))
+      .rejects.toMatchObject({ status: 409, code: 'INVITATION_PROCESSING' });
+    expect(tenancyRepository.revokeTenantInvitationIfAvailable).toHaveBeenCalledWith(
+      tenantId, '64b000000000000000000007', expect.any(Date), actorId,
+    );
+    expect(tenancyRepository.createTenantAuditEvent).not.toHaveBeenCalled();
+  });
+
+  it('does not return a replacement token when atomic invitation resend loses a race', async () => {
+    vi.mocked(tenancyRepository.findTenantInvitationById).mockResolvedValue({
+      _id: '64b000000000000000000007', email: 'member@example.com', status: 'pending',
+    } as any);
+    vi.mocked(tenancyRepository.rotateTenantInvitationIfAvailable).mockResolvedValue(null as any);
+
+    await expect(tenancyService.resendTenantInvitation(tenantId, '64b000000000000000000007', actorId))
+      .rejects.toMatchObject({ status: 409, code: 'INVITATION_PROCESSING' });
+    expect(tenancyRepository.rotateTenantInvitationIfAvailable).toHaveBeenCalledWith(
+      tenantId, '64b000000000000000000007', expect.any(Date), expect.stringMatching(/^[a-f0-9]{64}$/),
+    );
+    expect(tenancyRepository.createTenantAuditEvent).not.toHaveBeenCalled();
   });
 
 });
