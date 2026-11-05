@@ -71,6 +71,10 @@ paths:
     $ref: "./openapi/tenant/geo/cities/cities.yaml#/paths/~1tenant~1geo~1cities"
   /tenant/geo/districts:
     $ref: "./openapi/tenant/geo/districts/districts.yaml#/paths/~1tenant~1geo~1districts"
+  /tenant/profile:
+    $ref: "./openapi/tenant/profile/profile.yaml#/paths/~1tenant~1profile"
+  /tenant/preferences:
+    $ref: "./openapi/tenant/profile/profile.yaml#/paths/~1tenant~1preferences"
   /tenant/context:
     $ref: "./openapi/tenant/context/context.yaml#/paths/~1tenant~1context"
   /tenant/clinics:
