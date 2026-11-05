@@ -4,7 +4,7 @@ paths:
       tags: [Clinics]
       x-apidog-folder: "Tenant/Clinics/Settings"
       summary: Get effective clinic settings
-      description: Returns tenant defaults, clinic overrides, effective values and the inherited configuration version.
+      description: Returns tenant defaults, clinic overrides, effective values, per-setting source labels (tenant_default or clinic_override) and the inherited configuration version.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
