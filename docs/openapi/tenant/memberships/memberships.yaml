@@ -53,7 +53,7 @@ paths:
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
         - { name: search, in: query, schema: { type: string, maxLength: 100 } }
-        - { name: status, in: query, schema: { type: string, enum: [pending, expired, accepted, revoked] } }
+        - { name: status, in: query, schema: { type: string, enum: [pending, processing, expired, accepted, revoked] } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
         - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
       responses:
