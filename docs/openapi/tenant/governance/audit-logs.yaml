@@ -1,4 +1,27 @@
 paths:
+  /tenant/audit-logs/export:
+    get:
+      tags: [Tenant Governance]
+      x-apidog-folder: "Tenant/Governance/Audit Logs"
+      summary: Export tenant audit events as CSV
+      description: Exports at most 5,000 tenant-scoped events. Only safe audit identifiers and action metadata are included; secrets and arbitrary metadata are excluded. X-Export-Truncated indicates whether additional rows were omitted.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: actorId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: targetType, in: query, schema: { type: string } }
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: CSV audit export
+          content:
+            text/csv:
+              schema: { type: string }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/audit-logs:
     get:
       tags: [Tenant Governance]
