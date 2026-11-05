@@ -21,6 +21,7 @@ tenantRouter.patch('/configuration', requireTenantScope, requireTenantPermission
 tenantRouter.post('/configuration/preview-apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.previewTenantConfigurationApply);
 tenantRouter.post('/configuration/apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.applyTenantConfiguration);
 tenantRouter.get('/audit-logs', requireTenantScope, requireTenantPermission('audit.read'), tenancyController.listTenantAuditEvents);
+tenantRouter.get('/audit-logs/export', requireTenantScope, requireTenantPermission('audit.export'), tenancyController.exportTenantAuditEvents);
 tenantRouter.get('/subscription', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantSubscription);
 tenantRouter.get('/subscription/usage', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantSubscriptionUsage);
 tenantRouter.get('/invoices', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.listTenantInvoices);
