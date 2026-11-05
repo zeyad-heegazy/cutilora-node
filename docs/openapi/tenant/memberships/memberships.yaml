@@ -4,13 +4,75 @@ paths:
       tags: [Tenant Memberships]
       x-apidog-folder: "Tenant/Users and Memberships"
       summary: List tenant users and memberships
-      description: Lists tenant memberships with linked user identity and clinic/branch scopes. Invitation delivery and acceptance are not included in this endpoint.
+      description: Lists tenant memberships with linked user identity and clinic/branch scopes.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       responses:
         "200": { description: Tenant memberships and scoped user identities }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/invitations:
+    get:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: List tenant invitations
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant invitations without token hashes }
+    post:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Create a tenant invitation
+      description: Returns a single-use invitation token for private delivery. Email delivery is not configured by this endpoint.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role, scope]
+              properties:
+                email: { type: string, format: email }
+                role: { type: string, enum: [tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] }
+                scope: { type: string, enum: [tenant, clinic, branch] }
+                clinicId: { type: string }
+                branchIds: { type: array, items: { type: string } }
+                expiresInDays: { type: integer, minimum: 1, maximum: 30, default: 7 }
+      responses:
+        "201": { description: Invitation created; token returned once for private delivery }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: A pending invitation already exists for this email }
+  /tenant/invitations/{invitationId}/revoke:
+    post:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Revoke a pending invitation
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: invitationId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Invitation revoked }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/invitations/{invitationId}/resend:
+    post:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Resend an invitation by rotating its token
+      description: Returns a new token for private delivery. The previous token becomes invalid.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: invitationId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: New single-use token returned }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
   /tenant/memberships/{membershipId}:
     patch:
       tags: [Tenant Memberships]
