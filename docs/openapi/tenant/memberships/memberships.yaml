@@ -89,7 +89,17 @@ paths:
               required: [email, role, scope]
               properties:
                 email: { type: string, format: email }
-                phone: { type: string, pattern: '^\\+[1-9][0-9]{7,14}
+                phone:
+                  type: string
+                  pattern: "^\\+[1-9][0-9]{7,14}$"
+                  description: Required when sms is selected; E.164 format.
+                channels:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  default: [email]
+                  description: Delivery channels to use when provider integrations are configured. SMS requires phone.
+                  items: { type: string, enum: [email, sms] }
                 role: { type: string, enum: [tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] }
                 scope: { type: string, enum: [tenant, clinic, branch] }
                 clinicId: { type: string }
