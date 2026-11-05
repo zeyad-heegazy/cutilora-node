@@ -126,7 +126,7 @@ paths:
       tags: [Tenant Memberships]
       x-apidog-folder: "Tenant/Users and Memberships"
       summary: Preview a tenant user's effective access
-      description: Returns only memberships in the active tenant, their clinic/branch scopes and permissions derived from the built-in role catalog. Suspended memberships return no effective permissions.
+      description: Returns only memberships in the active tenant, including custom role identity/version, scoped grants and direct-versus-inherited permission sources. Suspended memberships return no effective permissions.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
