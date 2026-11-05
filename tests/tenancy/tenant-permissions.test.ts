@@ -41,6 +41,15 @@ describe('tenant permission matrix', () => {
     expect(runPermission('custom', 'branch.read', { scope: 'branch', customPermissions: [] }).next).not.toHaveBeenCalled();
   });
 
+  it('applies direct grants and denials without escaping the membership scope', () => {
+    expect(runPermission('staff', 'branch.schedule.manage', {
+      scope: 'branch', permissionOverrides: { allow: ['branch.schedule.manage'], deny: [] },
+    }).next).toHaveBeenCalledOnce();
+    expect(runPermission('branch_manager', 'branch.read', {
+      scope: 'branch', permissionOverrides: { allow: [], deny: ['branch.read'] },
+    }).next).not.toHaveBeenCalled();
+  });
+
   it('does not grant permissions to unknown roles', () => {
     expect(getTenantRolePermissions('custom_unknown_role')).toEqual([]);
     expect(runPermission('custom_unknown_role', 'organization.manage').next).not.toHaveBeenCalled();
