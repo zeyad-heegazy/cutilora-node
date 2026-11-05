@@ -133,7 +133,7 @@ async function recordTenantAuditEvent(input: Record<string, unknown>): Promise<v
 }
 
 export const tenancyService = {
-  async createTenantInvitation(tenantId: string, userId: string, actorRole: string, input: { email: string; role: string; scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string; branchIds?: string[]; expiresInDays?: number }) {
+  async createTenantInvitation(tenantId: string, userId: string, actorRole: string, input: { email: string; phone?: string; channels: ('email' | 'sms')[]; role: string; scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string; branchIds?: string[]; expiresInDays?: number }) {
     const grantableByOwner = ['tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'];
     const grantableByAdmin = ['billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'];
     const grantable = actorRole === 'tenant_owner' ? grantableByOwner : actorRole === 'tenant_admin' ? grantableByAdmin : [];
@@ -165,7 +165,7 @@ export const tenancyService = {
         const counts = await tenancyRepository.getDashboardCounts(tenantId);
         await assertTenantLimit(tenantId, 'maxUsers', counts.activeMembers + counts.pendingInvitations + 1);
         return tenancyRepository.createTenantInvitation({
-          tenantId, email, role: input.role, scope: input.scope, clinicId: input.clinicId ?? null,
+          tenantId, email, phone: input.phone ?? null, channels: input.channels, role: input.role, scope: input.scope, clinicId: input.clinicId ?? null,
           branchIds: input.branchIds ?? [], invitedBy: userId, tokenHash, status: 'pending', expiresAt,
         });
       });
@@ -177,9 +177,9 @@ export const tenancyService = {
       }
       throw error;
     }
-    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.created', targetType: 'tenant_invitation', targetId: String(invitation._id), clinicId: input.clinicId, metadata: { email, role: input.role, scope: input.scope } });
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.created', targetType: 'tenant_invitation', targetId: String(invitation._id), clinicId: input.clinicId, metadata: { email, channels: input.channels, role: input.role, scope: input.scope } });
     return {
-      invitation: { id: String(invitation._id), email, role: invitation.role, scope: invitation.scope, clinicId: invitation.clinicId, branchIds: invitation.branchIds, status: invitation.status, expiresAt: invitation.expiresAt },
+      invitation: { id: String(invitation._id), email, phone: invitation.phone ?? null, channels: invitation.channels ?? ['email'], role: invitation.role, scope: invitation.scope, clinicId: invitation.clinicId, branchIds: invitation.branchIds, status: invitation.status, expiresAt: invitation.expiresAt },
       invitationToken: token,
       acceptanceEndpoint: '/auth/invitations/accept',
       delivery: 'manual',
