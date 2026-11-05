@@ -525,7 +525,11 @@ export const tenancyService = {
   async createBranch(input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
     if (!clinic) return null;
-    await geoService.validateCity(input.cityId ?? null);
+    const addressDetails = input.addressDetails ?? {};
+    if (input.cityId && addressDetails.cityId && String(input.cityId) !== String(addressDetails.cityId)) throw { status: 400, code: 'BRANCH_CITY_MISMATCH', message: 'cityId and addressDetails.cityId must match.' };
+    await geoService.validateCity(input.cityId ?? addressDetails.cityId ?? null);
+    if (Object.keys(addressDetails).length) await geoService.validateClinicLocation(addressDetails);
+    if (input.code && await tenancyRepository.findBranchByCode(clinicId, input.code)) throw { status: 409, code: 'BRANCH_CODE_EXISTS', message: 'Branch code already exists in this clinic.' };
     const base = slugify(String(input.slug || input.name), 'branch');
     let slug = base;
     let suffix = 2;
@@ -536,6 +540,9 @@ export const tenancyService = {
       ...input,
       slug,
       timezone: input.timezone || clinic.timezone || clinic.preferences?.timezone || 'Africa/Cairo',
+      cityId: input.cityId ?? addressDetails.cityId ?? null,
+      addressDetails,
+      createdBy: userId ?? null,
       tenantId,
       clinicId,
     });
@@ -545,8 +552,11 @@ export const tenancyService = {
   async updateBranch(id: string, input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
     if (!current) return null;
-    const update: Record<string, unknown> = { ...input };
+    const update: Record<string, unknown> = { ...input, ...(userId ? { updatedBy: userId } : {}) };
     if ('cityId' in input) await geoService.validateCity(input.cityId ?? null);
+    if (input.addressDetails) await geoService.validateClinicLocation(input.addressDetails);
+    if (input.cityId && input.addressDetails?.cityId && String(input.cityId) !== String(input.addressDetails.cityId)) throw { status: 400, code: 'BRANCH_CITY_MISMATCH', message: 'cityId and addressDetails.cityId must match.' };
+    if (typeof input.code === 'string' && await tenancyRepository.findBranchByCode(clinicId, input.code, id)) throw { status: 409, code: 'BRANCH_CODE_EXISTS', message: 'Branch code already exists in this clinic.' };
     if (typeof input.slug === 'string' || (typeof input.name === 'string' && input.name !== current.name)) {
       const base = slugify(String(input.slug || input.name), 'branch');
       let candidate = base;
