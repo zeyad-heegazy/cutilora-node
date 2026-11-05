@@ -204,7 +204,6 @@ export const tenancyService = {
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const updated = await tenancyRepository.rotateTenantInvitationIfAvailable(tenantId, invitationId, new Date(), tokenHash);
     if (!updated) throw { status: 409, code: 'INVITATION_PROCESSING', message: 'This invitation is currently being accepted or has already changed. Refresh and retry.' };
-    if (!updated) return null;
     await recordTenantAuditEvent({
       tenantId,
       actorUserId: userId,
