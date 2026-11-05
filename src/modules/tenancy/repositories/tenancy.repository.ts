@@ -342,7 +342,23 @@ export const tenancyRepository = {
   expirePendingTenantInvitations(tenantId: string, email: string, now: Date) { return TenantInvitation.updateMany({ tenantId, email, status: 'pending', expiresAt: { $lte: now } }, { $set: { status: 'expired' } }); },
   findPendingTenantInvitation(tenantId: string, email: string) { return TenantInvitation.findOne({ tenantId, email, status: 'pending', expiresAt: { $gt: new Date() } }); },
   findTenantInvitationByTokenHash(tokenHash: string) { return TenantInvitation.findOne({ tokenHash }).select('+tokenHash'); },
-  listTenantInvitations(tenantId: string) { return TenantInvitation.find({ tenantId }).select('-tokenHash').populate('invitedBy', 'name email').populate('acceptedBy', 'name email').sort({ createdAt: -1 }).lean(); },
+  async listTenantInvitations(tenantId: string, query: { search?: string; status?: string; page: number; perPage: number } = { page: 1, perPage: 25 }) {
+    const filter: Record<string, unknown> = { tenantId };
+    const now = new Date();
+    if (query.status === 'expired') filter.$or = [{ status: 'expired' }, { status: 'pending', expiresAt: { $lte: now } }];
+    else if (query.status === 'pending') { filter.status = 'pending'; filter.expiresAt = { $gt: now }; }
+    else if (query.status) filter.status = query.status;
+    if (query.search) {
+      const escaped = [...query.search].map((char) => '.*+?^$()|[]{}\\'.includes(char) ? '\\' + char : char).join('');
+      filter.email = { $regex: escaped, $options: 'i' };
+    }
+    const skip = (query.page - 1) * query.perPage;
+    const [items, total] = await Promise.all([
+      TenantInvitation.find(filter).select('-tokenHash').populate('invitedBy', 'name email').populate('acceptedBy', 'name email').sort({ createdAt: -1 }).skip(skip).limit(query.perPage).lean(),
+      TenantInvitation.countDocuments(filter),
+    ]);
+    return { items, pagination: { page: query.page, perPage: query.perPage, total, pages: Math.ceil(total / query.perPage) } };
+  },
   updateTenantInvitation(tenantId: string, invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId }, { $set: update }, { new: true, runValidators: true }).select('-tokenHash'); },
   claimTenantInvitation(tokenHash: string, now: Date) { return TenantInvitation.findOneAndUpdate({ tokenHash, status: 'pending', expiresAt: { $gt: now } }, { $set: { status: 'processing' } }, { new: true }).select('+tokenHash'); },
   updateClaimedTenantInvitation(invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, status: 'processing' }, { $set: update }, { new: true, runValidators: true }); },
