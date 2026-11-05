@@ -91,18 +91,24 @@ paths:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1replace"
   /tenant/documents/{documentId}/download:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1download"
-  /tenant/finance/overview:
-    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1overview"
-  /tenant/finance/entries:
-    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1entries"
-  /tenant/finance/invoices:
-    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1invoices"
-  /tenant/finance/payments:
-    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1payments"
-  /tenant/finance/refunds:
-    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1refunds"
-  /tenant/finance/expenses:
-    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1expenses"
+  /tenant/finance/summary:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1summary"
+  /tenant/finance/clinic-comparison:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1clinic-comparison"
+  /tenant/finance/revenue-trends:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1revenue-trends"
+  /tenant/finance/expense-summary:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1expense-summary"
+  /tenant/finance/reports:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1reports"
+  /clinic/finance/invoices:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1invoices"
+  /clinic/finance/payments:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1payments"
+  /clinic/finance/refunds:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1refunds"
+  /clinic/finance/expenses:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1expenses"
   /tenant/subscription:
     $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription"
   /tenant/subscription/usage:
