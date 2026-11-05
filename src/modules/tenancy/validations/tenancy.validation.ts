@@ -295,7 +295,7 @@ export const createTenantDocumentSchema = z.object({
   expiresAt: z.coerce.date().nullable().optional(),
 });
 
-const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must use YYYY-MM-DD.');
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must use YYYY-MM-DD.').refine((value) => { const date = new Date(value + 'T00:00:00.000Z'); return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value; }, 'Date must be a real calendar date.');
 export const createBranchHolidaySchema = z.object({
   title: z.string().trim().min(1).max(160),
   type: z.enum(['closure', 'modified_hours']),
