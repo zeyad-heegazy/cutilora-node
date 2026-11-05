@@ -4,7 +4,7 @@ paths:
       tags: [Tenant Access Control]
       x-apidog-folder: "Tenant/Access Control"
       summary: Get current tenant role permissions
-      description: Returns the fixed permission set for the active tenant membership. Custom roles and per-user permission overrides are not supported by this release.
+      description: Returns the effective permission set for the active built-in or custom tenant membership. Custom role permissions are resolved at request time and restricted to the assigned membership scope.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
@@ -21,6 +21,7 @@ paths:
                     type: object
                     properties:
                       role: { type: string }
+                      customRoleId: { type: string, nullable: true }
                       scope: { type: string, enum: [tenant, clinic, branch] }
                       permissions: { type: array, items: { type: string } }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
