@@ -419,6 +419,16 @@ export const tenancyRepository = {
   findTenantMembershipById(tenantId: string, membershipId: string) {
     return TenantMembership.findOne({ _id: membershipId, tenantId });
   },
+  acquireTenantOwnerMutationLock(tenantId: string, now: Date, leaseMs: number) {
+    return Tenant.findOneAndUpdate(
+      { _id: tenantId, $or: [{ ownerMutationLockExpiresAt: null }, { ownerMutationLockExpiresAt: { $lte: now } }] },
+      { $set: { ownerMutationLockExpiresAt: new Date(now.getTime() + leaseMs) } },
+      { new: true },
+    ).select('_id');
+  },
+  releaseTenantOwnerMutationLock(tenantId: string) {
+    return Tenant.updateOne({ _id: tenantId }, { $set: { ownerMutationLockExpiresAt: null } });
+  },
   countActiveTenantOwners(tenantId: string) {
     return TenantMembership.countDocuments({ tenantId, scope: 'tenant', role: 'tenant_owner', status: 'active' });
   },
