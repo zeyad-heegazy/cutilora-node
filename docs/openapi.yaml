@@ -111,6 +111,12 @@ paths:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}"
   /tenant/roles/{roleId}/archive:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1archive"
+  /tenant/roles/{roleId}/permissions:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1permissions"
+  /tenant/roles/{roleId}/clone:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1clone"
+  /tenant/access/me:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1access~1me"
   /tenant/users/{userId}/effective-access:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users~1{userId}~1effective-access"
   /tenant/users/{userId}:
