@@ -11,7 +11,8 @@ vi.mock('../../src/modules/tenancy/models/tenant-role.model.js', () => ({
 import { getTenantRoleCatalog, getTenantRolePermissions, requireTenantPermission } from '../../src/modules/tenancy/middleware/tenant-permissions.js';
 
 function query(value: any) {
-  return { sort: () => ({ select: () => ({ lean: async () => value }) }) };
+  const chain: any = { sort: () => chain, select: () => chain, lean: async () => value };
+  return chain;
 }
 async function run(role: string, permission: string, options: { roleId?: string; clinicId?: string | null; branchId?: string | null } = {}) {
   membershipFindOne.mockReturnValue(query({ role, roleId: options.roleId ?? null, scope: 'tenant', clinicId: options.clinicId ?? null }));
