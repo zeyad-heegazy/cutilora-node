@@ -21,6 +21,15 @@ describe('branch manager permissions', () => {
     expect(getTenantRolePermissions('clinic_manager')).toContain('branch.settings.manage');
   });
 
+  it('grants clinic and branch activity feeds only to scoped managers', () => {
+    expect(getTenantRolePermissions('tenant_admin')).toContain('clinic.activity.read');
+    expect(getTenantRolePermissions('clinic_admin')).toContain('clinic.activity.read');
+    expect(getTenantRolePermissions('clinic_manager')).toContain('clinic.activity.read');
+    expect(getTenantRolePermissions('branch_manager')).not.toContain('clinic.activity.read');
+    expect(getTenantRolePermissions('branch_manager')).toContain('branch.activity.read');
+    expect(getTenantRolePermissions('staff')).not.toContain('branch.activity.read');
+  });
+
   it('grants clinic-wide assigned-user visibility to clinic admins and managers', () => {
     expect(getTenantRolePermissions('clinic_admin')).toContain('clinic.members.read');
     expect(getTenantRolePermissions('clinic_manager')).toContain('clinic.members.read');
