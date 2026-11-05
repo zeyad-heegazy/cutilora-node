@@ -130,6 +130,7 @@ const schema = new Schema(
     operatingHours: { type: [operatingHoursSchema], default: [] },
     branding: { type: brandingSchema, default: () => ({}) },
     bookingSettings: { type: bookingSettingsSchema, default: () => ({}) },
+    settings: { type: Schema.Types.Mixed, default: () => ({}) },
     openingDate: { type: Date, default: null },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
