@@ -267,6 +267,9 @@ export const tenancyRepository = {
   createBranch(data: Record<string, unknown>) {
     return Branch.create(data);
   },
+  findBranchByCode(clinicId: string, code: string, excludeId?: string) {
+    return Branch.findOne({ clinicId, code, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).select('_id');
+  },
   findBranchBySlug(tenantId: string, clinicId: string, slug: string, excludeId?: string) {
     return Branch.findOne({
       tenantId,
