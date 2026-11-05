@@ -28,7 +28,7 @@ const cloneRoleSchema = z.object({
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().max(500).optional(),
   clinicId: z.string().regex(/^[a-fA-F0-9]{24}$/).optional(),
-  branchIds: z.array(z.string().regex(/^[a-fA-F0-9]{24}$/)).max(50).optional(),
+  branchIds: z.array(z.string().regex(/^[a-fA-F0-9]{24}$/)).max(20).optional(),
 });
 const assignRoleSchema = z.object({ roleId: z.string().regex(/^[a-fA-F0-9]{24}$/) });
 
