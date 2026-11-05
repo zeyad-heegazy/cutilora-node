@@ -85,6 +85,8 @@ paths:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents"
   /tenant/documents/{documentId}:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}"
+  /tenant/documents/{documentId}/versions:
+    $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1versions"
   /tenant/documents/{documentId}/replace:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1replace"
   /tenant/documents/{documentId}/download:
