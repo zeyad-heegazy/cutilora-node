@@ -8,6 +8,8 @@ const schema = new Schema({
   sizeBytes: { type: Number, required: true, min: 1, max: 3 * 1024 * 1024 },
   storageKey: { type: String, required: true, select: false },
   expiresAt: { type: Date, default: null },
+  version: { type: Number, required: true, default: 1, min: 1 },
+  replacesDocumentId: { type: Schema.Types.ObjectId, ref: 'TenantDocument', default: null },
   status: { type: String, enum: ['active', 'archived'], default: 'active', required: true },
   uploadedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   archivedAt: { type: Date, default: null },
