@@ -593,7 +593,7 @@ export const tenancyRepository = {
   archiveTenantRole(tenantId: string, roleId: string, actorUserId: string, historyEntry: Record<string, unknown>) {
     return TenantRole.findOneAndUpdate(
       { _id: roleId, tenantId, status: 'active' },
-      { $set: { status: 'archived', updatedBy: actorUserId }, $push: { history: historyEntry } },
+      { $set: { status: 'archived', updatedBy: actorUserId }, $inc: { version: 1 }, $push: { history: { $each: [historyEntry], $slice: -100 } } },
       { new: true, runValidators: true },
     );
   },
