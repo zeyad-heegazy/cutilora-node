@@ -858,8 +858,7 @@ export const tenancyService = {
     if (!clinic) return null;
     return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) }, query);
   },
-  async listBranches(tenantId: string, clinicId: string | null, branchId: string | null, query: { search?: string; status?: string; page: number; perPage: number } = { page: 1, perPage: 25 }) {
-    if (clinicId && !await tenancyRepository.findClinicById(clinicId, tenantId)) return null;
+  listBranches(tenantId: string, clinicId: string | null, branchId: string | null, query: { search?: string; status?: string; page: number; perPage: number } = { page: 1, perPage: 25 }) {
     return tenancyRepository.listBranches({
       tenantId,
       ...(clinicId ? { clinicId } : {}),
