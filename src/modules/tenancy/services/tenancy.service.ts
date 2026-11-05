@@ -163,7 +163,7 @@ export const tenancyService = {
         tenantId,
         uploadedBy: userId,
         category: input.category,
-        name: String(input.name).trim().replace(/[\\/\\r\\n\"\\\\]/g, '_'),
+        name: String(input.name).trim().split('/').join('_').split(String.fromCharCode(92)).join('_').replaceAll('"', '_').replaceAll(String.fromCharCode(10), '_').replaceAll(String.fromCharCode(13), '_'),
         mimeType: decoded.mimeType,
         sizeBytes: decoded.content.length,
         storageKey,
