@@ -135,8 +135,8 @@ export const tenancyService = {
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.resent', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
     return { invitation: updated, invitationToken: token, acceptanceEndpoint: '/auth/invitations/accept', delivery: 'manual' };
   },
-  listTenantMemberships(tenantId: string) {
-    return tenancyRepository.listTenantMemberships(tenantId);
+  listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; page: number; perPage: number }) {
+    return tenancyRepository.listTenantMemberships(tenantId, query);
   },
   async updateTenantMembership(tenantId: string, membershipId: string, actorUserId: string, actorRole: string, input: Record<string, any>) {
     const current = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
