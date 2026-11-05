@@ -1,0 +1,83 @@
+paths:
+  /tenant/configuration:
+    get:
+      tags: [Tenant Configuration]
+      x-apidog-folder: "Tenant/Shared Configuration"
+      summary: Get organization defaults
+      description: Returns versioned tenant defaults and change history. These values are inherited by newly created clinics; existing clinics retain their own overrides until explicitly published.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Versioned tenant configuration }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    patch:
+      tags: [Tenant Configuration]
+      x-apidog-folder: "Tenant/Shared Configuration"
+      summary: Update organization defaults
+      description: Updates tenant-level defaults and increments the configuration version. Does not silently overwrite existing clinic settings.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [values]
+              properties:
+                values: { type: object, additionalProperties: true }
+      responses:
+        "200": { description: Updated configuration and version history }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: Configuration changed concurrently; reload and retry }
+  /tenant/configuration/preview-apply:
+    post:
+      tags: [Tenant Configuration]
+      x-apidog-folder: "Tenant/Shared Configuration"
+      summary: Preview publishing defaults to clinics
+      description: Shows the target clinics, current configuration version, clinic overrides and effective values without changing data.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [applyTo]
+              properties:
+                applyTo: { type: string, enum: [all, selected] }
+                clinicIds: { type: array, items: { type: string }, uniqueItems: true, maxItems: 100 }
+      responses:
+        "200": { description: Configuration impact preview }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { description: A selected clinic does not belong to this tenant }
+  /tenant/configuration/apply:
+    post:
+      tags: [Tenant Configuration]
+      x-apidog-folder: "Tenant/Shared Configuration"
+      summary: Publish defaults to clinics
+      description: Requires confirm=true after preview. Applies only the organizationDefaults/version fields, preserves clinic-specific overrides and is safe to retry for the same version.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [applyTo, confirm]
+              properties:
+                applyTo: { type: string, enum: [all, selected] }
+                clinicIds: { type: array, items: { type: string }, uniqueItems: true, maxItems: 100 }
+                confirm: { type: boolean, enum: [true] }
+      responses:
+        "200": { description: Number of clinics updated and skipped }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { description: A selected clinic does not belong to this tenant }
