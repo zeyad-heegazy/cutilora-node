@@ -185,7 +185,7 @@ export const updateClinicSchema = z
     address: addressSchema.partial().optional(),
     timezone: timezoneSchema.optional(),
     preferences: preferencesSchema.partial().optional(),
-    settings: z.record(z.unknown()).optional(),
+    settings: z.record(z.unknown()).refine((settings) => !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides'].some((key) => key in settings), 'Reserved organization configuration keys cannot be changed through clinic settings.').optional(),
     countryId: z.string().optional(),
     governorateId: z.string().optional(),
     cityId: z.string().optional(),
@@ -337,7 +337,7 @@ export const updateTenantConfigurationSchema = z.object({
 });
 const configurationApplyFields = {
   applyTo: z.enum(['all', 'selected']),
-  clinicIds: z.array(z.string().regex(/^[a-f\\d]{24}$/i)).min(1).max(100).refine((ids) => new Set(ids).size === ids.length, 'clinicIds must be unique.').optional(),
+  clinicIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).min(1).max(100).refine((ids) => new Set(ids).size === ids.length, 'clinicIds must be unique.').optional(),
 };
 export const previewTenantConfigurationApplySchema = z.object(configurationApplyFields).refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
   message: 'clinicIds are required when applyTo=selected.',
