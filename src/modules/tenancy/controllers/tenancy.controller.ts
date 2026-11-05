@@ -511,7 +511,7 @@ export const tenancyController = {
     try {
       const context = req.tenantContext!;
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
-      const item = await tenancyService.updateBranch(String(req.params.branchId ?? ''), { status: 'active' }, context.tenantId, context.clinicId, req.auth!.userId);
+      const item = await tenancyService.activateBranch(String(req.params.branchId ?? ''), context.tenantId, context.clinicId, req.auth!.userId);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
@@ -520,7 +520,27 @@ export const tenancyController = {
     try {
       const context = req.tenantContext!;
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
-      const item = await tenancyService.updateBranch(String(req.params.branchId ?? ''), { status: 'suspended' }, context.tenantId, context.clinicId, req.auth!.userId);
+      const item = await tenancyService.deactivateBranch(String(req.params.branchId ?? ''), context.tenantId, context.clinicId, req.auth!.userId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async temporarilyCloseBranch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const { reason } = branchLifecycleReasonSchema.parse(req.body);
+      const item = await tenancyService.temporarilyCloseBranch(String(req.params.branchId ?? ''), context.tenantId, context.clinicId, req.auth!.userId, reason);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async permanentlyCloseBranch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const { reason } = branchLifecycleReasonSchema.parse(req.body);
+      const item = await tenancyService.permanentlyCloseBranch(String(req.params.branchId ?? ''), context.tenantId, context.clinicId, req.auth!.userId, reason);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
