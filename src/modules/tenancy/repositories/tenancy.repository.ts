@@ -419,7 +419,7 @@ export const tenancyRepository = {
   deleteTenantMembershipById(id: string) { return TenantMembership.deleteOne({ _id: id }); },
   findTenantMembershipForUser(userId: string, tenantId: string) { return TenantMembership.findOne({ userId, tenantId, status: { $in: ['active', 'invited'] } }); },
   findExistingMembershipForInvitation(userId: string, tenantId: string, clinicId: string | null) { return TenantMembership.findOne({ userId, tenantId, clinicId, status: { $in: ['active', 'invited'] } }); },
-  async listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number } = { page: 1, perPage: 25 }) {
+  async listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; branchId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number } = { page: 1, perPage: 25 }) {
     const filter: Record<string, unknown> = { tenantId };
     if (query.status) filter.status = query.status;
     if (query.role) filter.role = query.role;
