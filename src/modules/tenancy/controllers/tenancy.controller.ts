@@ -465,6 +465,7 @@ export const tenancyController = {
   async getMyTenantAccess(req: Request, res: Response) {
     const context = req.tenantContext!;
     const grants = getTenantRoleGrants(context.role, context);
+    const activeScope = context.branchId ? 'branch' : context.clinicId ? 'clinic' : 'tenant';
     const direct = new Set(context.permissionOverrides?.allow ?? []);
     res.json({ success: true, data: {
       membershipId: context.membershipId,
@@ -477,7 +478,7 @@ export const tenancyController = {
       grants: grants.map((grant) => ({
         ...grant,
         source: direct.has(grant.permission) ? 'direct' : 'role',
-        inherited: grant.scope === 'tenant' ? context.scope !== 'tenant' : grant.scope === 'clinic' && context.scope === 'branch',
+        inherited: grant.scope === 'tenant' ? activeScope !== 'tenant' : grant.scope === 'clinic' && activeScope === 'branch',
       })),
     } });
   },
