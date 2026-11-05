@@ -11,6 +11,14 @@ describe('branch manager permissions', () => {
     expect(permissions).toContain('branch.holidays.manage');
   });
 
+  it('grants clinic document access only to clinic administrators and managers', () => {
+    expect(getTenantRolePermissions('clinic_admin')).toContain('clinic.documents.manage');
+    expect(getTenantRolePermissions('clinic_manager')).toContain('clinic.documents.read');
+    expect(getTenantRolePermissions('tenant_admin')).toContain('clinic.documents.manage');
+    expect(getTenantRolePermissions('staff')).not.toContain('clinic.documents.read');
+    expect(getTenantRolePermissions('branch_manager')).not.toContain('clinic.documents.read');
+  });
+
   it('does not grant branch managers lifecycle or cross-branch management permissions', () => {
     const permissions = getTenantRolePermissions('branch_manager');
 
