@@ -38,7 +38,7 @@ const TENANT_ROLE_LABELS: Record<string, string> = {
   receptionist: 'Receptionist',
 };
 
-const FINANCE_PERMISSION_CATALOG = ['finance.read', 'finance.invoices.read', 'finance.invoices.manage', 'finance.payments.manage', 'finance.refunds.manage', 'finance.expenses.read', 'finance.expenses.manage', 'finance.cash.read', 'finance.cash.manage', 'finance.cash.approve', 'finance.receivables.read', 'finance.reports.read'];
+const FINANCE_PERMISSION_CATALOG = ['finance.read', 'finance.invoices.read', 'finance.invoices.manage', 'finance.payments.manage', 'finance.refunds.manage', 'finance.expenses.read', 'finance.expenses.manage', 'finance.cash.read', 'finance.cash.manage', 'finance.cash.approve', 'finance.receivables.read', 'finance.reports.read', 'finance.credit-notes.manage'];
 export const TENANT_PERMISSION_CATALOG = [...new Set([...Object.values(TENANT_ROLE_PERMISSIONS).flat().filter((permission) => permission !== '*'), ...FINANCE_PERMISSION_CATALOG])].sort();
 
 export function getTenantRolePermissions(role: string): string[] {
