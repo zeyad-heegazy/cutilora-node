@@ -101,6 +101,7 @@ describe('tenant permission matrix and scoped custom roles', () => {
   it('denies a custom role without an active role record', async () => {
     membershipFindOne.mockReturnValue(query({ role: 'custom_role', roleId: 'role-a', scope: 'branch', clinicId: 'clinic-a' }));
     roleFindOne.mockReturnValue(query(null));
+    branchFindOne.mockReturnValue(query({ clinicId: 'clinic-a' }));
     const req = { auth: { userId: 'user-a' }, params: {}, query: {}, tenantContext: { tenantId: 'tenant-a', clinicId: 'clinic-a', branchId: 'branch-a' } } as any;
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
     const next = vi.fn();
