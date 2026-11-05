@@ -9,6 +9,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     exportTenantAuditEvents: vi.fn(),
     listDashboardClinics: vi.fn(),
     findSubscriptionByTenantId: vi.fn(),
+    // Counts pending invitations from the dedicated invitation collection.
   },
 }));
 vi.mock('../../src/modules/geo/services/geo.service.js', () => ({
