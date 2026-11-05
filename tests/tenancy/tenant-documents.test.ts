@@ -70,6 +70,7 @@ describe('tenant document service', () => {
 
   it('removes the stored file if document metadata persistence fails', async () => {
     vi.mocked(storePrivateTenantDocument).mockResolvedValue(tenantId + '/orphan.pdf');
+    vi.mocked(removePrivateTenantDocument).mockResolvedValue(undefined);
     vi.mocked(tenancyRepository.createTenantDocument).mockRejectedValue(new Error('database unavailable'));
 
     await expect(tenancyService.createTenantDocument(tenantId, userId, {
