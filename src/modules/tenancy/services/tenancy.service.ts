@@ -89,9 +89,9 @@ export const tenancyService = {
     if (input.scope !== 'tenant' && !input.clinicId) throw { status: 400, code: 'CLINIC_REQUIRED', message: 'A clinic is required for clinic- or branch-scoped invitations.' };
     if (input.scope === 'clinic' && (input.branchIds?.length ?? 0)) throw { status: 400, code: 'INVITATION_SCOPE_INVALID', message: 'Clinic-scoped invitations cannot include branch IDs.' };
     if (input.scope === 'branch' && !(input.branchIds?.length)) throw { status: 400, code: 'BRANCH_REQUIRED', message: 'At least one branch is required for branch-scoped invitations.' };
-    if (input.clinicId && !await tenancyRepository.findClinicById(input.clinicId, tenantId)) return null;
+    if (input.clinicId && !await tenancyRepository.findActiveClinic(input.clinicId, tenantId)) return null;
     for (const branchId of input.branchIds ?? []) {
-      if (!input.clinicId || !await tenancyRepository.findBranchById(branchId, tenantId, input.clinicId)) throw { status: 400, code: 'BRANCH_SCOPE_INVALID', message: 'Every selected branch must belong to the selected clinic and tenant.' };
+      if (!input.clinicId || !await tenancyRepository.findActiveBranch(branchId, tenantId, input.clinicId)) throw { status: 400, code: 'BRANCH_SCOPE_INVALID', message: 'Every selected branch must be active and belong to the selected clinic and tenant.' };
     }
     const email = input.email.trim().toLowerCase();
     await tenancyRepository.expirePendingTenantInvitations(tenantId, email, new Date());
