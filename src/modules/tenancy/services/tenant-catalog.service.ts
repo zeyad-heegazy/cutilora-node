@@ -81,7 +81,7 @@ export const tenantCatalogService = {
   },
   async publish(tenantId: string, userId: string, templateId: string, input: { expectedVersion: number; applyTo: 'none' | 'all' | 'selected'; clinicIds?: string[]; confirm: boolean }) {
     if (!input.confirm) fail(400, 'CONFIRMATION_REQUIRED', 'Review the preview and set confirm=true before publishing.');
-    const current = await tenancyRepository.findTenantCatalogTemplate(tenantId, templateId);
+    const current: any = await tenancyRepository.findTenantCatalogTemplate(tenantId, templateId);
     if (!current) return null;
     if (current.status === 'archived') fail(409, 'TEMPLATE_ARCHIVED', 'Archived templates cannot be published.');
     if (current.version !== input.expectedVersion) fail(409, 'TEMPLATE_VERSION_CONFLICT', 'Template changed. Reload and retry.');
