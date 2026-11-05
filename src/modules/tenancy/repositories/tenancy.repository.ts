@@ -396,6 +396,13 @@ export const tenancyRepository = {
     ]);
     return { items, pagination: { page: query.page, perPage: query.perPage, total, pages: Math.ceil(total / query.perPage) } };
   },
+  listMembershipsForUser(tenantId: string, userId: string) {
+    return TenantMembership.find({ tenantId, userId })
+      .populate('clinicId', 'name slug status')
+      .populate('branchIds', 'name slug status')
+      .sort({ createdAt: 1 })
+      .lean();
+  },
   findTenantMembershipById(tenantId: string, membershipId: string) {
     return TenantMembership.findOne({ _id: membershipId, tenantId });
   },
