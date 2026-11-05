@@ -522,6 +522,17 @@ export const tenancyService = {
   getBranch(id: string, tenantId: string, clinicId: string) {
     return tenancyRepository.findBranchById(id, tenantId, clinicId);
   },
+  async getBranchSettings(tenantId: string, clinicId: string, branchId: string) {
+    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+    if (!branch) return null;
+    return { settings: branch.settings ?? {}, timezone: branch.timezone, operatingHours: branch.operatingHours ?? [] };
+  },
+  async updateBranchSettings(tenantId: string, clinicId: string, branchId: string, userId: string, settings: Record<string, any>) {
+    const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
+    if (!branch) return null;
+    const currentSettings = branch.settings?.toObject?.() ?? branch.settings ?? {};
+    return this.updateBranch(branchId, { settings: deepMerge(currentSettings, settings) }, tenantId, clinicId, userId);
+  },
   async createBranch(input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
     if (!clinic) return null;
