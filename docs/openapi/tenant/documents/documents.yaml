@@ -65,6 +65,18 @@ paths:
       responses:
         "200": { description: Document archived }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/documents/{documentId}/versions:
+    get:
+      tags: [Tenant Organization]
+      summary: List document version history
+      description: Returns metadata for the document and its replacement chain, including archived versions. Private storage keys and file contents are never returned.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Ordered document version history }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
   /tenant/documents/{documentId}/replace:
     put:
       tags: [Tenant Organization]
