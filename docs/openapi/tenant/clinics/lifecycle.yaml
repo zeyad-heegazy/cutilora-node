@@ -1,0 +1,29 @@
+paths:
+  /tenant/clinics/{clinicId}/activate:
+    post:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics"
+      summary: Activate a clinic
+      description: Reactivates a suspended clinic. Does not automatically reactivate its branches.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Clinic activated }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/clinics/{clinicId}/deactivate:
+    post:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics"
+      summary: Suspend a clinic
+      description: Suspends the clinic without deleting clinic or operational history.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Clinic suspended }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
