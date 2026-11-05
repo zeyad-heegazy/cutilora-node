@@ -325,7 +325,9 @@ export const tenancyController = {
     try {
       const context = req.tenantContext!;
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
-      res.json({ success: true, data: await tenancyService.listBranches(context.tenantId, context.clinicId, context.branchId) });
+      const query = branchListQuerySchema.parse(req.query);
+      const result = await tenancyService.listBranches(context.tenantId, context.clinicId, context.branchId, query);
+      res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
   async getBranchSettings(req: Request, res: Response, next: NextFunction) {
