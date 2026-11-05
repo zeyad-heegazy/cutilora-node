@@ -17,6 +17,20 @@ function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>
   return result;
 }
 
+function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
+  const filter: Record<string, any> = { tenantId };
+  if (query.actorId) filter.actorUserId = query.actorId;
+  if (query.action) filter.action = query.action;
+  if (query.targetType) filter.targetType = query.targetType;
+  if (query.clinicId) filter.clinicId = query.clinicId;
+  if (query.branchId) filter.branchId = query.branchId;
+  if (query.from || query.to) filter.createdAt = {
+    ...(query.from ? { $gte: query.from } : {}),
+    ...(query.to ? { $lte: query.to } : {}),
+  };
+  return filter;
+}
+
 const DEFAULT_CLINIC_PREFERENCES = { timezone: 'Africa/Cairo', locale: 'en', currency: 'EGP', dateFormat: 'YYYY-MM-DD', weekStartsOn: 6, supportedLanguages: ['en', 'ar'] };
 const DEFAULT_BOOKING_SETTINGS = { allowOnlineBooking: false, requireAppointmentConfirmation: true, defaultAppointmentDurationMinutes: 30, bufferMinutes: 0, cancellationWindowHours: 24 };
 
@@ -273,17 +287,19 @@ export const tenancyService = {
     return tenancyRepository.countExpiringTenantDocuments(tenantId, from, to);
   },
   listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
-    const filter: Record<string, any> = { tenantId };
-    if (query.actorId) filter.actorUserId = query.actorId;
-    if (query.action) filter.action = query.action;
-    if (query.targetType) filter.targetType = query.targetType;
-    if (query.clinicId) filter.clinicId = query.clinicId;
-    if (query.branchId) filter.branchId = query.branchId;
-    if (query.from || query.to) filter.createdAt = {
-      ...(query.from ? { $gte: query.from } : {}),
-      ...(query.to ? { $lte: query.to } : {}),
-    };
-    return tenancyRepository.listTenantAuditEvents(filter, query.page, query.perPage);
+    return tenancyRepository.listTenantAuditEvents(buildTenantAuditFilter(tenantId, query), query.page, query.perPage);
+  },
+  async exportTenantAuditEvents(tenantId: string, query: Record<string, any>) {
+    const limit = 5000;
+    const rows = await tenancyRepository.exportTenantAuditEvents(buildTenantAuditFilter(tenantId, query), limit + 1);
+    const truncated = rows.length > limit;
+    const columns = ['createdAt', 'actorUserId', 'action', 'targetType', 'targetId', 'clinicId', 'branchId', 'result', 'requestId'];
+    const escape = (value: unknown) => '"' + String(value ?? '').replaceAll('"', '""') + '"';
+    const csv = [
+      columns.join(','),
+      ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(row[column])).join(',')),
+    ].join('\\r\\n');
+    return { csv, truncated, exported: Math.min(rows.length, limit) };
   },
   async replaceTenantDocument(tenantId: string, documentId: string, userId: string, input: Record<string, any>) {
     const existing = await tenancyRepository.findTenantDocument(tenantId, documentId);
