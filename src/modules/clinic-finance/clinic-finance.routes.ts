@@ -8,6 +8,8 @@ import { cashSessionController } from './cash-session.controller.js';
 export const clinicFinanceRouter = Router();
 clinicFinanceRouter.use(authenticate, resolveTenantContext);
 
+clinicFinanceRouter.get('/finance/receivables', requireTenantPermission('finance.receivables.read'), clinicFinanceController.receivables);
+clinicFinanceRouter.get('/finance/reports', requireTenantPermission('finance.reports.read'), clinicFinanceController.reports);
 clinicFinanceRouter.get('/finance/summary', requireTenantPermission('finance.read'), clinicFinanceController.summary);
 clinicFinanceRouter.get('/invoices', requireTenantPermission('finance.invoices.read'), clinicFinanceController.listInvoices);
 clinicFinanceRouter.post('/invoices', requireTenantPermission('finance.invoices.manage'), clinicFinanceController.createInvoice);
