@@ -205,8 +205,31 @@ export const tenancyService = {
     const updated = await tenancyRepository.rotateTenantInvitationIfAvailable(tenantId, invitationId, new Date(), tokenHash);
     if (!updated) throw { status: 409, code: 'INVITATION_PROCESSING', message: 'This invitation is currently being accepted or has already changed. Refresh and retry.' };
     if (!updated) return null;
-    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.resent', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
-    return { invitation: updated, invitationToken: token, acceptanceEndpoint: '/auth/invitations/accept', delivery: 'manual' };
+    await recordTenantAuditEvent({
+      tenantId,
+      actorUserId: userId,
+      action: 'membership.invitation.resent',
+      targetType: 'tenant_invitation',
+      targetId: invitationId,
+      metadata: { email: invitation.email, channels: updated.channels ?? invitation.channels ?? ['email'] },
+    });
+    return {
+      invitation: {
+        id: String(updated._id),
+        email: updated.email,
+        phone: updated.phone ?? null,
+        channels: updated.channels ?? ['email'],
+        role: updated.role,
+        scope: updated.scope,
+        clinicId: updated.clinicId,
+        branchIds: updated.branchIds,
+        status: updated.status,
+        expiresAt: updated.expiresAt,
+      },
+      invitationToken: token,
+      acceptanceEndpoint: '/auth/invitations/accept',
+      delivery: 'manual',
+    };
   },
   async getTenantUserEffectiveAccess(tenantId: string, userId: string) {
     if (!/^[a-f\d]{24}$/i.test(userId)) return null;
