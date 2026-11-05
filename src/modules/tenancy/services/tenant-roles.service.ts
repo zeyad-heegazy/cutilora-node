@@ -97,7 +97,9 @@ async function audit(tenantId: string, actorUserId: string, action: string, targ
 
 const scopeRank: Record<string, number> = { tenant: 0, clinic: 1, branch: 2 };
 function withGrantSource(grant: PermissionGrant, requestedScope: string) {
-  return { ...grant, source: scopeRank[grant.scope] < scopeRank[requestedScope] ? 'inherited' : 'direct' };
+  const grantRank = scopeRank[grant.scope] ?? Number.MAX_SAFE_INTEGER;
+  const requestedRank = scopeRank[requestedScope] ?? Number.MAX_SAFE_INTEGER;
+  return { ...grant, source: grantRank < requestedRank ? 'inherited' : 'direct' };
 }
 
 function serialize(role: any) {
