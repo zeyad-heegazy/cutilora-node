@@ -7,6 +7,14 @@ import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../.
 import { readPrivateTenantDocument, removePrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
 import { logger } from '../../../shared/logger/logger.js';
 
+async function assertTenantLimit(tenantId: string, key: 'maxClinics' | 'maxBranches' | 'maxUsers', nextUsage: number) {
+  const subscription = await tenancyRepository.findSubscriptionByTenantId(tenantId);
+  const limit = subscription?.plan?.limits?.[key];
+  if (typeof limit === 'number' && nextUsage > limit) {
+    throw { status: 403, code: 'SUBSCRIPTION_LIMIT_REACHED', message: `The tenant has reached its subscription limit for ${key}.`, details: { resource: key, limit, currentUsage: nextUsage - 1 } };
+  }
+}
+
 function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>): Record<string, any> {
   const result = { ...defaults };
   for (const [key, value] of Object.entries(provided ?? {})) {
@@ -127,6 +135,8 @@ export const tenancyService = {
     await tenancyRepository.expirePendingTenantInvitations(tenantId, email, new Date());
     const pending = await tenancyRepository.findPendingTenantInvitation(tenantId, email);
     if (pending) throw { status: 409, code: 'INVITATION_ALREADY_PENDING', message: 'An active invitation already exists for this email.' };
+    const counts = await tenancyRepository.getDashboardCounts(tenantId);
+    await assertTenantLimit(tenantId, 'maxUsers', counts.activeMembers + counts.pendingInvitations + 1);
     const token = randomBytes(32).toString('base64url');
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + (input.expiresInDays ?? 7) * 24 * 60 * 60 * 1000);
@@ -566,6 +576,8 @@ export const tenancyService = {
     return geoService.listForClinic(resource, query);
   },
   async createClinic(input: Record<string, any>, tenantId: string, userId?: string) {
+    const currentCounts = await tenancyRepository.getDashboardCounts(tenantId);
+    await assertTenantLimit(tenantId, 'maxClinics', currentCounts.clinics.total + 1);
     const location = locationFrom(input);
     await geoService.validateClinicLocation(location);
     const name = String(input.name);
@@ -791,6 +803,8 @@ export const tenancyService = {
     };
   },
   async createBranch(input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
+    const currentCounts = await tenancyRepository.getDashboardCounts(tenantId);
+    await assertTenantLimit(tenantId, 'maxBranches', currentCounts.branches.total + 1);
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
     if (!clinic) return null;
     const addressDetails = input.addressDetails ?? {};
