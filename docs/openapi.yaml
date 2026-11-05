@@ -133,6 +133,16 @@ paths:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1preview-apply"
   /tenant/configuration/apply:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1apply"
+  /tenant/catalog-templates:
+    $ref: "./openapi/tenant/configuration/catalog-templates.yaml#/paths/~1tenant~1catalog-templates"
+  /tenant/catalog-templates/{templateId}:
+    $ref: "./openapi/tenant/configuration/catalog-templates.yaml#/paths/~1tenant~1catalog-templates~1{templateId}"
+  /tenant/catalog-templates/{templateId}/preview-publish:
+    $ref: "./openapi/tenant/configuration/catalog-templates.yaml#/paths/~1tenant~1catalog-templates~1{templateId}~1preview-publish"
+  /tenant/catalog-templates/{templateId}/publish:
+    $ref: "./openapi/tenant/configuration/catalog-templates.yaml#/paths/~1tenant~1catalog-templates~1{templateId}~1publish"
+  /tenant/catalog-templates/{templateId}/archive:
+    $ref: "./openapi/tenant/configuration/catalog-templates.yaml#/paths/~1tenant~1catalog-templates~1{templateId}~1archive"
   /tenant/audit-logs/export:
     $ref: "./openapi/tenant/governance/audit-logs.yaml#/paths/~1tenant~1audit-logs~1export"
   /tenant/audit-logs:

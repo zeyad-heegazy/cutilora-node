@@ -3,6 +3,7 @@ import { authenticate } from '../../auth/middleware/authenticate.js';
 import { resolveTenantContext, requireTenantScope } from '../middleware/tenant-context.js';
 import { requireTenantPermission } from '../middleware/tenant-permissions.js';
 import { tenancyController } from '../controllers/tenancy.controller.js';
+import { tenantCatalogTemplateRouter } from '../catalog/tenant-catalog-template.routes.js';
 
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
@@ -30,6 +31,7 @@ tenantRouter.get('/configuration', requireTenantScope, requireTenantPermission('
 tenantRouter.patch('/configuration', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.updateTenantConfiguration);
 tenantRouter.post('/configuration/preview-apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.previewTenantConfigurationApply);
 tenantRouter.post('/configuration/apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.applyTenantConfiguration);
+tenantRouter.use('/catalog-templates', tenantCatalogTemplateRouter);
 tenantRouter.get('/audit-logs', requireTenantScope, requireTenantPermission('audit.read'), tenancyController.listTenantAuditEvents);
 tenantRouter.get('/audit-logs/export', requireTenantScope, requireTenantPermission('audit.export'), tenancyController.exportTenantAuditEvents);
 tenantRouter.get('/subscription', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantSubscription);
