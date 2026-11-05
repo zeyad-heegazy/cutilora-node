@@ -121,4 +121,14 @@ describe('tenant invitation acceptance', () => {
     expect(tenancyRepository.deleteTenantMembershipById).toHaveBeenCalledWith(membershipId);
     expect(authRepository.deleteUserById).toHaveBeenCalledWith(userId);
   });
+  it('does not accept invitations for suspended or missing tenants', async () => {
+    vi.mocked(tenancyRepository.findActiveTenant).mockResolvedValue(null as any);
+
+    await expect(authService.acceptInvitation({ token: 'x'.repeat(40) }))
+      .rejects.toMatchObject({ code: 'TENANT_UNAVAILABLE', status: 409 });
+
+    expect(authRepository.findUserByEmail).not.toHaveBeenCalled();
+    expect(tenancyRepository.createTenantMembership).not.toHaveBeenCalled();
+  });
+
 });
