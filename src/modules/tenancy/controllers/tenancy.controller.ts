@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -31,7 +31,7 @@ export const tenancyController = {
   },
   async updatePreferences(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = updateTenantSchema.pick({ preferences: true }).parse(req.body);
+      const input = updateTenantPreferencesSchema.parse(req.body);
       if (!input.preferences) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Preferences are required.' } });
       const item = await tenancyService.updatePreferences(req.tenantContext!.tenantId, req.auth!.userId, input.preferences);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
