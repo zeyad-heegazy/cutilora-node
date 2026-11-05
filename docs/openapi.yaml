@@ -111,6 +111,8 @@ paths:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users~1{userId}~1effective-access"
   /tenant/users:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users"
+  /tenant/memberships/{membershipId}/history:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1memberships~1{membershipId}~1history"
   /tenant/memberships/{membershipId}:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1memberships~1{membershipId}"
   /tenant/configuration:
