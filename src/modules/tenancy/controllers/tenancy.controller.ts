@@ -510,6 +510,25 @@ export const tenancyController = {
       res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
+  async listBranchUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) {
+        return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      }
+      const branch = await tenancyService.getBranch(branchId, context.tenantId, context.clinicId);
+      if (!branch) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      const query = tenantUserListQuerySchema.parse(req.query);
+      const result = await tenancyService.listTenantMemberships(context.tenantId, {
+        ...query,
+        clinicId: context.clinicId,
+        branchId,
+      });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (e) { next(e); }
+  },
   async getBranchSettings(req: Request, res: Response, next: NextFunction) {
     try {
       const context = req.tenantContext!;
