@@ -51,11 +51,11 @@ paths:
   /tenant/roles/{roleId}/clone:
     post:
       tags: [Tenant Access Control]
-      summary: Clone a tenant custom role
+      summary: Clone a tenant custom role or starter template
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
-        - { name: roleId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+        - { name: roleId, in: path, required: true, schema: { type: string, description: "Custom role ObjectId or template:<key>" } }
       requestBody:
         required: true
         content:
@@ -76,7 +76,7 @@ paths:
     post:
       tags: [Tenant Access Control]
       summary: Deactivate an unused custom role
-      description: A role assigned to active memberships cannot be deactivated.
+      description: A role assigned to active or invited memberships cannot be deactivated.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
