@@ -494,7 +494,18 @@ export const tenancyService = {
           update.branding.coverImageUrl = newCoverUrl;
         }
       } catch (error) {
-        await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+        const cleanup = await Promise.allSettled([
+          removeBrandingImage(newLogoUrl),
+          removeBrandingImage(newCoverUrl),
+        ]);
+        cleanup.forEach((result) => {
+          if (result.status === 'rejected') {
+            logger.warn('Failed to clean up a partially stored tenant branding update', {
+              tenantId,
+              error: result.reason instanceof Error ? result.reason.message : 'unknown',
+            });
+          }
+        });
         throw error;
       }
     }
