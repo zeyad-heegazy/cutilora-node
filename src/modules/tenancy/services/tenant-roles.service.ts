@@ -74,15 +74,15 @@ async function actorGrants(tenantId: string, actorId: string, clinicId: string |
   }
   const scope = builtInScopes[membership.role] ?? 'branch';
   const permissions = getTenantRolePermissions(membership.role);
-  const clinicId = membership.clinicId ? String(membership.clinicId) : null;
+  const membershipClinicId = membership.clinicId ? String(membership.clinicId) : null;
   if (scope === 'branch') {
     return (membership.branchIds ?? []).flatMap((branchId: unknown) => permissions.map((permission) => ({
-      permission, scope, clinicId, branchId: String(branchId),
+      permission, scope, clinicId: membershipClinicId, branchId: String(branchId),
     })));
   }
   return permissions.map((permission) => ({
     permission, scope,
-    ...(scope === 'clinic' ? { clinicId } : {}),
+    ...(scope === 'clinic' ? { clinicId: membershipClinicId } : {}),
   }));
 }
 
