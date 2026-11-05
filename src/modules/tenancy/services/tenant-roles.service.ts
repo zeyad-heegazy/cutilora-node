@@ -13,6 +13,7 @@ export const TENANT_PERMISSION_CATALOG = [
   { module: 'branches', actions: ['branch.read', 'branch.manage', 'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.lifecycle.manage', 'branch.holidays.read', 'branch.holidays.manage'] },
   { module: 'users', actions: ['memberships.manage'] },
   { module: 'settings', actions: ['organization.manage', 'configuration.manage'] },
+  { module: 'documents', actions: ['documents.manage'] },
   { module: 'finance', actions: ['billing.read'] },
   { module: 'reports', actions: ['dashboard.read', 'audit.read', 'audit.export'] },
   { module: 'integrations', actions: [] },
