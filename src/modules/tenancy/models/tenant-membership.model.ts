@@ -6,11 +6,13 @@ const schema = new Schema({
   clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', default: null },
   branchIds: [{ type: Schema.Types.ObjectId, ref: 'Branch' }],
   scope: { type: String, enum: ['tenant', 'clinic', 'branch'], required: true },
-  role: { type: String, enum: ['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'], required: true },
+  role: { type: String, enum: ['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist', 'custom_role'], required: true },
+  roleId: { type: Schema.Types.ObjectId, ref: 'TenantRole', default: null },
   status: { type: String, enum: ['active', 'invited', 'suspended'], default: 'active', required: true },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
 
 schema.index({ userId: 1, tenantId: 1, clinicId: 1 }, { unique: true });
 schema.index({ tenantId: 1, clinicId: 1, status: 1 });
+schema.index({ tenantId: 1, roleId: 1, status: 1 });
 export const TenantMembership = (models.TenantMembership || model('TenantMembership', schema)) as Model<any>;
