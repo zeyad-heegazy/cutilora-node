@@ -2,6 +2,7 @@ import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
 import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
+import { readPrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
 
 function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>): Record<string, any> {
   const result = { ...defaults };
@@ -40,7 +41,58 @@ function locationFrom(input: Record<string, any>) {
   };
 }
 
+function decodeTenantDocument(input: string): { content: Buffer; mimeType: string; extension: string } {
+  const match = input.match(/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
+  const encoded = match ? match[2] : input;
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) || encoded.length % 4 !== 0) {
+    throw new Error('Document must be valid base64 or a supported base64 data URL.');
+  }
+  const content = Buffer.from(encoded, 'base64');
+  if (!content.length || content.length > 10 * 1024 * 1024) throw new Error('Document size must be between 1 byte and 10 MB.');
+  let mimeType = '';
+  let extension = '';
+  if (content.subarray(0, 5).toString() === '%PDF-') { mimeType = 'application/pdf'; extension = 'pdf'; }
+  else if (content.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) { mimeType = 'image/png'; extension = 'png'; }
+  else if (content[0] === 0xff && content[1] === 0xd8 && content[2] === 0xff) { mimeType = 'image/jpeg'; extension = 'jpg'; }
+  else if (content.subarray(0, 4).toString() === 'RIFF' && content.subarray(8, 12).toString() === 'WEBP') { mimeType = 'image/webp'; extension = 'webp'; }
+  if (!mimeType) throw new Error('Only valid PDF, JPEG, PNG and WebP documents are supported.');
+  if (match && match[1] !== mimeType) throw new Error('Declared document MIME type does not match its content.');
+  return { content, mimeType, extension };
+}
+
 export const tenancyService = {
+  async createTenantDocument(tenantId: string, userId: string, input: Record<string, any>) {
+    const decoded = decodeTenantDocument(input.fileBase64);
+    const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
+    try {
+      return await tenancyRepository.createTenantDocument({
+        tenantId,
+        uploadedBy: userId,
+        category: input.category,
+        name: String(input.name).trim(),
+        mimeType: decoded.mimeType,
+        sizeBytes: decoded.content.length,
+        storageKey,
+        expiresAt: input.expiresAt ?? null,
+      });
+    } catch (error) {
+      const { removePrivateTenantDocument } = await import('../../../shared/storage/private-tenant-document.storage.js');
+      await removePrivateTenantDocument(storageKey);
+      throw error;
+    }
+  },
+  listTenantDocuments(tenantId: string) {
+    return tenancyRepository.listTenantDocuments(tenantId);
+  },
+  async getTenantDocument(tenantId: string, documentId: string) {
+    const document = await tenancyRepository.findTenantDocument(tenantId, documentId);
+    if (!document) return null;
+    const content = await readPrivateTenantDocument(document.storageKey);
+    return { document, content };
+  },
+  archiveTenantDocument(tenantId: string, documentId: string, userId: string) {
+    return tenancyRepository.archiveTenantDocument(tenantId, documentId, userId);
+  },
   getProfile(tenantId: string) {
     return tenancyRepository.findTenantById(tenantId);
   },
