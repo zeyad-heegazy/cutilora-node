@@ -38,6 +38,8 @@ const TENANT_ROLE_LABELS: Record<string, string> = {
   receptionist: 'Receptionist',
 };
 
+export const TENANT_PERMISSION_CATALOG = [...new Set(Object.values(TENANT_ROLE_PERMISSIONS).flat().filter((permission) => permission !== '*'))].sort();
+
 export function getTenantRolePermissions(role: string): string[] {
   const permissions = TENANT_ROLE_PERMISSIONS[role] ?? [];
   return permissions.includes('*') ? ['*'] : [...permissions];
@@ -60,7 +62,7 @@ export function getTenantRoleCatalog(actorRole: string) {
 
 export function getTenantRoleGrants(
   role: string,
-  context: { scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string | null; branchId?: string | null },
+  context: { scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string | null; branchId?: string | null; customPermissions?: string[] },
 ) {
   const permissions = context.customPermissions ?? getTenantRolePermissions(role);
   return permissions.map((permission) => ({
