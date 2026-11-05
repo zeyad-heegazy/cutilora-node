@@ -148,4 +148,25 @@ describe('tenant invitation acceptance', () => {
     expect(tenancyRepository.deleteTenantMembershipById).not.toHaveBeenCalled();
   });
 
+  it('finalizes an invitation idempotently when the matching membership already exists', async () => {
+    vi.mocked(authRepository.findUserByEmail).mockResolvedValue({
+      _id: userId, name: 'Existing User', email: invitation.email, isActive: true, platformRole: 'user',
+    } as any);
+    vi.mocked(tenancyRepository.findExistingMembershipForInvitation).mockResolvedValue({
+      _id: membershipId,
+      scope: invitation.scope,
+      role: invitation.role,
+      branchIds: [],
+      status: 'active',
+    } as any);
+
+    const result = await authService.acceptInvitation({ token: 'x'.repeat(40) });
+
+    expect(tenancyRepository.createTenantMembership).not.toHaveBeenCalled();
+    expect(tenancyRepository.updateClaimedTenantInvitation).toHaveBeenCalledWith(invitationId, expect.objectContaining({
+      status: 'accepted', acceptedBy: userId, processingAt: null,
+    }));
+    expect(result).toMatchObject({ alreadyMember: true, membership: { id: membershipId, status: 'active' } });
+  });
+
 });
