@@ -33,6 +33,7 @@ export const recordPaymentSchema = z.object({
   receivedAt: z.coerce.date().optional(),
 });
 export const refundPaymentSchema = z.object({
+  method: paymentMethodSchema,
   idempotencyKey: z.string().trim().min(8).max(128),
   amountMinor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
   reason: z.string().trim().min(3).max(500),
@@ -47,7 +48,7 @@ export const createExpenseSchema = z.object({
   dueAt: z.coerce.date().optional(),
   incurredAt: z.coerce.date().optional(),
 });
-export const payExpenseSchema = z.object({ method: paymentMethodSchema, paidAt: z.coerce.date().optional() });
+export const payExpenseSchema = z.object({ idempotencyKey: z.string().trim().min(8).max(128), method: paymentMethodSchema, paidAt: z.coerce.date().optional() });
 export const voidExpenseSchema = z.object({ reason: z.string().trim().min(3).max(500) });
 export const summaryQuerySchema = z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional(), branchId: z.string().regex(/^[a-f0-9]{24}$/i).optional() }).refine((v) => !v.from || !v.to || v.from <= v.to, 'from must be before or equal to to');
 export const expenseListQuerySchema = z.object({
