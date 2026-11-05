@@ -4,6 +4,7 @@ import { resolveTenantContext, requireTenantScope } from '../middleware/tenant-c
 import { requireTenantPermission } from '../middleware/tenant-permissions.js';
 import { tenancyController } from '../controllers/tenancy.controller.js';
 import { tenantRolesController } from '../controllers/tenant-roles.controller.js';
+import { tenantCatalogController } from '../controllers/tenant-catalog.controller.js';
 
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
@@ -28,6 +29,12 @@ tenantRouter.post('/users/:userId/sessions/:sessionId/revoke', requireTenantScop
 tenantRouter.get('/users/:userId/effective-access', requireTenantScope, requireTenantPermission('memberships.manage'), tenantRolesController.effectiveAccess);
 tenantRouter.get('/memberships/:membershipId/history', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.listTenantMembershipHistory);
 tenantRouter.patch('/memberships/:membershipId', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.updateTenantMembership);
+tenantRouter.get('/catalog-templates', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.list);
+tenantRouter.post('/catalog-templates', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.create);
+tenantRouter.get('/catalog-templates/:templateId', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.get);
+tenantRouter.patch('/catalog-templates/:templateId', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.update);
+tenantRouter.post('/catalog-templates/:templateId/archive', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.archive);
+tenantRouter.post('/catalog-templates/:templateId/publish', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.publish);
 tenantRouter.get('/configuration', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.getTenantConfiguration);
 tenantRouter.patch('/configuration', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.updateTenantConfiguration);
 tenantRouter.post('/configuration/preview-apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.previewTenantConfigurationApply);
