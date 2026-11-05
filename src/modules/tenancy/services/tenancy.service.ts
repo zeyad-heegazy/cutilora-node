@@ -73,6 +73,54 @@ async function recordTenantAuditEvent(input: Record<string, unknown>): Promise<v
 }
 
 export const tenancyService = {
+  listTenantMemberships(tenantId: string) {
+    return tenancyRepository.listTenantMemberships(tenantId);
+  },
+  async updateTenantMembership(tenantId: string, membershipId: string, actorUserId: string, actorRole: string, input: Record<string, any>) {
+    const current = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
+    if (!current) return null;
+    if (String(current.userId) === actorUserId) throw { status: 403, code: 'SELF_MEMBERSHIP_CHANGE_DENIED', message: 'You cannot change your own membership role, scope or status.' };
+    if (actorRole !== 'tenant_owner' && current.scope === 'tenant') throw { status: 403, code: 'MEMBERSHIP_MANAGEMENT_DENIED', message: 'Only the Tenant Owner can manage tenant-wide memberships.' };
+    const next = {
+      role: input.role ?? current.role,
+      scope: input.scope ?? current.scope,
+      clinicId: input.clinicId === undefined ? (current.clinicId ? String(current.clinicId) : null) : input.clinicId,
+      branchIds: input.branchIds === undefined ? (current.branchIds ?? []).map((id: unknown) => String(id)) : input.branchIds,
+      status: input.status ?? current.status,
+    };
+    const tenantRoles = ['tenant_owner', 'tenant_admin', 'billing_admin'];
+    const clinicRoles = ['clinic_admin', 'clinic_manager', 'staff', 'provider', 'receptionist'];
+    const branchRoles = ['branch_manager', 'staff', 'provider', 'receptionist'];
+    if (next.scope === 'tenant') {
+      if (!tenantRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at tenant scope.' };
+      if (actorRole !== 'tenant_owner') throw { status: 403, code: 'TENANT_OWNER_REQUIRED', message: 'Only the Tenant Owner can assign tenant-wide roles.' };
+      next.clinicId = null;
+      next.branchIds = [];
+    } else {
+      if (!next.clinicId) throw { status: 400, code: 'CLINIC_REQUIRED', message: 'Clinic scope requires clinicId.' };
+      if (!await tenancyRepository.findClinicById(next.clinicId, tenantId)) throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'Clinic not found in this tenant.' };
+      if (next.scope === 'clinic') {
+        if (!clinicRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at clinic scope.' };
+        next.branchIds = [];
+      } else {
+        if (!branchRoles.includes(next.role) || !next.branchIds.length) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'Branch scope requires a branch-compatible role and at least one branch.' };
+        for (const branchId of next.branchIds) {
+          if (!await tenancyRepository.findBranchById(branchId, tenantId, next.clinicId)) throw { status: 404, code: 'BRANCH_NOT_FOUND', message: 'A selected branch does not belong to the selected clinic.' };
+        }
+      }
+    }
+    const isDemotingLastOwner = current.scope === 'tenant' && current.role === 'tenant_owner' && current.status === 'active'
+      && (next.scope !== 'tenant' || next.role !== 'tenant_owner' || next.status !== 'active');
+    if (isDemotingLastOwner && await tenancyRepository.countActiveTenantOwners(tenantId) <= 1) {
+      throw { status: 409, code: 'LAST_TENANT_OWNER_REQUIRED', message: 'The last active Tenant Owner cannot be demoted or suspended.' };
+    }
+    if (actorRole !== 'tenant_owner' && (next.scope === 'tenant' || next.role === 'tenant_owner' || next.role === 'tenant_admin')) {
+      throw { status: 403, code: 'ROLE_GRANT_DENIED', message: 'Tenant Admin cannot grant tenant-wide or administrative roles.' };
+    }
+    const updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'membership.updated', targetType: 'tenant_membership', targetId: membershipId, clinicId: next.clinicId, metadata: { role: next.role, scope: next.scope, status: next.status } });
+    return updated;
+  },
   async getTenantConfiguration(tenantId: string) {
     const configuration = await tenancyRepository.findTenantConfiguration(tenantId);
     return configuration ?? { tenantId, version: 0, values: {}, history: [] };
