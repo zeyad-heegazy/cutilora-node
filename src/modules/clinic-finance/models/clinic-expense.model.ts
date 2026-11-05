@@ -1,5 +1,12 @@
 import { Schema, model, models, type Model } from 'mongoose';
 
+const eventSchema = new Schema({
+  type: { type: String, required: true, maxlength: 80 },
+  actorUserId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+  occurredAt: { type: Date, required: true },
+  metadata: { type: Schema.Types.Mixed, default: {} },
+}, { _id: false });
+
 const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, immutable: true },
   clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', required: true, immutable: true },
@@ -19,6 +26,7 @@ const schema = new Schema({
   paidAt: { type: Date, default: null },
   voidedAt: { type: Date, default: null },
   voidReason: { type: String, trim: true, maxlength: 500, default: '' },
+  events: { type: [eventSchema], default: [] },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true, immutable: true },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true, minimize: false });
