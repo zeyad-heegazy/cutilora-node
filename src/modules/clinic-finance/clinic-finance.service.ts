@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import { Types } from 'mongoose';
 import { Clinic } from '../tenancy/models/clinic.model.js';
 import { ClinicInvoice, ClinicInvoiceCounter } from './models/clinic-invoice.model.js';
@@ -89,12 +89,28 @@ export const clinicFinanceService = {
     const clinic = await assertClinic(scope);
     const { lines, totals } = calculateInvoiceLines(input.lines ?? []);
     const currency = (input.currency ?? clinic.preferences?.currency ?? 'EGP').toUpperCase();
-    return ClinicInvoice.create({
-      ...invoiceFilter(scope), customer: input.customer, lines, currency, dueAt: input.dueAt ?? null, ...totals,
-      paidMinor: 0, refundedMinor: 0, balanceDueMinor: totals.totalMinor,
-      status: 'draft', createdBy: scope.userId, updatedBy: scope.userId,
-      events: [{ type: 'invoice.created', actorUserId: scope.userId, occurredAt: new Date() }],
-    });
+    const requestFingerprint = createHash('sha256').update(JSON.stringify({ customer: input.customer, lines: input.lines, currency, dueAt: input.dueAt ?? null, branchId: scope.branchId })).digest('hex');
+    const existing = await ClinicInvoice.findOne({ tenantId: scope.tenantId, clinicId: scope.clinicId, idempotencyKey: input.idempotencyKey }).select('+requestFingerprint');
+    if (existing) {
+      if (existing.requestFingerprint !== requestFingerprint) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different invoice details.' };
+      return existing;
+    }
+    try {
+      return await ClinicInvoice.create({
+        ...invoiceFilter(scope), idempotencyKey: input.idempotencyKey, requestFingerprint,
+        customer: input.customer, lines, currency, dueAt: input.dueAt ?? null, ...totals,
+        paidMinor: 0, refundedMinor: 0, balanceDueMinor: totals.totalMinor,
+        status: 'draft', createdBy: scope.userId, updatedBy: scope.userId,
+        events: [{ type: 'invoice.created', actorUserId: scope.userId, occurredAt: new Date() }],
+      });
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        const raced = await ClinicInvoice.findOne({ tenantId: scope.tenantId, clinicId: scope.clinicId, idempotencyKey: input.idempotencyKey }).select('+requestFingerprint');
+        if (raced?.requestFingerprint === requestFingerprint) return raced;
+        if (raced) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different invoice details.' };
+      }
+      throw error;
+    }
   },
 
   async listInvoices(scope: Scope, query: any) {
@@ -241,12 +257,28 @@ export const clinicFinanceService = {
   async createExpense(scope: Scope, input: any) {
     const clinic = await assertClinic(scope);
     const currency = (input.currency ?? clinic.preferences?.currency ?? 'EGP').toUpperCase();
-    return ClinicExpense.create({
-      ...invoiceFilter(scope), description: input.description, category: input.category,
-      supplier: input.supplier ?? {}, amountMinor: input.amountMinor, currency,
-      dueAt: input.dueAt ?? null, incurredAt: input.incurredAt ?? new Date(),
-      status: 'recorded', createdBy: scope.userId, updatedBy: scope.userId, events: [{ type: 'expense.recorded', actorUserId: scope.userId, occurredAt: new Date() }],
-    });
+    const requestFingerprint = createHash('sha256').update(JSON.stringify({ description: input.description, category: input.category, supplier: input.supplier ?? {}, amountMinor: input.amountMinor, currency, dueAt: input.dueAt ?? null, incurredAt: input.incurredAt ?? null, branchId: scope.branchId })).digest('hex');
+    const existing = await ClinicExpense.findOne({ tenantId: scope.tenantId, clinicId: scope.clinicId, idempotencyKey: input.idempotencyKey }).select('+requestFingerprint');
+    if (existing) {
+      if (existing.requestFingerprint !== requestFingerprint) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different expense details.' };
+      return existing;
+    }
+    try {
+      return await ClinicExpense.create({
+        ...invoiceFilter(scope), idempotencyKey: input.idempotencyKey, requestFingerprint,
+        description: input.description, category: input.category, supplier: input.supplier ?? {},
+        amountMinor: input.amountMinor, currency, dueAt: input.dueAt ?? null, incurredAt: input.incurredAt ?? new Date(),
+        status: 'recorded', createdBy: scope.userId, updatedBy: scope.userId,
+        events: [{ type: 'expense.recorded', actorUserId: scope.userId, occurredAt: new Date() }],
+      });
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        const raced = await ClinicExpense.findOne({ tenantId: scope.tenantId, clinicId: scope.clinicId, idempotencyKey: input.idempotencyKey }).select('+requestFingerprint');
+        if (raced?.requestFingerprint === requestFingerprint) return raced;
+        if (raced) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different expense details.' };
+      }
+      throw error;
+    }
   },
 
   async listExpenses(scope: Scope, query: any) {
