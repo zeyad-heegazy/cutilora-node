@@ -38,6 +38,44 @@ export const tenancyController = {
       res.json({ success: true, data: item.preferences });
     } catch (e) { next(e); }
   },
+  async dashboardSummary(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantContext!.tenantId;
+      const [tenant, counts, subscription] = await Promise.all([
+        tenancyService.getProfile(tenantId),
+        tenancyService.getDashboardCounts(tenantId),
+        tenancyService.getSubscriptionOverview(tenantId),
+      ]);
+      if (!tenant) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant not found.' } });
+      res.json({ success: true, data: {
+        organization: { id: String(tenant._id), name: tenant.displayName || tenant.name, status: tenant.status },
+        counts,
+        subscription,
+        generatedAt: new Date().toISOString(),
+      } });
+    } catch (e) { next(e); }
+  },
+  async dashboardClinics(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json({ success: true, data: await tenancyService.listDashboardClinics(req.tenantContext!.tenantId) });
+    } catch (e) { next(e); }
+  },
+  async dashboardAlerts(req: Request, res: Response, next: NextFunction) {
+    try {
+      const tenantId = req.tenantContext!.tenantId;
+      const [counts, clinics, subscription] = await Promise.all([
+        tenancyService.getDashboardCounts(tenantId),
+        tenancyService.listDashboardClinics(tenantId),
+        tenancyService.getSubscriptionOverview(tenantId),
+      ]);
+      const alerts = [];
+      if (counts.pendingInvitations > 0) alerts.push({ code: 'PENDING_INVITATIONS', severity: 'info', count: counts.pendingInvitations });
+      if (counts.clinics.suspended > 0) alerts.push({ code: 'SUSPENDED_CLINICS', severity: 'warning', count: counts.clinics.suspended });
+      if (subscription?.status === 'past_due') alerts.push({ code: 'SUBSCRIPTION_PAST_DUE', severity: 'critical' });
+      if (clinics.some((clinic: any) => clinic.status === 'suspended')) alerts.push({ code: 'CLINIC_ACCESS_RESTRICTED', severity: 'warning' });
+      res.json({ success: true, data: { items: alerts, generatedAt: new Date().toISOString() } });
+    } catch (e) { next(e); }
+  },
   async listGeo(req: Request, res: Response, next: NextFunction) {
     try {
       const resource = geoResourceSchema.parse(req.params.resource);
