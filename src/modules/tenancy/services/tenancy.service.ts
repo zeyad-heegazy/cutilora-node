@@ -395,6 +395,9 @@ export const tenancyService = {
     const content = await readPrivateTenantDocument(document.storageKey);
     return { document, content };
   },
+  getTenantDocumentVersionHistory(tenantId: string, documentId: string) {
+    return tenancyRepository.listTenantDocumentVersions(tenantId, documentId);
+  },
   getTenantDocumentMetadata(tenantId: string, documentId: string) {
     return tenancyRepository.findTenantDocumentMetadata(tenantId, documentId);
   },
