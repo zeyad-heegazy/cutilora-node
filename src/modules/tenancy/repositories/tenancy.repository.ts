@@ -423,8 +423,16 @@ export const tenancyRepository = {
     const filter: Record<string, unknown> = { tenantId };
     if (query.status) filter.status = query.status;
     if (query.role) filter.role = query.role;
-    if (query.scope) filter.scope = query.scope;
-    if (query.clinicId) filter.clinicId = query.clinicId;
+    if (query.branchId) {
+      if (!query.clinicId) throw new Error('clinicId is required when filtering memberships by branchId.');
+      filter.$or = [
+        { scope: 'clinic', clinicId: query.clinicId },
+        { scope: 'branch', clinicId: query.clinicId, branchIds: query.branchId },
+      ];
+    } else {
+      if (query.scope) filter.scope = query.scope;
+      if (query.clinicId) filter.clinicId = query.clinicId;
+    }
     const userFilter: Record<string, unknown> = {};
     if (query.search) {
       const escaped = [...query.search].map((char) => '.*+?^$()|[]{}\\'.includes(char) ? '\\' + char : char).join('');
