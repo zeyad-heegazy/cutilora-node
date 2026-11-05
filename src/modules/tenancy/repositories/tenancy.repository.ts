@@ -15,6 +15,9 @@ export const tenancyRepository = {
   listTenantDocuments(tenantId: string) {
     return TenantDocument.find({ tenantId, status: 'active' }).sort({ createdAt: -1 }).lean();
   },
+  findTenantDocumentMetadata(tenantId: string, documentId: string) {
+    return TenantDocument.findOne({ _id: documentId, tenantId, status: 'active' }).select('-storageKey').lean();
+  },
   findTenantDocument(tenantId: string, documentId: string) {
     return TenantDocument.findOne({ _id: documentId, tenantId, status: 'active' }).select('+storageKey');
   },
