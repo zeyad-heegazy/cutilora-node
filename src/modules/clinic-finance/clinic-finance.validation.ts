@@ -17,7 +17,7 @@ const customerSchema = z.object({
   externalPatientReference: z.string().trim().max(100).optional(),
 });
 export const createInvoiceSchema = z.object({ idempotencyKey: z.string().trim().min(8).max(128), customer: customerSchema, lines: z.array(lineSchema).min(1).max(100), currency: currencySchema.optional(), dueAt: z.coerce.date().optional() });
-export const updateInvoiceSchema = createInvoiceSchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required.');
+export const updateInvoiceSchema = createInvoiceSchema.omit({ idempotencyKey: true }).partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required.');
 export const invoiceListQuerySchema = z.object({
   status: z.enum(['draft', 'issued', 'partially_paid', 'paid', 'void']).optional(),
   from: z.coerce.date().optional(), to: z.coerce.date().optional(),
