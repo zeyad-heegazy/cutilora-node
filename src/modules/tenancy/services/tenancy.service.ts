@@ -137,7 +137,7 @@ export const tenancyService = {
     return { invitation: updated, invitationToken: token, acceptanceEndpoint: '/auth/invitations/accept', delivery: 'manual' };
   },
   async getTenantUserEffectiveAccess(tenantId: string, userId: string) {
-    if (!/^[a-f\\d]{24}$/i.test(userId)) return null;
+    if (!/^[a-f\d]{24}$/i.test(userId)) return null;
     const memberships = await tenancyRepository.listMembershipsForUser(tenantId, userId);
     if (!memberships.length) return null;
     return {
