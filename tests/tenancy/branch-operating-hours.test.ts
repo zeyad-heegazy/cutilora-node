@@ -47,6 +47,55 @@ describe('branch business-hours validation', () => {
     ).toThrow('Breaks must be inside operating hours and must not overlap.');
   });
 
+  it('accepts multiple split shifts with breaks contained in each shift', () => {
+    const split = weeklySchedule.map((day) => day.dayOfWeek === 0
+      ? {
+          dayOfWeek: 0,
+          shifts: [
+            { startTime: '08:00', endTime: '12:00', breakTimes: [{ startTime: '10:00', endTime: '10:15' }] },
+            { startTime: '14:00', endTime: '18:00' },
+          ],
+        }
+      : day);
+
+    expect(updateBranchOperatingHoursSchema.parse({ operatingHours: split }).operatingHours[0]).toMatchObject({
+      shifts: [{ startTime: '08:00', endTime: '12:00' }, { startTime: '14:00', endTime: '18:00' }],
+    });
+  });
+
+  it('rejects overlapping split shifts', () => {
+    const split = weeklySchedule.map((day) => day.dayOfWeek === 1
+      ? {
+          dayOfWeek: 1,
+          shifts: [
+            { startTime: '08:00', endTime: '13:00' },
+            { startTime: '12:30', endTime: '17:00' },
+          ],
+        }
+      : day);
+
+    expect(() =>
+      updateBranchOperatingHoursSchema.parse({ operatingHours: split }),
+    ).toThrow('Shifts and breaks must be ordered, non-overlapping, and breaks must be inside their shift.');
+  });
+
+  it('rejects breaks outside their split shift', () => {
+    const split = weeklySchedule.map((day) => day.dayOfWeek === 2
+      ? {
+          dayOfWeek: 2,
+          shifts: [{
+            startTime: '08:00',
+            endTime: '12:00',
+            breakTimes: [{ startTime: '12:00', endTime: '12:30' }],
+          }],
+        }
+      : day);
+
+    expect(() =>
+      updateBranchOperatingHoursSchema.parse({ operatingHours: split }),
+    ).toThrow('Shifts and breaks must be ordered, non-overlapping, and breaks must be inside their shift.');
+  });
+
   it('rejects overnight schedules until cross-midnight scheduling is explicitly supported', () => {
     const invalid = weeklySchedule.map((day) => day.dayOfWeek === 3
       ? { ...day, openTime: '20:00', closeTime: '02:00' }
