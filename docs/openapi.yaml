@@ -25,6 +25,8 @@ paths:
     $ref: "./openapi/platform/system/health.yaml#/paths/~1health"
   /auth/login:
     $ref: "./openapi/tenant/auth/auth.yaml#/paths/~1auth~1login"
+  /auth/invitations/accept:
+    $ref: "./openapi/tenant/auth/auth.yaml#/paths/~1auth~1invitations~1accept"
   /auth/logout:
     $ref: "./openapi/tenant/auth/auth.yaml#/paths/~1auth~1logout"
   /auth/me:
