@@ -33,7 +33,7 @@ paths:
               properties:
                 overrides: { type: object, minProperties: 1, additionalProperties: true }
       responses:
-        "200": { description: Updated effective branch configuration }
+        "200": { description: Updated effective branch configuration and source labels }
         "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
