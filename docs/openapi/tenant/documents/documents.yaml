@@ -65,6 +65,35 @@ paths:
       responses:
         "200": { description: Document archived }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/documents/{documentId}/replace:
+    put:
+      tags: [Tenant Organization]
+      summary: Replace an organization document
+      description: Creates a new immutable document version and archives the previous active version. The category is retained from the original document.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileBase64]
+              properties:
+                name: { type: string, maxLength: 180 }
+                fileBase64: { type: string, description: Base64 file or supported data URL; maximum decoded size 3 MB }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "200": { description: Replacement document version created }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
   /tenant/documents/{documentId}/download:
     get:
       tags: [Tenant Organization]
