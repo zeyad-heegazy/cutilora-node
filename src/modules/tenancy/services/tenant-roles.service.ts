@@ -7,13 +7,13 @@ import { getTenantRolePermissions } from './tenant-access.service.js';
 import { hasScopedPermission, type PermissionGrant } from '../../../shared/authorization/permission.engine.js';
 
 export const TENANT_PERMISSION_CATALOG = [
-  { module: 'clinics', actions: ['view', 'create', 'update', 'deactivate', 'manage_access'] },
-  { module: 'branches', actions: ['view', 'create', 'update', 'deactivate', 'export', 'manage_access'] },
-  { module: 'users', actions: ['view', 'create', 'update', 'deactivate', 'manage_access'] },
-  { module: 'settings', actions: ['view', 'update', 'manage_access'] },
-  { module: 'finance', actions: ['view', 'export', 'approve', 'manage'] },
-  { module: 'reports', actions: ['view', 'export'] },
-  { module: 'integrations', actions: ['view', 'create', 'update', 'deactivate', 'manage'] },
+  { module: 'clinics', actions: ['clinic.manage', 'clinic.settings.read', 'clinic.settings.manage', 'clinic.members.read', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.activity.read'] },
+  { module: 'branches', actions: ['branch.read', 'branch.manage', 'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.lifecycle.manage', 'branch.holidays.read', 'branch.holidays.manage'] },
+  { module: 'users', actions: ['memberships.manage'] },
+  { module: 'settings', actions: ['organization.manage', 'configuration.manage'] },
+  { module: 'finance', actions: ['billing.read'] },
+  { module: 'reports', actions: ['dashboard.read', 'audit.read', 'audit.export'] },
+  { module: 'integrations', actions: [] },
 ] as const;
 
 const permissionKeys = new Set(TENANT_PERMISSION_CATALOG.flatMap((item) => item.actions.map((action) => `${item.module}.${action}`)));
@@ -107,6 +107,7 @@ export const tenantRolesService = {
     if (!key) fail(400, 'ROLE_KEY_INVALID', 'A valid role key is required.');
     if (['tenant-owner', 'tenant-admin', 'platform-admin'].includes(key)) fail(400, 'ROLE_KEY_RESERVED', 'This role key is reserved.');
     const grants = input.permissions as PermissionGrant[];
+    for (const grant of grants) validateGrantShape(grant, input.scope);
     await validateGrantTargets(tenantId, grants);
     await assertActorCanGrant(tenantId, actorId, actorClinicId, grants);
     const role = await TenantRole.create({ tenantId, key, name: input.name, description: input.description ?? '', scope: input.scope, permissions: grants, createdBy: actorId, updatedBy: actorId });
@@ -160,6 +161,10 @@ export const tenantRolesService = {
     if (role.scope !== membership.scope) fail(400, 'ROLE_SCOPE_MISMATCH', 'The custom role scope must match the membership scope.');
     if (role.scope === 'clinic' && !membership.clinicId) fail(400, 'ROLE_SCOPE_MISMATCH', 'Clinic-scoped roles require a clinic membership.');
     if (role.scope === 'branch' && !membership.branchIds?.length) fail(400, 'ROLE_SCOPE_MISMATCH', 'Branch-scoped roles require at least one assigned branch.');
+    for (const grant of role.permissions as PermissionGrant[]) {
+      if (grant.scope !== 'tenant' && String(grant.clinicId) !== String(membership.clinicId)) fail(400, 'ROLE_SCOPE_MISMATCH', 'A scoped permission must target the membership clinic.');
+      if (grant.scope === 'branch' && !(membership.branchIds ?? []).some((id: unknown) => String(id) === String(grant.branchId))) fail(400, 'ROLE_SCOPE_MISMATCH', 'A branch permission must target a branch assigned to this membership.');
+    }
     await assertActorCanGrant(tenantId, actorId, null, role.permissions as PermissionGrant[]);
     const oldRole = membership.role;
     membership.role = 'custom_role';
