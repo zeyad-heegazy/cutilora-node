@@ -295,6 +295,24 @@ export const tenancyController = {
       res.json({ success: true, data: { id: String(item._id), status: item.status, archivedAt: item.archivedAt } });
     } catch (e) { next(e); }
   },
+  async listClinicActivity(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'branch' || (context.scope === 'clinic' && context.clinicId !== clinicId)) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic activity.' } });
+      }
+      const clinic = await tenancyService.getClinic(clinicId, context.tenantId);
+      if (!clinic) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
+      const query = tenantAuditQuerySchema.parse(req.query);
+      const result = await tenancyService.listTenantAuditEvents(context.tenantId, {
+        ...query,
+        clinicId,
+        branchId: undefined,
+      });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (e) { next(e); }
+  },
   async listClinicUsers(req: Request, res: Response, next: NextFunction) {
     try {
       const context = req.tenantContext!;
@@ -525,6 +543,25 @@ export const tenancyController = {
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
       const query = branchListQuerySchema.parse(req.query);
       const result = await tenancyService.listBranches(context.tenantId, context.clinicId, context.branchId, query);
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (e) { next(e); }
+  },
+  async listBranchActivity(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) {
+        return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch activity.' } });
+      }
+      const branch = await tenancyService.getBranch(branchId, context.tenantId, context.clinicId);
+      if (!branch) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      const query = tenantAuditQuerySchema.parse(req.query);
+      const result = await tenancyService.listTenantAuditEvents(context.tenantId, {
+        ...query,
+        clinicId: context.clinicId,
+        branchId,
+      });
       res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
