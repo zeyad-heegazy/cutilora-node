@@ -14,12 +14,12 @@ function query(value: any) {
   const chain: any = { sort: () => chain, select: () => chain, lean: async () => value };
   return chain;
 }
-async function run(role: string, permission: string, options: { roleId?: string; clinicId?: string | null; branchId?: string | null } = {}) {
-  membershipFindOne.mockReturnValue(query({ role, roleId: options.roleId ?? null, scope: 'tenant', clinicId: options.clinicId ?? null }));
+async function run(role: string, permission: string, options: { roleId?: string; clinicId?: string | null; branchId?: string | null; membershipScope?: string; membershipClinicId?: string | null; resourceClinicId?: string } = {}) {
+  membershipFindOne.mockReturnValue(query({ role, roleId: options.roleId ?? null, scope: options.membershipScope ?? 'tenant', clinicId: options.membershipClinicId ?? null }));
   roleFindOne.mockReturnValue(query(options.roleId ? {
     permissions: [{ permission: 'branch.holidays.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }],
   } : null));
-  const req = { auth: { userId: 'user-a' }, tenantContext: { tenantId: 'tenant-a', clinicId: options.clinicId ?? null, branchId: options.branchId ?? null, role } } as any;
+  const req = { auth: { userId: 'user-a' }, params: options.resourceClinicId ? { clinicId: options.resourceClinicId } : {}, tenantContext: { tenantId: 'tenant-a', clinicId: options.clinicId ?? null, branchId: options.branchId ?? null, role } } as any;
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
   const next = vi.fn();
   await requireTenantPermission(permission)(req, res, next);
@@ -67,6 +67,12 @@ describe('tenant permission matrix and scoped custom roles', () => {
     const allowed = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-a', branchId: 'branch-a' });
     expect(allowed.next).toHaveBeenCalledOnce();
     const denied = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-b', branchId: 'branch-a' });
+    expect(denied.next).not.toHaveBeenCalled();
+    expect(denied.res.status).toHaveBeenCalledWith(403);
+  });
+
+  it('prevents clinic-scoped memberships from addressing another clinic by route parameter', async () => {
+    const denied = await run('clinic_manager', 'clinic.settings.read', { clinicId: 'clinic-a', membershipScope: 'clinic', membershipClinicId: 'clinic-a', resourceClinicId: 'clinic-b' });
     expect(denied.next).not.toHaveBeenCalled();
     expect(denied.res.status).toHaveBeenCalledWith(403);
   });
