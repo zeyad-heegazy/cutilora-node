@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({
   auditCreate: vi.fn(),
   branchExists: vi.fn(),
   clinicExists: vi.fn(),
+  acquireOwnerLock: vi.fn(),
+  countOwners: vi.fn(),
+  releaseOwnerLock: vi.fn(),
 }));
 
 vi.mock('../../src/modules/tenancy/models/tenant-membership.model.js', () => ({
@@ -35,6 +38,13 @@ vi.mock('../../src/modules/tenancy/models/branch.model.js', () => ({
 vi.mock('../../src/modules/tenancy/models/clinic.model.js', () => ({
   Clinic: { exists: (...args: any[]) => mocks.clinicExists(...args) },
 }));
+vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
+  tenancyRepository: {
+    acquireTenantOwnerMutationLock: (...args: any[]) => mocks.acquireOwnerLock(...args),
+    countActiveTenantOwners: (...args: any[]) => mocks.countOwners(...args),
+    releaseTenantOwnerMutationLock: (...args: any[]) => mocks.releaseOwnerLock(...args),
+  },
+}));
 
 import { tenantRolesService, TENANT_ROLE_TEMPLATES } from '../../src/modules/tenancy/services/tenant-roles.service.js';
 
@@ -55,6 +65,9 @@ describe('tenant custom role service', () => {
     mocks.auditCreate.mockResolvedValue({});
     mocks.branchExists.mockResolvedValue(true);
     mocks.clinicExists.mockResolvedValue(true);
+    mocks.acquireOwnerLock.mockResolvedValue({ _id: 'tenant-a' });
+    mocks.countOwners.mockResolvedValue(2);
+    mocks.releaseOwnerLock.mockResolvedValue({});
   });
 
   it('creates a tenant-scoped custom role within the Tenant Owner authority and audits it', async () => {
@@ -108,6 +121,25 @@ describe('tenant custom role service', () => {
       scope: 'branch',
       permissions: expect.arrayContaining([expect.objectContaining({ permission: 'branch.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' })]),
     }));
+  });
+
+  it('prevents a custom role assignment from demoting the last active Tenant Owner', async () => {
+    const target = {
+      userId: 'user-target', role: 'tenant_owner', roleId: null, scope: 'tenant', status: 'active',
+      clinicId: null, branchIds: [], save: vi.fn().mockResolvedValue({}),
+    };
+    mocks.membershipFindOne
+      .mockReturnValueOnce(query(target))
+      .mockReturnValueOnce(query({ role: 'tenant_owner', roleId: null, scope: 'tenant', clinicId: null }));
+    mocks.roleFindOne.mockReturnValue(query({
+      _id: '507f1f77bcf86cd799439012', key: 'finance-viewer', name: 'Finance Viewer', scope: 'tenant', version: 1,
+      permissions: [{ permission: 'billing.read', scope: 'tenant' }],
+    }));
+    mocks.countOwners.mockResolvedValue(1);
+    await expect(tenantRolesService.assign('tenant-a', 'owner-a', 'tenant_owner', '507f1f77bcf86cd799439011', '507f1f77bcf86cd799439012'))
+      .rejects.toMatchObject({ status: 409, code: 'LAST_TENANT_OWNER_REQUIRED' });
+    expect(target.save).not.toHaveBeenCalled();
+    expect(mocks.releaseOwnerLock).toHaveBeenCalledWith('tenant-a');
   });
 
   it('rejects stale role edits instead of overwriting a newer permission version', async () => {
