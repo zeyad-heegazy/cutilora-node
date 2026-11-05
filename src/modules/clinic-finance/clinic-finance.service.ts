@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { Clinic } from '../tenancy/models/clinic.model.js';
 import { ClinicInvoice, ClinicInvoiceCounter } from './models/clinic-invoice.model.js';
 import { ClinicExpense } from './models/clinic-expense.model.js';
+import { ClinicCashSession } from './models/clinic-cash-session.model.js';
 
 type Scope = { tenantId: string; clinicId: string; branchId: string | null; userId: string };
 type InvoiceInput = { customer?: any; lines?: any[]; currency?: string };
@@ -131,9 +132,11 @@ export const clinicFinanceService = {
     if (!['issued', 'partially_paid'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
     const balanceDueMinor = current.totalMinor - (current.paidMinor - current.refundedMinor);
     if (input.amountMinor > balanceDueMinor) throw { status: 400, code: 'PAYMENT_EXCEEDS_BALANCE', message: 'Payment exceeds the outstanding invoice balance.' };
+    const cashSession = input.method === 'cash' ? await ClinicCashSession.findOne({ ...invoiceFilter(scope), status: 'open' }).select('_id') : null;
+    if (input.method === 'cash' && !cashSession) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording cash collections.' };
     const payment = {
-      _id: new Types.ObjectId(), idempotencyKey: input.idempotencyKey, method: input.method, amountMinor: input.amountMinor,
-      currency: current.currency, reference: input.reference ?? '', receivedAt: input.receivedAt ?? new Date(),
+      _id: new Types.ObjectId(), cashSessionId: cashSession?._id ?? null, idempotencyKey: input.idempotencyKey, method: input.method, amountMinor: input.amountMinor,
+      currency: current.currency, reference: input.reference ?? '', receivedAt: input.method === 'cash' ? new Date() : (input.receivedAt ?? new Date()),
       recordedBy: scope.userId, refundedMinor: 0, refunds: [],
     };
     const nextPaid = current.paidMinor + input.amountMinor;
@@ -160,6 +163,8 @@ export const clinicFinanceService = {
     }
     const refundable = payment.amountMinor - payment.refundedMinor;
     if (input.amountMinor > refundable) throw { status: 400, code: 'REFUND_EXCEEDS_PAYMENT', message: 'Refund exceeds the remaining refundable payment amount.' };
+    const cashSession = input.method === 'cash' ? await ClinicCashSession.findOne({ ...invoiceFilter(scope), status: 'open' }).select('_id') : null;
+    if (input.method === 'cash' && !cashSession) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording a cash refund.' };
     const now = new Date();
     const nextRefunded = current.refundedMinor + input.amountMinor;
     const nextBalance = current.totalMinor - (current.paidMinor - nextRefunded);
@@ -167,7 +172,7 @@ export const clinicFinanceService = {
     const updated = await ClinicInvoice.findOneAndUpdate(
       { _id: invoiceId, ...invoiceFilter(scope), version: current.version, 'payments._id': payment._id, 'payments.refundedMinor': payment.refundedMinor },
       { $inc: { 'payments.$.refundedMinor': input.amountMinor, refundedMinor: input.amountMinor, version: 1 },
-        $push: { 'payments.$.refunds': { idempotencyKey: input.idempotencyKey, amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
+        $push: { 'payments.$.refunds': { idempotencyKey: input.idempotencyKey, method: input.method, cashSessionId: cashSession?._id ?? null, amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
           events: { type: 'payment.refunded', actorUserId: scope.userId, occurredAt: now, metadata: { paymentId, amountMinor: input.amountMinor, reason: input.reason } } },
         $set: { balanceDueMinor: nextBalance, status: nextStatus, updatedBy: scope.userId } },
       { new: true, runValidators: true },
@@ -215,12 +220,18 @@ export const clinicFinanceService = {
   },
 
   async payExpense(scope: Scope, expenseId: string, input: any) {
+    const current = await ClinicExpense.findOne({ _id: expenseId, ...invoiceFilter(scope) });
+    if (!current) throw { status: 404, code: 'EXPENSE_NOT_FOUND', message: 'Expense not found.' };
+    if (current.status === 'paid' && current.paymentIdempotencyKey === input.idempotencyKey && current.paymentMethod === input.method) return current;
+    if (current.status !== 'recorded') throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense is not awaiting payment.' };
+    const cashSession = input.method === 'cash' ? await ClinicCashSession.findOne({ ...invoiceFilter(scope), status: 'open' }).select('_id') : null;
+    if (input.method === 'cash' && !cashSession) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording a cash expense payment.' };
     const updated = await ClinicExpense.findOneAndUpdate(
       { _id: expenseId, ...invoiceFilter(scope), status: 'recorded' },
-      { $set: { status: 'paid', paymentMethod: input.method, paidAt: input.paidAt ?? new Date(), updatedBy: scope.userId }, $push: { events: { type: 'expense.paid', actorUserId: scope.userId, occurredAt: new Date(), metadata: { method: input.method } } } },
+      { $set: { status: 'paid', paymentMethod: input.method, paymentIdempotencyKey: input.idempotencyKey, cashSessionId: cashSession?._id ?? null, paidAt: input.method === 'cash' ? new Date() : (input.paidAt ?? new Date()), updatedBy: scope.userId }, $push: { events: { type: 'expense.paid', actorUserId: scope.userId, occurredAt: new Date(), metadata: { method: input.method } } } },
       { new: true, runValidators: true },
     );
-    if (!updated) throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense is missing or is not awaiting payment.' };
+    if (!updated) throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense was paid or changed by another request.' };
     return updated;
   },
 
