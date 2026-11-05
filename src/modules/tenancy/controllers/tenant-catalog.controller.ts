@@ -52,6 +52,14 @@ export const tenantCatalogController = {
       res.json({ success: true, data: item });
     } catch (error) { next(error); }
   },
+  async rollback(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = z.object({ expectedVersion: z.number().int().positive(), targetVersion: z.number().int().positive() }).parse(req.body);
+      const item = await tenantCatalogService.rollback(tenant(req), actor(req), String(req.params.templateId ?? ''), input.expectedVersion, input.targetVersion);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'TEMPLATE_NOT_FOUND', message: 'Template not found.' } });
+      res.json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
   async archive(req: Request, res: Response, next: NextFunction) {
     try {
       const input = z.object({ expectedVersion: z.number().int().positive() }).parse(req.body);
