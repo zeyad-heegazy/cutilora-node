@@ -36,8 +36,10 @@ paths:
           application/json:
             schema:
               type: object
-              minProperties: 1
+              minProperties: 2
+              required: [expectedVersion]
               properties:
+                expectedVersion: { type: integer, minimum: 1 }
                 name: { type: string, minLength: 2, maxLength: 120 }
                 description: { type: string, maxLength: 500 }
                 scope: { type: string, enum: [tenant, clinic, branch] }
