@@ -23,6 +23,11 @@ describe('tenancy request validation', () => {
     expect(result.slug).toBeUndefined();
   });
 
+  it('allows creating a draft branch without operational details', () => {
+    const result = createBranchSchema.parse({ name: 'New Clinic Location', status: 'draft' });
+    expect(result.status).toBe('draft');
+  });
+
   it('rejects invalid IANA timezones for branches', () => {
     expect(createBranchSchema.safeParse({
       name: 'Riyadh Branch',
