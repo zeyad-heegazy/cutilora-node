@@ -19,7 +19,7 @@ const customerSchema = z.object({
 export const createInvoiceSchema = z.object({ idempotencyKey: z.string().trim().min(8).max(128), customer: customerSchema, lines: z.array(lineSchema).min(1).max(100), currency: currencySchema.optional(), dueAt: z.coerce.date().optional() });
 export const updateInvoiceSchema = createInvoiceSchema.omit({ idempotencyKey: true }).partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required.');
 export const invoiceListQuerySchema = z.object({
-  status: z.enum(['draft', 'issued', 'partially_paid', 'paid', 'void']).optional(),
+  status: z.enum(['draft', 'issued', 'partially_paid', 'partially_credited', 'paid', 'credited', 'void']).optional(),
   from: z.coerce.date().optional(), to: z.coerce.date().optional(),
   branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   page: z.coerce.number().int().min(1).default(1),
@@ -38,6 +38,7 @@ export const refundPaymentSchema = z.object({
   amountMinor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER),
   reason: z.string().trim().min(3).max(500),
 });
+export const createCreditNoteSchema = z.object({ idempotencyKey: z.string().trim().min(8).max(128), amountMinor: z.number().int().min(1).max(Number.MAX_SAFE_INTEGER), reason: z.string().trim().min(3).max(500) });
 export const voidInvoiceSchema = z.object({ reason: z.string().trim().min(3).max(500) });
 export const createExpenseSchema = z.object({
   idempotencyKey: z.string().trim().min(8).max(128),
