@@ -97,7 +97,7 @@ paths:
     patch:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches"
-      summary: Update branch details and operating hours; tenant and clinic administrators can also change lifecycle status
+      summary: Update branch details and operating hours; tenant admins and clinic admins or managers can also change lifecycle status
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
