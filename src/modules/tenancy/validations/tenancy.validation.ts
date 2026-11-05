@@ -285,3 +285,5 @@ export const createPaymentSchema = z.object({
   paidAt: z.coerce.date().nullable().optional(),
   failureReason: optionalText(1000),
 });
+
+export const updateTenantPreferencesSchema = z.object({ preferences: preferencesSchema.partial() });
