@@ -2,11 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { getTenantRolePermissions } from '../../src/modules/tenancy/services/tenant-access.service.js';
 
 describe('branch manager permissions', () => {
-  it('allows branch managers to read and update their own branch settings and schedule', () => {
+  it('allows branch managers to read and manage their own branch schedule and settings', () => {
     const permissions = getTenantRolePermissions('branch_manager');
 
     expect(permissions).toContain('branch.read');
-    expect(permissions).toContain('branch.update');
+    expect(permissions).toContain('branch.schedule.manage');
+    expect(permissions).toContain('branch.settings.manage');
+    expect(permissions).not.toContain('branch.update');
     expect(permissions).toContain('branch.holidays.read');
     expect(permissions).toContain('branch.holidays.manage');
   });
