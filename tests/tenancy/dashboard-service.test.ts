@@ -6,6 +6,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     getDashboardCounts: vi.fn(),
     findTenantById: vi.fn(),
     listTenantAuditEvents: vi.fn(),
+    exportTenantAuditEvents: vi.fn(),
     listDashboardClinics: vi.fn(),
     findSubscriptionByTenantId: vi.fn(),
   },
@@ -104,4 +105,21 @@ describe('tenant dashboard service', () => {
     vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue(null as any);
     await expect(tenancyService.getSubscriptionOverview(tenantId)).resolves.toBeNull();
   });
+  it('exports only safe audit fields with tenant-scoped filters and a row cap', async () => {
+    vi.mocked(tenancyRepository.exportTenantAuditEvents).mockResolvedValue([
+      { createdAt: new Date('2026-11-05T10:00:00.000Z'), actorUserId: 'user-1', action: 'membership.updated', targetType: 'membership', targetId: 'm-1', clinicId: null, branchId: null, result: 'success', requestId: 'req-1', metadata: { secret: 'must-not-export' } },
+    ] as any);
+
+    const result = await tenancyService.exportTenantAuditEvents(tenantId, {
+      actorId: '64b000000000000000000002', action: 'membership.updated',
+    });
+
+    expect(tenancyRepository.exportTenantAuditEvents).toHaveBeenCalledWith({
+      tenantId, actorUserId: '64b000000000000000000002', action: 'membership.updated',
+    }, 5001);
+    expect(result.csv).toContain('membership.updated');
+    expect(result.csv).not.toContain('must-not-export');
+    expect(result.truncated).toBe(false);
+  });
+
 });
