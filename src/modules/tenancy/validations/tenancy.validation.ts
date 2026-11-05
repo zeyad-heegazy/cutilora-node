@@ -442,7 +442,8 @@ export const applyTenantConfigurationSchema = tenantConfigurationApplyBaseSchema
 });
 
 export const updateTenantMembershipSchema = z.object({
-  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
+  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist', 'custom']).optional(),
+  customRoleId: z.string().regex(/^[a-f\\d]{24}$/i).nullable().optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
   clinicId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
   branchIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).max(50).optional(),
@@ -509,4 +510,24 @@ export const tenantInvitationListQuerySchema = z.object({
   status: z.enum(['pending', 'processing', 'expired', 'accepted', 'revoked']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+
+export const createTenantRoleSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(500).optional(),
+  scope: z.enum(['tenant', 'clinic', 'branch']),
+  permissions: z.array(z.string().trim().min(1).max(100)).max(100).default([]),
+});
+export const updateTenantRoleSchema = z.object({
+  name: z.string().trim().min(2).max(80).optional(),
+  description: z.string().trim().max(500).optional(),
+  permissions: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
+  version: z.number().int().min(1),
+}).refine((value) => value.name !== undefined || value.description !== undefined || value.permissions !== undefined, {
+  message: 'At least one role field must be supplied.',
+});
+export const tenantRoleListQuerySchema = z.object({
+  status: z.enum(['active', 'archived']).optional(),
+  scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
 });
