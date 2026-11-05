@@ -49,7 +49,7 @@ export const createExpenseSchema = z.object({
 });
 export const payExpenseSchema = z.object({ method: paymentMethodSchema, paidAt: z.coerce.date().optional() });
 export const voidExpenseSchema = z.object({ reason: z.string().trim().min(3).max(500) });
-export const summaryQuerySchema = z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional(), branchId: z.string().regex(/^[a-f\\d]{24}$/i).optional() }).refine((v) => !v.from || !v.to || v.from <= v.to, 'from must be before or equal to to');
+export const summaryQuerySchema = z.object({ from: z.coerce.date().optional(), to: z.coerce.date().optional(), branchId: z.string().regex(/^[a-f0-9]{24}$/i).optional() }).refine((v) => !v.from || !v.to || v.from <= v.to, 'from must be before or equal to to');
 export const expenseListQuerySchema = z.object({
   status: z.enum(['recorded', 'paid', 'void']).optional(),
   from: z.coerce.date().optional(), to: z.coerce.date().optional(),
