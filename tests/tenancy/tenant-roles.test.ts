@@ -174,6 +174,20 @@ describe('tenant custom role service', () => {
     expect(mocks.releaseOwnerLock).toHaveBeenCalledWith('tenant-a');
   });
 
+  it('prevents deactivation while a suspended membership still references the role', async () => {
+    const role = {
+      _id: '507f1f77bcf86cd799439012', version: 2, toObject() { return this; },
+    };
+    mocks.roleFindOneAndUpdate.mockResolvedValue(role);
+    mocks.membershipCountDocuments.mockResolvedValue(1);
+    await expect(tenantRolesService.deactivate('tenant-a', 'owner-a', '507f1f77bcf86cd799439012'))
+      .rejects.toMatchObject({ status: 409, code: 'ROLE_IN_USE' });
+    expect(mocks.membershipCountDocuments).toHaveBeenCalledWith({
+      tenantId: 'tenant-a', roleId: role._id,
+    });
+    expect(mocks.roleUpdateOne).toHaveBeenCalledOnce();
+  });
+
   it('rejects stale role edits instead of overwriting a newer permission version', async () => {
     mocks.roleFindOne.mockReturnValue(query({ _id: 'role-a', version: 4, scope: 'tenant', permissions: [] }));
     await expect(tenantRolesService.update('tenant-a', 'owner-a', null, '507f1f77bcf86cd799439011', {
