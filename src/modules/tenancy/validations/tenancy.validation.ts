@@ -457,6 +457,8 @@ export const tenantUserListQuerySchema = z.object({
   lastLoginTo: z.coerce.date().optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
+}).refine((query) => !query.lastLoginFrom || !query.lastLoginTo || query.lastLoginFrom <= query.lastLoginTo, {
+  message: 'lastLoginFrom must be before or equal to lastLoginTo.', path: ['lastLoginTo'],
 });
 
 export const tenantInvitationListQuerySchema = z.object({
