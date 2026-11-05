@@ -4,6 +4,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     listTenantMemberships: vi.fn(),
     listTenantInvitations: vi.fn(),
+    listTenantAuditEvents: vi.fn(),
     listMembershipsForUser: vi.fn(),
     findTenantMembershipById: vi.fn(),
     countActiveTenantOwners: vi.fn(),
@@ -229,6 +230,30 @@ describe('tenant membership administration', () => {
 
     expect(tenancyRepository.countActiveTenantOwners).not.toHaveBeenCalled();
     expect(tenancyRepository.updateTenantMembership).not.toHaveBeenCalled();
+  });
+
+  it('returns membership history only after confirming the membership belongs to the tenant', async () => {
+    vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({ _id: membershipId } as any);
+    vi.mocked(tenancyRepository.listTenantAuditEvents).mockResolvedValue({
+      items: [{ action: 'membership.updated', targetId: membershipId }],
+      pagination: { page: 1, perPage: 25, total: 1, pages: 1 },
+    } as any);
+
+    const result = await tenancyService.listTenantMembershipHistory(tenantId, membershipId);
+
+    expect(tenancyRepository.findTenantMembershipById).toHaveBeenCalledWith(tenantId, membershipId);
+    expect(tenancyRepository.listTenantAuditEvents).toHaveBeenCalledWith({
+      tenantId, targetType: 'tenant_membership', targetId: membershipId,
+    }, 1, 25);
+    expect(result?.items).toHaveLength(1);
+  });
+
+  it('does not query membership history for a membership outside the tenant', async () => {
+    vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue(null as any);
+
+    await expect(tenancyService.listTenantMembershipHistory(tenantId, membershipId)).resolves.toBeNull();
+
+    expect(tenancyRepository.listTenantAuditEvents).not.toHaveBeenCalled();
   });
 
 });
