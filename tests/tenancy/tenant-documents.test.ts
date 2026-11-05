@@ -145,6 +145,7 @@ describe('tenant document service', () => {
       version: 1,
     } as any);
     vi.mocked(storePrivateTenantDocument).mockResolvedValue(tenantId + '/replacement.pdf');
+    vi.mocked(removePrivateTenantDocument).mockResolvedValue(undefined);
     vi.mocked(tenancyRepository.createTenantDocument).mockResolvedValue({
       _id: '64b000000000000000000004',
       version: 2,
