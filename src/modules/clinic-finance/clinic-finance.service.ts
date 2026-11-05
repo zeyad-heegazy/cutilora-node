@@ -6,7 +6,7 @@ import { ClinicExpense } from './models/clinic-expense.model.js';
 type Scope = { tenantId: string; clinicId: string; branchId: string | null; userId: string };
 type InvoiceInput = { customer?: any; lines?: any[]; currency?: string };
 
-function calculateLines(lines: any[]) {
+export function calculateInvoiceLines(lines: any[]) {
   const calculated = lines.map((line) => {
     const subtotalMinor = line.quantity * line.unitPriceMinor;
     if (!Number.isSafeInteger(subtotalMinor)) throw { status: 400, code: 'AMOUNT_OUT_OF_RANGE', message: 'Invoice line amount exceeds the supported range.' };
@@ -26,7 +26,7 @@ function calculateLines(lines: any[]) {
 }
 
 async function assertClinic(scope: Scope) {
-  const clinic = await Clinic.findOne({ _id: scope.clinicId, tenantId: scope.tenantId, status: 'active' }).select('preferences.currency');
+  const clinic = await Clinic.findOne({ _id: scope.clinicId, tenantId: scope.tenantId, status: 'active' }).select('preferences.currency timezone');
   if (!clinic) throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'Clinic not found in the selected tenant.' };
   return clinic;
 }
@@ -45,7 +45,7 @@ function dateFilter(from?: Date, to?: Date) {
 export const clinicFinanceService = {
   async createInvoice(scope: Scope, input: InvoiceInput) {
     const clinic = await assertClinic(scope);
-    const { lines, totals } = calculateLines(input.lines ?? []);
+    const { lines, totals } = calculateInvoiceLines(input.lines ?? []);
     const currency = (input.currency ?? clinic.preferences?.currency ?? 'EGP').toUpperCase();
     return ClinicInvoice.create({
       ...invoiceFilter(scope), customer: input.customer, lines, currency, ...totals,
@@ -79,10 +79,10 @@ export const clinicFinanceService = {
     const current = await ClinicInvoice.findOne({ _id: invoiceId, ...invoiceFilter(scope) });
     if (!current) return null;
     if (current.status !== 'draft') throw { status: 409, code: 'INVOICE_NOT_EDITABLE', message: 'Only draft invoices can be edited.' };
-    const update: any = { updatedBy: scope.userId, $inc: { version: 1 } };
+    const update: any = { updatedBy: scope.userId };
     if (input.customer) update.customer = input.customer;
     if (input.lines) {
-      const result = calculateLines(input.lines);
+      const result = calculateInvoiceLines(input.lines);
       update.lines = result.lines;
       Object.assign(update, result.totals);
       update.balanceDueMinor = result.totals.totalMinor;
@@ -90,7 +90,7 @@ export const clinicFinanceService = {
     if (input.currency && input.currency !== current.currency) throw { status: 409, code: 'INVOICE_CURRENCY_IMMUTABLE', message: 'Invoice currency cannot be changed after creation.' };
     return ClinicInvoice.findOneAndUpdate(
       { _id: invoiceId, ...invoiceFilter(scope), status: 'draft', version: current.version },
-      { $set: update, $push: { events: { type: 'invoice.updated', actorUserId: scope.userId, occurredAt: new Date() } } },
+      { $set: update, $inc: { version: 1 }, $push: { events: { type: 'invoice.updated', actorUserId: scope.userId, occurredAt: new Date() } } },
       { new: true, runValidators: true },
     );
   },
@@ -98,8 +98,10 @@ export const clinicFinanceService = {
   async issueInvoice(scope: Scope, invoiceId: string) {
     const current = await ClinicInvoice.findOne({ _id: invoiceId, ...invoiceFilter(scope), status: 'draft' });
     if (!current) return null;
+    if (current.totalMinor <= 0) throw { status: 409, code: 'INVOICE_TOTAL_INVALID', message: 'An invoice must have a positive total before it can be issued.' };
+    const clinic = await assertClinic(scope);
     const now = new Date();
-    const year = now.getUTCFullYear();
+    const year = Number(new Intl.DateTimeFormat('en', { timeZone: clinic.timezone || 'Africa/Cairo', year: 'numeric' }).format(now));
     const counter = await ClinicInvoiceCounter.findOneAndUpdate(
       { tenantId: scope.tenantId, clinicId: scope.clinicId, year },
       { $inc: { sequence: 1 }, $setOnInsert: { tenantId: scope.tenantId, clinicId: scope.clinicId, year } },
@@ -118,10 +120,15 @@ export const clinicFinanceService = {
     const current = await ClinicInvoice.findOne({ _id: invoiceId, ...invoiceFilter(scope) });
     if (!current) return null;
     if (!['issued', 'partially_paid'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
+    const priorPayment = current.payments.find((item: any) => item.idempotencyKey === input.idempotencyKey);
+    if (priorPayment) {
+      if (priorPayment.amountMinor !== input.amountMinor || priorPayment.method !== input.method || priorPayment.reference !== (input.reference ?? '')) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different payment details.' };
+      return current;
+    }
     const balanceDueMinor = current.totalMinor - (current.paidMinor - current.refundedMinor);
     if (input.amountMinor > balanceDueMinor) throw { status: 400, code: 'PAYMENT_EXCEEDS_BALANCE', message: 'Payment exceeds the outstanding invoice balance.' };
     const payment = {
-      _id: new Types.ObjectId(), method: input.method, amountMinor: input.amountMinor,
+      _id: new Types.ObjectId(), idempotencyKey: input.idempotencyKey, method: input.method, amountMinor: input.amountMinor,
       currency: current.currency, reference: input.reference ?? '', receivedAt: input.receivedAt ?? new Date(),
       recordedBy: scope.userId, refundedMinor: 0, refunds: [],
     };
@@ -142,6 +149,11 @@ export const clinicFinanceService = {
     if (!current) return null;
     const payment = current.payments.id(paymentId);
     if (!payment) throw { status: 404, code: 'PAYMENT_NOT_FOUND', message: 'Payment not found on this invoice.' };
+    const priorRefund = payment.refunds.find((item: any) => item.idempotencyKey === input.idempotencyKey);
+    if (priorRefund) {
+      if (priorRefund.amountMinor !== input.amountMinor || priorRefund.reason !== input.reason) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different refund details.' };
+      return current;
+    }
     const refundable = payment.amountMinor - payment.refundedMinor;
     if (input.amountMinor > refundable) throw { status: 400, code: 'REFUND_EXCEEDS_PAYMENT', message: 'Refund exceeds the remaining refundable payment amount.' };
     const now = new Date();
@@ -151,7 +163,7 @@ export const clinicFinanceService = {
     const updated = await ClinicInvoice.findOneAndUpdate(
       { _id: invoiceId, ...invoiceFilter(scope), version: current.version, 'payments._id': payment._id, 'payments.refundedMinor': payment.refundedMinor },
       { $inc: { 'payments.$.refundedMinor': input.amountMinor, refundedMinor: input.amountMinor, version: 1 },
-        $push: { 'payments.$.refunds': { amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
+        $push: { 'payments.$.refunds': { idempotencyKey: input.idempotencyKey, amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
           events: { type: 'payment.refunded', actorUserId: scope.userId, occurredAt: now, metadata: { paymentId, amountMinor: input.amountMinor, reason: input.reason } } },
         $set: { balanceDueMinor: nextBalance, status: nextStatus, updatedBy: scope.userId } },
       { new: true, runValidators: true },
@@ -178,7 +190,7 @@ export const clinicFinanceService = {
       ...invoiceFilter(scope), description: input.description, category: input.category,
       supplier: input.supplier ?? {}, amountMinor: input.amountMinor, currency,
       dueAt: input.dueAt ?? null, incurredAt: input.incurredAt ?? new Date(),
-      status: 'recorded', createdBy: scope.userId, updatedBy: scope.userId,
+      status: 'recorded', createdBy: scope.userId, updatedBy: scope.userId, events: [{ type: 'expense.recorded', actorUserId: scope.userId, occurredAt: new Date() }],
     });
   },
 
@@ -201,7 +213,7 @@ export const clinicFinanceService = {
   async payExpense(scope: Scope, expenseId: string, input: any) {
     const updated = await ClinicExpense.findOneAndUpdate(
       { _id: expenseId, ...invoiceFilter(scope), status: 'recorded' },
-      { $set: { status: 'paid', paymentMethod: input.method, paidAt: input.paidAt ?? new Date(), updatedBy: scope.userId } },
+      { $set: { status: 'paid', paymentMethod: input.method, paidAt: input.paidAt ?? new Date(), updatedBy: scope.userId }, $push: { events: { type: 'expense.paid', actorUserId: scope.userId, occurredAt: new Date(), metadata: { method: input.method } } } },
       { new: true, runValidators: true },
     );
     if (!updated) throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense is missing or is not awaiting payment.' };
@@ -211,7 +223,7 @@ export const clinicFinanceService = {
   async voidExpense(scope: Scope, expenseId: string, reason: string) {
     const updated = await ClinicExpense.findOneAndUpdate(
       { _id: expenseId, ...invoiceFilter(scope), status: 'recorded' },
-      { $set: { status: 'void', voidedAt: new Date(), voidReason: reason, updatedBy: scope.userId } },
+      { $set: { status: 'void', voidedAt: new Date(), voidReason: reason, updatedBy: scope.userId }, $push: { events: { type: 'expense.voided', actorUserId: scope.userId, occurredAt: new Date(), metadata: { reason } } } },
       { new: true, runValidators: true },
     );
     if (!updated) throw { status: 409, code: 'EXPENSE_NOT_VOIDABLE', message: 'Only unpaid recorded expenses can be voided.' };
