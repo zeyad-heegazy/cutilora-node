@@ -1,8 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { getTenantRoleCatalog, getTenantRolePermissions } from '../middleware/tenant-permissions.js';
+import { getTenantRoleCatalog, getTenantRolePermissions, getTenantRoleGrants } from '../middleware/tenant-permissions.js';
 import { TENANT_PERMISSION_CATALOG } from '../services/tenant-access.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema, createTenantRoleSchema, updateTenantRoleSchema, tenantRoleListQuerySchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema, createTenantRoleSchema, updateTenantRoleSchema, tenantRoleListQuerySchema, cloneTenantRoleSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -445,6 +445,41 @@ export const tenancyController = {
         })),
       ] });
     } catch (e) { next(e); }
+  },
+  async getTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getCustomTenantRole(req.tenantContext!.tenantId, String(req.params.roleId ?? ''));
+      if (!item) return res.status(404).json({ success: false, error: { code: 'ROLE_NOT_FOUND', message: 'Custom role not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async cloneTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = cloneTenantRoleSchema.parse(req.body);
+      const context = req.tenantContext!;
+      const item = await tenancyService.cloneCustomTenantRole(context.tenantId, String(req.params.roleId ?? ''), req.auth!.userId, context.role, context.scope, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'ROLE_NOT_FOUND', message: 'Active custom role not found.' } });
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async getMyTenantAccess(req: Request, res: Response) {
+    const context = req.tenantContext!;
+    const grants = getTenantRoleGrants(context.role, context);
+    const direct = new Set(context.permissionOverrides?.allow ?? []);
+    res.json({ success: true, data: {
+      membershipId: context.membershipId,
+      role: context.role,
+      customRoleId: context.customRoleId ?? null,
+      scope: context.scope,
+      clinicId: context.clinicId,
+      branchId: context.branchId,
+      permissions: grants.map((grant) => grant.permission),
+      grants: grants.map((grant) => ({
+        ...grant,
+        source: direct.has(grant.permission) ? 'direct' : 'role',
+        inherited: grant.scope === 'tenant' ? context.scope !== 'tenant' : grant.scope === 'clinic' && context.scope === 'branch',
+      })),
+    } });
   },
   async getTenantPermissionCatalog(req: Request, res: Response) {
     const context = req.tenantContext!;
