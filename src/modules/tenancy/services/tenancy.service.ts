@@ -240,6 +240,7 @@ export const tenancyService = {
         tenantId, name: input.name.trim(), key, description: input.description ?? '',
         scope: input.scope, permissions: [...new Set(input.permissions)].sort(),
         version: 1, status: 'active', createdBy: actorUserId, updatedBy: actorUserId,
+        history: [{ version: 1, action: 'created', name: input.name.trim(), description: input.description ?? '', scope: input.scope, permissions: [...new Set(input.permissions)].sort(), changedBy: actorUserId, changedAt: new Date() }],
       });
       await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.created', targetType: 'tenant_role', targetId: String(role._id), metadata: { name: role.name, scope: role.scope, permissions: role.permissions } });
       return role;
@@ -266,7 +267,11 @@ export const tenancyService = {
       update.name = input.name.trim(); update.key = key;
     }
     try {
-      const updated = await tenancyRepository.updateTenantRole(tenantId, roleId, input.version, update);
+      const updated = await tenancyRepository.updateTenantRole(tenantId, roleId, input.version, update, {
+        version: input.version + 1, action: 'updated', name: String(update.name ?? current.name),
+        description: String(update.description ?? current.description ?? ''), scope: current.scope,
+        permissions, changedBy: actorUserId, changedAt: new Date(),
+      });
       if (!updated) throw { status: 409, code: 'ROLE_VERSION_CONFLICT', message: 'This role changed since it was loaded. Refresh and retry.' };
       await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.updated', targetType: 'tenant_role', targetId: roleId, metadata: { previousVersion: current.version, version: updated.version, previousPermissions: current.permissions, permissions: updated.permissions } });
       return updated;
@@ -281,7 +286,10 @@ export const tenancyService = {
     if (!role || role.status !== 'active') return null;
     if (actorRole !== 'tenant_owner' && role.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin cannot archive tenant-scoped roles.' };
     if (await tenancyRepository.countMembershipsUsingRole(tenantId, roleId) > 0) throw { status: 409, code: 'ROLE_IN_USE', message: 'Reassign all memberships using this role before archiving it.' };
-    const archived = await tenancyRepository.archiveTenantRole(tenantId, roleId);
+    const archived = await tenancyRepository.archiveTenantRole(tenantId, roleId, actorUserId, {
+      version: role.version, action: 'archived', name: role.name, description: role.description ?? '',
+      scope: role.scope, permissions: role.permissions ?? [], changedBy: actorUserId, changedAt: new Date(),
+    });
     if (archived) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.archived', targetType: 'tenant_role', targetId: roleId, metadata: { name: role.name } });
     return archived;
   },
