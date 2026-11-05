@@ -9,7 +9,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   },
 }));
 
-import { resolveTenantContext } from '../../src/modules/tenancy/middleware/tenant-context.js';
+import { requireTenantScope, resolveTenantContext } from '../../src/modules/tenancy/middleware/tenant-context.js';
 import { tenancyRepository } from '../../src/modules/tenancy/repositories/tenancy.repository.js';
 
 const ids = {
@@ -41,6 +41,26 @@ describe('resolveTenantContext scope enforcement', () => {
     vi.mocked(tenancyRepository.findActiveTenant).mockResolvedValue({ _id: ids.tenant } as any);
     vi.mocked(tenancyRepository.findActiveClinic).mockResolvedValue({ _id: ids.clinic } as any);
     vi.mocked(tenancyRepository.findActiveBranch).mockResolvedValue({ _id: ids.branch } as any);
+  });
+
+  it('requires tenant-wide scope for clinic administration', () => {
+    const response: any = {
+      statusCode: 200,
+      status(code: number) { this.statusCode = code; return this; },
+      json(body: unknown) { this.body = body; return this; },
+    };
+    const next = vi.fn();
+    requireTenantScope({ tenantContext: { scope: 'clinic' } } as any, response, next);
+    expect(response.statusCode).toBe(403);
+    expect(response.body.error.code).toBe('TENANT_SCOPE_REQUIRED');
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('allows tenant-wide scope through the clinic administration guard', () => {
+    const response: any = { status: vi.fn().mockReturnThis(), json: vi.fn() };
+    const next = vi.fn();
+    requireTenantScope({ tenantContext: { scope: 'tenant' } } as any, response, next);
+    expect(next).toHaveBeenCalledOnce();
   });
 
   it('rejects malformed tenant identifiers before querying MongoDB', async () => {
