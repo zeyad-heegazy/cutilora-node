@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -36,6 +36,32 @@ export const tenancyController = {
       const item = await tenancyService.updatePreferences(req.tenantContext!.tenantId, req.auth!.userId, input.preferences);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
       res.json({ success: true, data: item.preferences });
+    } catch (e) { next(e); }
+  },
+  async getTenantConfiguration(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json({ success: true, data: await tenancyService.getTenantConfiguration(req.tenantContext!.tenantId) });
+    } catch (e) { next(e); }
+  },
+  async updateTenantConfiguration(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = updateTenantConfigurationSchema.parse(req.body);
+      const item = await tenancyService.updateTenantConfiguration(req.tenantContext!.tenantId, req.auth!.userId, input.values);
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async previewTenantConfigurationApply(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = previewTenantConfigurationApplySchema.parse(req.body);
+      const result = await tenancyService.previewTenantConfigurationApply(req.tenantContext!.tenantId, input);
+      res.json({ success: true, data: result });
+    } catch (e) { next(e); }
+  },
+  async applyTenantConfiguration(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = applyTenantConfigurationSchema.parse(req.body);
+      const result = await tenancyService.applyTenantConfiguration(req.tenantContext!.tenantId, req.auth!.userId, input);
+      res.json({ success: true, data: result });
     } catch (e) { next(e); }
   },
   async listTenantAuditEvents(req: Request, res: Response, next: NextFunction) {
