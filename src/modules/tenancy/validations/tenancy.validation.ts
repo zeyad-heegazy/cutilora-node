@@ -202,12 +202,40 @@ export const updateClinicSchema = z
     message: 'At least one field must be provided.',
   });
 
+const timezoneSchema = z.string().trim().min(1).max(100).refine((value) => {
+  try { new Intl.DateTimeFormat('en-US', { timeZone: value }); return true; }
+  catch { return false; }
+}, 'Timezone must be a valid IANA timezone.');
+
+const branchFields = {
+  name: z.string().trim().min(2).max(160),
+  slug: slug.optional(),
+  status: z.enum(['active', 'suspended']),
+  address: z.string().trim().max(500).optional(),
+  cityId: z.string().regex(/^[a-f\\d]{24}$/i).nullable().optional(),
+  timezone: timezoneSchema,
+  operatingHours: z.array(operatingHourSchema).max(7),
+};
+
 export const createBranchSchema = z.object({
-  name: z.string().trim().min(2),
-  slug,
-  address: z.string().optional(),
-  cityId: z.string().optional(),
-  timezone: z.string().default('Africa/Cairo'),
+  name: branchFields.name,
+  slug: branchFields.slug,
+  address: branchFields.address,
+  cityId: branchFields.cityId,
+  timezone: timezoneSchema.optional(),
+  operatingHours: branchFields.operatingHours.optional(),
+});
+
+export const updateBranchSchema = z.object({
+  name: branchFields.name.optional(),
+  slug: branchFields.slug,
+  status: branchFields.status.optional(),
+  address: branchFields.address,
+  cityId: branchFields.cityId,
+  timezone: timezoneSchema.optional(),
+  operatingHours: branchFields.operatingHours.optional(),
+}).refine((data) => Object.keys(data).length > 0, {
+  message: 'At least one field must be provided.',
 });
 
 export const upsertSubscriptionSchema = z.object({
