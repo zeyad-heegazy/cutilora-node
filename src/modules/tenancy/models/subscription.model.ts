@@ -7,6 +7,13 @@ const schema = new Schema({
     name: { type: String, required: true, trim: true },
     amount: { type: Number, min: 0, default: 0 },
     currency: { type: String, uppercase: true, minlength: 3, maxlength: 3, default: 'EGP' },
+    limits: {
+      maxClinics: { type: Number, min: 0, default: null },
+      maxBranches: { type: Number, min: 0, default: null },
+      maxUsers: { type: Number, min: 0, default: null },
+      maxStorageBytes: { type: Number, min: 0, default: null },
+    },
+    features: [{ type: String, trim: true, lowercase: true }],
   },
   billingCycle: { type: String, enum: ['monthly', 'quarterly', 'yearly'], required: true, default: 'monthly' },
   status: { type: String, enum: ['pending', 'trialing', 'active', 'past_due', 'canceled', 'expired'], required: true, default: 'pending' },
