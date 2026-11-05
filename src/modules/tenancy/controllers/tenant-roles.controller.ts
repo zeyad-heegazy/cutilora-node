@@ -17,6 +17,7 @@ const createRoleSchema = z.object({
   permissions: z.array(grantSchema).max(200),
 });
 const updateRoleSchema = z.object({
+  expectedVersion: z.number().int().positive(),
   name: z.string().trim().min(2).max(120).optional(),
   description: z.string().trim().max(500).optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
