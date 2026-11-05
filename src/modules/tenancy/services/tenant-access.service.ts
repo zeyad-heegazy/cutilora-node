@@ -62,9 +62,13 @@ export function getTenantRoleCatalog(actorRole: string) {
 
 export function getTenantRoleGrants(
   role: string,
-  context: { scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string | null; branchId?: string | null; customPermissions?: string[] },
+  context: { scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string | null; branchId?: string | null; customPermissions?: string[]; permissionOverrides?: { allow?: string[]; deny?: string[] } },
 ) {
-  const permissions = context.customPermissions ?? getTenantRolePermissions(role);
+  const denied = new Set(context.permissionOverrides?.deny ?? []);
+  const permissions = [...new Set([
+    ...(context.customPermissions ?? getTenantRolePermissions(role)),
+    ...(context.permissionOverrides?.allow ?? []),
+  ])].filter((permission) => !denied.has(permission));
   return permissions.map((permission) => ({
     permission,
     scope: context.scope,
