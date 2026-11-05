@@ -339,13 +339,15 @@ export const tenancyRepository = {
   },
   createTenantInvitation(data: Record<string, unknown>) { return TenantInvitation.create(data); },
   findTenantInvitationById(tenantId: string, invitationId: string) { return TenantInvitation.findOne({ _id: invitationId, tenantId }); },
-  findPendingTenantInvitation(tenantId: string, email: string) { return TenantInvitation.findOne({ tenantId, email, status: 'pending' }); },
+  expirePendingTenantInvitations(tenantId: string, email: string, now: Date) { return TenantInvitation.updateMany({ tenantId, email, status: 'pending', expiresAt: { $lte: now } }, { $set: { status: 'expired' } }); },
+  findPendingTenantInvitation(tenantId: string, email: string) { return TenantInvitation.findOne({ tenantId, email, status: 'pending', expiresAt: { $gt: new Date() } }); },
   findTenantInvitationByTokenHash(tokenHash: string) { return TenantInvitation.findOne({ tokenHash }).select('+tokenHash'); },
   listTenantInvitations(tenantId: string) { return TenantInvitation.find({ tenantId }).select('-tokenHash').populate('invitedBy', 'name email').populate('acceptedBy', 'name email').sort({ createdAt: -1 }).lean(); },
   updateTenantInvitation(tenantId: string, invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId }, { $set: update }, { new: true, runValidators: true }).select('-tokenHash'); },
   claimTenantInvitation(tokenHash: string, now: Date) { return TenantInvitation.findOneAndUpdate({ tokenHash, status: 'pending', expiresAt: { $gt: now } }, { $set: { status: 'processing' } }, { new: true }).select('+tokenHash'); },
   updateClaimedTenantInvitation(invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, status: 'processing' }, { $set: update }, { new: true, runValidators: true }); },
   createTenantMembership(data: Record<string, unknown>) { return TenantMembership.create(data); },
+  deleteTenantMembershipById(id: string) { return TenantMembership.deleteOne({ _id: id }); },
   findTenantMembershipForUser(userId: string, tenantId: string) { return TenantMembership.findOne({ userId, tenantId, status: { $in: ['active', 'invited'] } }); },
   listTenantMemberships(tenantId: string) {
     return TenantMembership.find({ tenantId })
