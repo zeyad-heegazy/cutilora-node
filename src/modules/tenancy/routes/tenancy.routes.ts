@@ -49,6 +49,7 @@ tenantRouter.post('/clinics', requireTenantScope, requireTenantPermission('clini
 tenantRouter.post('/clinics/:clinicId/activate', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.activateClinic);
 tenantRouter.post('/clinics/:clinicId/deactivate', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.deactivateClinic);
 tenantRouter.get('/clinics/:clinicId/branches', requireTenantPermission('branch.read'), tenancyController.listClinicBranches);
+tenantRouter.get('/clinics/:clinicId/activity', requireTenantPermission('clinic.activity.read'), tenancyController.listClinicActivity);
 tenantRouter.get('/clinics/:clinicId/users', requireTenantPermission('clinic.members.read'), tenancyController.listClinicUsers);
 tenantRouter.get('/clinics/:clinicId/documents', requireTenantPermission('clinic.documents.read'), tenancyController.listClinicDocuments);
 tenantRouter.post('/clinics/:clinicId/documents', requireTenantPermission('clinic.documents.manage'), tenancyController.createClinicDocument);
@@ -65,6 +66,7 @@ tenantRouter.get('/branches', requireTenantPermission('branch.read'), tenancyCon
 tenantRouter.post('/branches', requireTenantPermission('branch.manage'), tenancyController.createBranch);
 tenantRouter.post('/branches/:branchId/activate', requireTenantScope, requireTenantPermission('branch.lifecycle.manage'), tenancyController.activateBranch);
 tenantRouter.post('/branches/:branchId/deactivate', requireTenantScope, requireTenantPermission('branch.lifecycle.manage'), tenancyController.deactivateBranch);
+tenantRouter.get('/branches/:branchId/activity', requireTenantPermission('branch.activity.read'), tenancyController.listBranchActivity);
 tenantRouter.get('/branches/:branchId/users', requireTenantPermission('branch.members.read'), tenancyController.listBranchUsers);
 tenantRouter.get('/branches/:branchId/business-hours', requireTenantPermission('branch.read'), tenancyController.getBranchBusinessHours);
 tenantRouter.put('/branches/:branchId/business-hours', requireTenantPermission('branch.schedule.manage'), tenancyController.updateBranchBusinessHours);
