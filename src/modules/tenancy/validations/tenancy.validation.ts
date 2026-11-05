@@ -82,6 +82,7 @@ const clinicFields = {
   address: addressSchema.optional(),
   timezone: z.string().trim().min(1).max(100).default('Africa/Cairo'),
   preferences: preferencesSchema.optional(),
+  settings: z.record(z.unknown()).optional(),
   operatingHours: z.array(operatingHourSchema).max(7).optional(),
   branding: brandingSchema.optional(),
   bookingSettings: z
@@ -174,6 +175,7 @@ export const updateClinicSchema = z
     address: addressSchema.partial().optional(),
     timezone: z.string().trim().min(1).max(100).optional(),
     preferences: preferencesSchema.partial().optional(),
+    settings: z.record(z.unknown()).optional(),
     countryId: z.string().optional(),
     governorateId: z.string().optional(),
     cityId: z.string().optional(),
