@@ -217,17 +217,28 @@ export const tenancyRepository = {
   },
   async getDashboardCounts(tenantId: string) {
     const filter = { tenantId };
-    const [clinicCount, activeClinicCount, branchCount, activeBranchCount, activeMemberIds, pendingInvitationCount] = await Promise.all([
+    const [clinicCount, activeClinicCount, branchCount, activeBranchCount, draftBranchCount, temporarilyClosedBranchCount, suspendedBranchCount, closedBranchCount, activeMemberIds, pendingInvitationCount] = await Promise.all([
       Clinic.countDocuments(filter),
       Clinic.countDocuments({ ...filter, status: 'active' }),
       Branch.countDocuments(filter),
       Branch.countDocuments({ ...filter, status: 'active' }),
+      Branch.countDocuments({ ...filter, status: 'draft' }),
+      Branch.countDocuments({ ...filter, status: 'temporarily_closed' }),
+      Branch.countDocuments({ ...filter, status: 'suspended' }),
+      Branch.countDocuments({ ...filter, status: 'closed' }),
       TenantMembership.distinct('userId', { ...filter, status: 'active' }),
       TenantInvitation.countDocuments({ tenantId, status: { $in: ['pending', 'processing'] }, expiresAt: { $gt: new Date() } }),
     ]);
     return {
       clinics: { total: clinicCount, active: activeClinicCount, suspended: clinicCount - activeClinicCount },
-      branches: { total: branchCount, active: activeBranchCount, suspended: branchCount - activeBranchCount },
+      branches: {
+        total: branchCount,
+        active: activeBranchCount,
+        draft: draftBranchCount,
+        temporarilyClosed: temporarilyClosedBranchCount,
+        suspended: suspendedBranchCount,
+        closed: closedBranchCount,
+      },
       activeMembers: activeMemberIds.length,
       pendingInvitations: pendingInvitationCount,
     };
