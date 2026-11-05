@@ -435,11 +435,23 @@ export const tenancyController = {
       const query = tenantRoleListQuerySchema.parse(req.query);
       const context = req.tenantContext!;
       const customRoles = await tenancyService.listCustomTenantRoles(context.tenantId, query);
-      res.json({ success: true, data: { builtIn: getTenantRoleCatalog(context.role), custom: customRoles } });
+      res.json({ success: true, data: [
+        ...getTenantRoleCatalog(context.role),
+        ...customRoles.map((role: any) => ({
+          id: String(role._id), role: 'custom', label: role.name, description: role.description,
+          scopes: [role.scope], permissions: role.permissions, version: role.version,
+          status: role.status, customizable: true,
+          assignableByCurrentUser: context.role === 'tenant_owner' || (context.role === 'tenant_admin' && role.scope !== 'tenant'),
+        })),
+      ] });
     } catch (e) { next(e); }
   },
   async getTenantPermissionCatalog(req: Request, res: Response) {
-    res.json({ success: true, data: TENANT_PERMISSION_CATALOG });
+    const context = req.tenantContext!;
+    const permissions = context.role === 'tenant_owner'
+      ? TENANT_PERMISSION_CATALOG
+      : TENANT_PERMISSION_CATALOG.filter((permission) => getTenantRolePermissions(context.role).includes(permission));
+    res.json({ success: true, data: { permissions, assignable: permissions } });
   },
   async createTenantRole(req: Request, res: Response, next: NextFunction) {
     try {
