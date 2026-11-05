@@ -112,6 +112,20 @@ paths:
       responses:
         "200": { description: New single-use token returned }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/memberships/{membershipId}/history:
+    get:
+      tags: [Tenant Organization]
+      summary: List tenant membership history
+      description: Returns append-only tenant audit events associated with a membership. Membership ownership is checked before history is returned.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: membershipId, in: path, required: true, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Membership audit history }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
   /tenant/memberships/{membershipId}:
     patch:
       tags: [Tenant Memberships]
