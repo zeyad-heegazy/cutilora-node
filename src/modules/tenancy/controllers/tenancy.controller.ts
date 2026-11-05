@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { getTenantRolePermissions } from '../middleware/tenant-permissions.js';
+import { getTenantRoleCatalog, getTenantRolePermissions } from '../middleware/tenant-permissions.js';
 import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
@@ -246,6 +246,9 @@ export const tenancyController = {
       const query = clinicGeoListSchema.parse(req.query);
       res.json({ success: true, ...await tenancyService.listGeo(resource, query) });
     } catch (e) { next(e); }
+  },
+  async listTenantRoles(req: Request, res: Response) {
+    res.json({ success: true, data: getTenantRoleCatalog(req.tenantContext!.role) });
   },
   async getPermissions(req: Request, res: Response) {
     const context = req.tenantContext!;
