@@ -4,7 +4,7 @@ paths:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches"
       summary: Activate a branch
-      description: Reactivates a suspended branch within the selected tenant and clinic.
+      description: Reactivates a suspended or temporarily closed branch within the selected tenant and clinic.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
@@ -19,7 +19,7 @@ paths:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches"
       summary: Suspend a branch
-      description: Suspends the branch without deleting its history.
+      description: Suspends the branch without deleting its history. A permanently closed branch cannot be suspended or reactivated.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
