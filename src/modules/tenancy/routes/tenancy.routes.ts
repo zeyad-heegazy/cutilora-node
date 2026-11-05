@@ -29,5 +29,8 @@ tenantRouter.get('/branches', tenancyController.listBranches);
 tenantRouter.post('/branches', requireTenantRoles('tenant_owner', 'tenant_admin', 'clinic_admin', 'clinic_manager'), tenancyController.createBranch);
 tenantRouter.post('/branches/:branchId/activate', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.activateBranch);
 tenantRouter.post('/branches/:branchId/deactivate', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.deactivateBranch);
+tenantRouter.get('/branches/:branchId/holidays', requireTenantRoles('tenant_owner', 'tenant_admin', 'clinic_admin', 'clinic_manager', 'branch_manager'), tenancyController.listBranchHolidays);
+tenantRouter.post('/branches/:branchId/holidays', requireTenantRoles('tenant_owner', 'tenant_admin', 'clinic_admin', 'clinic_manager', 'branch_manager'), tenancyController.createBranchHoliday);
+tenantRouter.delete('/branches/:branchId/holidays/:holidayId', requireTenantRoles('tenant_owner', 'tenant_admin', 'clinic_admin', 'clinic_manager', 'branch_manager'), tenancyController.cancelBranchHoliday);
 tenantRouter.get('/branches/:branchId', tenancyController.getBranch);
 tenantRouter.patch('/branches/:branchId', requireTenantRoles('tenant_owner', 'tenant_admin', 'clinic_admin', 'clinic_manager', 'branch_manager'), tenancyController.updateBranch);
