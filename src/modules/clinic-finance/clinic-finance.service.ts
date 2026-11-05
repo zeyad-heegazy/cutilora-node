@@ -335,7 +335,7 @@ export const clinicFinanceService = {
       ClinicExpense.find({ ...filter, $or: [{ incurredAt: range }, { paidAt: range }] }).select('currency amountMinor category status incurredAt paidAt').lean(),
       Clinic.findOne({ _id: scope.clinicId, tenantId: scope.tenantId }).select('timezone').lean(),
     ]);
-    const timezone = clinic?.timezone || 'Africa/Cairo';
+    const timezone = (clinic as any)?.timezone || 'Africa/Cairo';
     const periodKey = (date: Date) => {
       const parts = new Intl.DateTimeFormat('en-CA', query.groupBy === 'month'
         ? { timeZone: timezone, year: 'numeric', month: '2-digit' }
