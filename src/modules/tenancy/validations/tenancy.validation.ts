@@ -339,10 +339,14 @@ const configurationApplyFields = {
   applyTo: z.enum(['all', 'selected']),
   clinicIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).min(1).max(100).refine((ids) => new Set(ids).size === ids.length, 'clinicIds must be unique.').optional(),
 };
-export const previewTenantConfigurationApplySchema = z.object(configurationApplyFields).refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
+const tenantConfigurationApplyBaseSchema = z.object(configurationApplyFields);
+export const previewTenantConfigurationApplySchema = tenantConfigurationApplyBaseSchema.refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
   message: 'clinicIds are required when applyTo=selected.',
   path: ['clinicIds'],
 });
-export const applyTenantConfigurationSchema = previewTenantConfigurationApplySchema.extend({
+export const applyTenantConfigurationSchema = tenantConfigurationApplyBaseSchema.extend({
   confirm: z.boolean(),
+}).refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
+  message: 'clinicIds are required when applyTo=selected.',
+  path: ['clinicIds'],
 });
