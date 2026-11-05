@@ -7,6 +7,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     listTenantDocuments: vi.fn(),
     findTenantDocument: vi.fn(),
     findTenantDocumentMetadata: vi.fn(),
+    listTenantDocumentVersions: vi.fn(),
     archiveTenantDocument: vi.fn(),
   },
 }));
@@ -157,6 +158,19 @@ describe('tenant document service', () => {
     })).rejects.toMatchObject({ code: 'DOCUMENT_REPLACEMENT_CONFLICT', status: 409 });
 
     expect(removePrivateTenantDocument).toHaveBeenCalledWith(tenantId + '/replacement.pdf');
+  });
+
+  it('returns tenant-scoped document version history without storage keys', async () => {
+    vi.mocked(tenancyRepository.listTenantDocumentVersions).mockResolvedValue([
+      { _id: 'version-1', version: 1, status: 'archived' },
+      { _id: documentId, version: 2, status: 'active' },
+    ] as any);
+
+    const result = await tenancyService.getTenantDocumentVersionHistory(tenantId, documentId);
+
+    expect(tenancyRepository.listTenantDocumentVersions).toHaveBeenCalledWith(tenantId, documentId);
+    expect(result).toHaveLength(2);
+    expect(result?.[0]).toMatchObject({ version: 1, status: 'archived' });
   });
 
 });
