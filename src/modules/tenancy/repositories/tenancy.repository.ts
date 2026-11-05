@@ -218,9 +218,9 @@ export const tenancyRepository = {
     const filter: Record<string, unknown> = { tenantId };
     if (query.status) filter.status = query.status;
     if (query.search) {
-      const escaped = query.search.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\  listClinics(tenantId: string) {
-    return Clinic.find({ tenantId }).sort({ name: 1 });
-  },');
+      const slash = String.fromCharCode(92);
+      const regexMeta = '.*+?^$' + '{}' + '()|[]' + slash;
+      const escaped = query.search.split('').map((character) => regexMeta.includes(character) ? slash + character : character).join('');
       filter.$or = [{ name: { $regex: escaped, $options: 'i' } }, { code: { $regex: escaped, $options: 'i' } }];
     }
     const [items, total] = await Promise.all([
