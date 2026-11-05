@@ -196,7 +196,8 @@ export const clinicFinanceService = {
     }
     const refundable = payment.amountMinor - payment.refundedMinor;
     if (input.amountMinor > refundable) throw { status: 400, code: 'REFUND_EXCEEDS_PAYMENT', message: 'Refund exceeds the remaining refundable payment amount.' };
-    const cashSessionId = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashSessionId = cashReservation?.sessionId ?? null;
     const now = new Date();
     const nextRefunded = current.refundedMinor + input.amountMinor;
     const nextBalance = current.totalMinor - (current.paidMinor - nextRefunded);
@@ -213,7 +214,7 @@ export const clinicFinanceService = {
       if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Payment changed while recording refund. Reload and retry.' };
       return updated;
     } finally {
-      if (cashSessionId) await releaseCashSession(scope, cashSessionId);
+      if (cashReservation) await releaseCashSession(scope, cashReservation);
     }
   },
 
@@ -260,7 +261,8 @@ export const clinicFinanceService = {
     if (!current) throw { status: 404, code: 'EXPENSE_NOT_FOUND', message: 'Expense not found.' };
     if (current.status === 'paid' && current.paymentIdempotencyKey === input.idempotencyKey && current.paymentMethod === input.method) return current;
     if (current.status !== 'recorded') throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense is not awaiting payment.' };
-    const cashSessionId = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashSessionId = cashReservation?.sessionId ?? null;
     try {
       const updated = await ClinicExpense.findOneAndUpdate(
         { _id: expenseId, ...invoiceFilter(scope), status: 'recorded' },
@@ -270,7 +272,7 @@ export const clinicFinanceService = {
       if (!updated) throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense was paid or changed by another request.' };
       return updated;
     } finally {
-      if (cashSessionId) await releaseCashSession(scope, cashSessionId);
+      if (cashReservation) await releaseCashSession(scope, cashReservation);
     }
   },
 
