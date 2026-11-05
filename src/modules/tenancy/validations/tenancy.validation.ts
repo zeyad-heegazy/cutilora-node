@@ -73,6 +73,21 @@ const operatingHourSchema = z.object({
     )
     .max(5)
     .optional(),
+}).refine((hour) => hour.isClosed || Boolean(hour.openTime && hour.closeTime && hour.openTime < hour.closeTime), {
+  message: 'Open days require openTime before closeTime; overnight hours are not supported.',
+  path: ['openTime'],
+}).refine((hour) => {
+  if (hour.isClosed || !hour.openTime || !hour.closeTime) return true;
+  const breaks = [...(hour.breakTimes ?? [])].sort((a, b) => a.startTime.localeCompare(b.startTime));
+  return breaks.every((item, index) =>
+    item.startTime < item.endTime &&
+    item.startTime >= hour.openTime! &&
+    item.endTime <= hour.closeTime! &&
+    (index === 0 || breaks[index - 1]!.endTime <= item.startTime)
+  );
+}, {
+  message: 'Breaks must be inside operating hours and must not overlap.',
+  path: ['breakTimes'],
 });
 
 const operatingHoursArraySchema = z.array(operatingHourSchema).max(7).refine(
@@ -214,31 +229,62 @@ export const updateClinicSchema = z
 
 const branchFields = {
   name: z.string().trim().min(2).max(160),
+  code: z.string().trim().max(30).transform((value) => value.toUpperCase()).optional(),
   slug: slug.optional(),
   status: z.enum(['active', 'suspended']),
   address: z.string().trim().max(500).optional(),
+  addressDetails: addressSchema.partial().optional(),
+  contact: contactSchema.partial().optional(),
+  contactPerson: z.object({
+    name: optionalText(160),
+    email: z.string().trim().email().optional(),
+    phone,
+  }).partial().optional(),
   cityId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
+  postalCode: optionalText(30),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
   timezone: timezoneSchema,
   operatingHours: operatingHoursArraySchema,
+  settings: z.record(z.unknown()).optional(),
+  openingDate: z.coerce.date().nullable().optional(),
 };
 
 export const createBranchSchema = z.object({
   name: branchFields.name,
+  code: branchFields.code,
   slug: branchFields.slug,
   address: branchFields.address,
+  addressDetails: branchFields.addressDetails,
+  contact: branchFields.contact,
+  contactPerson: branchFields.contactPerson,
   cityId: branchFields.cityId,
+  postalCode: branchFields.postalCode,
+  latitude: branchFields.latitude,
+  longitude: branchFields.longitude,
   timezone: timezoneSchema.optional(),
   operatingHours: branchFields.operatingHours.optional(),
+  settings: branchFields.settings,
+  openingDate: branchFields.openingDate,
 });
 
 export const updateBranchSchema = z.object({
   name: branchFields.name.optional(),
+  code: branchFields.code,
   slug: branchFields.slug,
   status: branchFields.status.optional(),
   address: branchFields.address,
+  addressDetails: branchFields.addressDetails,
+  contact: branchFields.contact,
+  contactPerson: branchFields.contactPerson,
   cityId: branchFields.cityId,
+  postalCode: branchFields.postalCode,
+  latitude: branchFields.latitude,
+  longitude: branchFields.longitude,
   timezone: timezoneSchema.optional(),
   operatingHours: branchFields.operatingHours.optional(),
+  settings: branchFields.settings,
+  openingDate: branchFields.openingDate,
 }).refine((data) => Object.keys(data).length > 0, {
   message: 'At least one field must be provided.',
 });
