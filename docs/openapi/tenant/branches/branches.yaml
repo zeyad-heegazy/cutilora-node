@@ -222,6 +222,43 @@ paths:
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
 
+
+  /tenant/branches/{branchId}/activity:
+    get:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches"
+      summary: List branch activity
+      description: Returns audit events for this branch only. Branch-scoped users can view only their own branch. Requires branch.activity.read.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - name: branchId
+          in: path
+          required: true
+          schema: { type: string }
+        - { name: actorId, in: query, schema: { type: string, pattern: "^[a-f0-9]{24}$" } }
+        - { name: action, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: targetType, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Branch activity events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+                  pagination: { type: object, additionalProperties: true }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
   /tenant/branches/{branchId}/users:
     get:
       tags: [Branches]
