@@ -578,24 +578,24 @@ export const tenancyRepository = {
     ).populate('userId', 'name email isActive').populate('clinicId', 'name slug').populate('branchIds', 'name slug');
   },
   createTenantRole(data: Record<string, unknown>) { return TenantRole.create(data); },
-  findTenantRoleById(tenantId: string, roleId: string) { return TenantRole.findOne({ _id: roleId, tenantId }); },
-  findActiveTenantRoleById(tenantId: string, roleId: string) { return TenantRole.findOne({ _id: roleId, tenantId, status: 'active' }).lean(); },
+  findTenantRoleById(tenantId: string, roleId: string): Promise<any> { return TenantRole.findOne({ _id: roleId, tenantId }).exec() as Promise<any>; },
+  findActiveTenantRoleById(tenantId: string, roleId: string): Promise<any> { return TenantRole.findOne({ _id: roleId, tenantId, status: 'active' }).lean().exec() as Promise<any>; },
   listTenantRoles(tenantId: string, filters: { status?: string; scope?: string } = {}) {
-    return TenantRole.find({ tenantId, ...(filters.status ? { status: filters.status } : {}), ...(filters.scope ? { scope: filters.scope } : {}) }).sort({ status: 1, scope: 1, name: 1 }).lean();
+    return TenantRole.find({ tenantId, ...(filters.status ? { status: filters.status } : {}), ...(filters.scope ? { scope: filters.scope } : {}) }).sort({ status: 1, scope: 1, name: 1 }).lean().exec() as Promise<any[]>;
   },
   updateTenantRole(tenantId: string, roleId: string, expectedVersion: number, update: Record<string, unknown>, historyEntry: Record<string, unknown>) {
     return TenantRole.findOneAndUpdate(
       { _id: roleId, tenantId, version: expectedVersion, status: 'active' },
       { $set: { ...update, version: expectedVersion + 1 }, $push: { history: { $each: [historyEntry], $slice: -100 } } },
       { new: true, runValidators: true },
-    );
+    ).exec() as Promise<any>;
   },
   archiveTenantRole(tenantId: string, roleId: string, actorUserId: string, historyEntry: Record<string, unknown>) {
     return TenantRole.findOneAndUpdate(
       { _id: roleId, tenantId, status: 'active' },
       { $set: { status: 'archived', updatedBy: actorUserId }, $inc: { version: 1 }, $push: { history: { $each: [historyEntry], $slice: -100 } } },
       { new: true, runValidators: true },
-    );
+    ).exec() as Promise<any>;
   },
   countMembershipsUsingRole(tenantId: string, roleId: string) { return TenantMembership.countDocuments({ tenantId, customRoleId: roleId }); },
   findMembership(userId: string, tenantId: string, clinicId: string | null) {
