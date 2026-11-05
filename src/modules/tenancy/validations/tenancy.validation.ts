@@ -246,7 +246,7 @@ const branchFields = {
   longitude: z.number().min(-180).max(180).nullable().optional(),
   timezone: timezoneSchema,
   operatingHours: operatingHoursArraySchema,
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.unknown()).refine((settings) => !('organizationOverrides' in settings), 'Use the branch settings endpoint to update organization overrides.').optional(),
   openingDate: z.coerce.date().nullable().optional(),
 };
 
