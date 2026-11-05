@@ -273,8 +273,116 @@ export const tenancyRepository = {
       { new: true, runValidators: true },
     );
   },
-  listBranches(filter: Record<string, unknown>) {
-    return Branch.find(filter).sort({ name: 1 });
+  async listBranches(filter: Record<string, unknown>, query: { search?: string; status?: string; page: number; perPage: number }) {
+    const scopedFilter: Record<string, unknown> = { ...filter };
+    if (query.status) scopedFilter.status = query.status;
+    if (query.search) {
+      const slash = String.fromCharCode(92);
+      const regexMeta = '.*+?^
+  createBranch(data: Record<string, unknown>) {
+    return Branch.create(data);
+  },
+  findBranchByCode(clinicId: string, code: string, excludeId?: string) {
+    return Branch.findOne({ clinicId, code, ...(excludeId ? { _id: { $ne: excludeId } } : {}) }).select('_id');
+  },
+  findBranchBySlug(tenantId: string, clinicId: string, slug: string, excludeId?: string) {
+    return Branch.findOne({
+      tenantId,
+      clinicId,
+      slug,
+      ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+    }).select('_id');
+  },
+  findBranchById(id: string, tenantId: string, clinicId: string) {
+    return Branch.findOne({ _id: id, tenantId, clinicId });
+  },
+  updateBranch(id: string, tenantId: string, clinicId: string, data: Record<string, unknown>) {
+    return Branch.findOneAndUpdate(
+      { _id: id, tenantId, clinicId },
+      { $set: data },
+      { new: true, runValidators: true },
+    );
+  },
+  getTenantContext(
+    tenantId: string,
+    clinicId: string | null,
+    branchId: string | null,
+  ) {
+    return Promise.all([
+      Tenant.findById(tenantId).select(
+        'name displayName legalName slug businessType description industry status contact address branding preferences',
+      ),
+      clinicId
+        ? Clinic.findOne({ _id: clinicId, tenantId }).select(
+            'name slug code status clinicType timezone preferences contact address branding bookingSettings settings operatingHours',
+          )
+        : null,
+      branchId
+        ? Branch.findOne({ _id: branchId, tenantId, clinicId }).select(
+            'name slug status timezone cityId operatingHours',
+          )
+        : null,
+    ]);
+  },
+  listTenantMemberships(tenantId: string) {
+    return TenantMembership.find({ tenantId })
+      .populate('userId', 'name email isActive')
+      .populate('clinicId', 'name slug status')
+      .populate('branchIds', 'name slug status')
+      .sort({ createdAt: -1 })
+      .lean();
+  },
+  findTenantMembershipById(tenantId: string, membershipId: string) {
+    return TenantMembership.findOne({ _id: membershipId, tenantId });
+  },
+  countActiveTenantOwners(tenantId: string) {
+    return TenantMembership.countDocuments({ tenantId, scope: 'tenant', role: 'tenant_owner', status: 'active' });
+  },
+  updateTenantMembership(tenantId: string, membershipId: string, update: Record<string, unknown>) {
+    return TenantMembership.findOneAndUpdate(
+      { _id: membershipId, tenantId },
+      { $set: update },
+      { new: true, runValidators: true },
+    ).populate('userId', 'name email isActive').populate('clinicId', 'name slug').populate('branchIds', 'name slug');
+  },
+  findMembership(userId: string, tenantId: string, clinicId: string | null) {
+    return TenantMembership.findOne({
+      userId,
+      tenantId,
+      status: 'active',
+      ...(clinicId
+        ? { $or: [{ clinicId }, { clinicId: null }] }
+        : { clinicId: null }),
+    })
+      .sort({ clinicId: clinicId ? -1 : 1 })
+      .select('role scope tenantId clinicId branchIds');
+  },
+  findActiveTenant(id: string) {
+    return Tenant.findOne({ _id: id, status: 'active' }).select('_id');
+  },
+  findActiveClinic(id: string, tenantId: string) {
+    return Clinic.findOne({ _id: id, tenantId, status: 'active' }).select(
+      '_id',
+    );
+  },
+  findActiveBranch(id: string, tenantId: string, clinicId: string) {
+    return Branch.findOne({
+      _id: id,
+      tenantId,
+      clinicId,
+      status: 'active',
+    }).select('_id');
+  },
+};
+ + '{}' + '()|[]' + slash;
+      const escaped = query.search.split('').map((character) => regexMeta.includes(character) ? slash + character : character).join('');
+      scopedFilter.$or = [{ name: { $regex: escaped, $options: 'i' } }, { code: { $regex: escaped, $options: 'i' } }];
+    }
+    const [items, total] = await Promise.all([
+      Branch.find(scopedFilter).sort({ name: 1 }).skip((query.page - 1) * query.perPage).limit(query.perPage).lean(),
+      Branch.countDocuments(scopedFilter),
+    ]);
+    return { items, pagination: { page: query.page, perPage: query.perPage, total, pages: Math.ceil(total / query.perPage) } };
   },
   createBranch(data: Record<string, unknown>) {
     return Branch.create(data);
