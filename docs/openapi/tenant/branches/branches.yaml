@@ -5,14 +5,14 @@ paths:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches"
       summary: List branches in current clinic
-      description: "X-Clinic-Id is required. Results are restricted to X-Branch-Id when supplied. Branch-scoped memberships must select an authorized branch. Lifecycle values: active, temporarily_closed, suspended, closed."
+      description: "X-Clinic-Id is required. Results are restricted to X-Branch-Id when supplied. Branch-scoped memberships must select an authorized branch. Lifecycle values: draft, active, temporarily_closed, suspended, closed."
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
         - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
         - $ref: "../../../openapi.yaml#/components/parameters/BranchId"
         - { name: search, in: query, schema: { type: string, maxLength: 100 } }
-        - { name: status, in: query, schema: { type: string, enum: [active, temporarily_closed, suspended, closed] } }
+        - { name: status, in: query, schema: { type: string, enum: [draft, active, temporarily_closed, suspended, closed] } }
         - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
         - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
       responses:
@@ -48,6 +48,7 @@ paths:
               required: [name]
               properties:
                 name: { type: string, minLength: 2, maxLength: 160 }
+                status: { type: string, enum: [draft, active], default: active, description: Create as draft to complete branch details before activation; omitted preserves the existing active-by-default behavior. }
                 slug: { type: string, pattern: "^[a-z0-9]+(?:-[a-z0-9]+)*$", description: Optional; generated from name when omitted }
                 code: { type: string, maxLength: 30 }
                 address: { type: string, maxLength: 500 }
