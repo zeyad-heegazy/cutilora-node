@@ -151,12 +151,12 @@ export const tenancyRepository = {
       ),
       clinicId
         ? Clinic.findOne({ _id: clinicId, tenantId }).select(
-            'name slug code status clinicType timezone preferences contact address branding bookingSettings',
+            'name slug code status clinicType timezone preferences contact address branding bookingSettings settings operatingHours',
           )
         : null,
       branchId
         ? Branch.findOne({ _id: branchId, tenantId, clinicId }).select(
-            'name slug status timezone',
+            'name slug status timezone operatingHours',
           )
         : null,
     ]);
