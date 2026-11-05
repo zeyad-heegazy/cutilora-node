@@ -123,12 +123,12 @@ export const clinicFinanceService = {
   async recordPayment(scope: Scope, invoiceId: string, input: any) {
     const current = await ClinicInvoice.findOne({ _id: invoiceId, ...invoiceFilter(scope) });
     if (!current) return null;
-    if (!['issued', 'partially_paid'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
     const priorPayment = current.payments.find((item: any) => item.idempotencyKey === input.idempotencyKey);
     if (priorPayment) {
       if (priorPayment.amountMinor !== input.amountMinor || priorPayment.method !== input.method || priorPayment.reference !== (input.reference ?? '')) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different payment details.' };
       return current;
     }
+    if (!['issued', 'partially_paid'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
     const balanceDueMinor = current.totalMinor - (current.paidMinor - current.refundedMinor);
     if (input.amountMinor > balanceDueMinor) throw { status: 400, code: 'PAYMENT_EXCEEDS_BALANCE', message: 'Payment exceeds the outstanding invoice balance.' };
     const payment = {
