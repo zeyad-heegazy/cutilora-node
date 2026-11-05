@@ -165,6 +165,47 @@ export const tenancyService = {
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
     };
   },
+  async getTenantSubscription(tenantId: string) {
+    const item = await tenancyRepository.findSubscriptionByTenantId(tenantId);
+    if (!item) return null;
+    return {
+      id: String(item._id),
+      plan: item.plan,
+      billingCycle: item.billingCycle,
+      status: item.status,
+      trialStartsAt: item.trialStartsAt,
+      trialEndsAt: item.trialEndsAt,
+      currentPeriodStartsAt: item.currentPeriodStartsAt,
+      currentPeriodEndsAt: item.currentPeriodEndsAt,
+      nextBillingAt: item.nextBillingAt,
+      cancelAtPeriodEnd: item.cancelAtPeriodEnd,
+      canceledAt: item.canceledAt,
+    };
+  },
+  async getTenantSubscriptionUsage(tenantId: string) {
+    const [counts, subscription] = await Promise.all([
+      tenancyRepository.getDashboardCounts(tenantId),
+      tenancyRepository.findSubscriptionByTenantId(tenantId),
+    ]);
+    return {
+      plan: subscription ? { code: subscription.plan?.code, name: subscription.plan?.name } : null,
+      usage: {
+        clinics: counts.clinics.total,
+        branches: counts.branches.total,
+        activeMembers: counts.activeMembers,
+        pendingInvitations: counts.pendingInvitations,
+      },
+      limits: null,
+      limitsAvailable: false,
+      limitsMessage: 'Plan entitlements are not yet represented in the current subscription schema.',
+    };
+  },
+  listTenantInvoices(tenantId: string) {
+    return tenancyRepository.listTenantInvoices(tenantId);
+  },
+  getTenantInvoice(tenantId: string, invoiceId: string) {
+    return tenancyRepository.findTenantInvoice(tenantId, invoiceId);
+  },
   getDashboardCounts(tenantId: string) {
     return tenancyRepository.getDashboardCounts(tenantId);
   },
