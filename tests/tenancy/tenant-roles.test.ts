@@ -39,7 +39,7 @@ vi.mock('../../src/modules/tenancy/models/clinic.model.js', () => ({
 import { tenantRolesService } from '../../src/modules/tenancy/services/tenant-roles.service.js';
 
 function query(value: any) {
-  const chain: any = { sort: () => chain, select: () => chain, lean: async () => value };
+  const chain: any = { sort: () => chain, select: () => chain, lean: async () => value, then: (resolve: any, reject: any) => Promise.resolve(value).then(resolve, reject) };
   return chain;
 }
 
