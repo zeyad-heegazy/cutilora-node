@@ -211,22 +211,6 @@ export const authService = {
     }
     await tokenRevocationService.revoke(token, payload.exp);
   },
-  async listUserSessionSummaries(userId: string) {
-    const now = new Date();
-    const sessions = await authRepository.listUserSessions(userId);
-    return sessions.map((session: any) => ({
-      sessionId: session.sessionId,
-      userAgent: session.userAgent ?? null,
-      createdAt: session.createdAt,
-      lastSeenAt: session.lastSeenAt,
-      expiresAt: session.expiresAt,
-      revokedAt: session.revokedAt ?? null,
-      status: session.revokedAt ? 'revoked' : new Date(session.expiresAt).getTime() <= now.getTime() ? 'expired' : 'active',
-    }));
-  },
-  async revokeUserSession(userId: string, sessionId: string) {
-    return authRepository.revokeUserSession(userId, sessionId, new Date());
-  },
   async me(userId: string) {
     const [user, memberships] = await Promise.all([
       authRepository.findUserById(userId),
