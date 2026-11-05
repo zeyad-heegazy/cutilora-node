@@ -290,8 +290,8 @@ export const createBranchSchema = z.object({
   openingDate: branchFields.openingDate,
 });
 
-const branchWeeklyOperatingHoursSchema = operatingHoursArraySchema.length(
-  7,
+const branchWeeklyOperatingHoursSchema = operatingHoursArraySchema.refine(
+  (hours) => hours.length === 7,
   'A complete weekly schedule must include exactly one entry for every weekday.',
 );
 
