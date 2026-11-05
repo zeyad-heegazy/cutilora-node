@@ -70,7 +70,7 @@ paths:
     get:
       tags: [Tenant Dashboard]
       summary: List clinic portfolio for dashboard
-      description: Returns tenant-owned clinics with branch counts and last updated timestamp. Manager and activity fields are omitted until those domain records exist.
+      description: Returns tenant-owned clinics with branch counts, active clinic manager identity when assigned through a clinic membership, and latest tenant audit activity timestamp/action when available.
       security:
         - bearerAuth: []
       parameters:
