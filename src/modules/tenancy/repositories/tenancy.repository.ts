@@ -63,6 +63,26 @@ export const tenancyRepository = {
   listTenantDocuments(tenantId: string) {
     return TenantDocument.find({ tenantId, status: 'active' }).sort({ createdAt: -1 }).lean();
   },
+  async listTenantDocumentVersions(tenantId: string, documentId: string) {
+    const anchor = await TenantDocument.findOne({ _id: documentId, tenantId }).select('-storageKey').lean();
+    if (!anchor) return null;
+    const byId = new Map<string, any>([[String(anchor._id), anchor]]);
+    let current: any = anchor;
+    for (let depth = 0; current.replacesDocumentId && depth < 100; depth += 1) {
+      const parent = await TenantDocument.findOne({ _id: current.replacesDocumentId, tenantId }).select('-storageKey').lean();
+      if (!parent || byId.has(String(parent._id))) break;
+      byId.set(String(parent._id), parent);
+      current = parent;
+    }
+    current = anchor;
+    for (let depth = 0; depth < 100; depth += 1) {
+      const child = await TenantDocument.findOne({ tenantId, replacesDocumentId: current._id }).select('-storageKey').sort({ version: -1 }).lean();
+      if (!child || byId.has(String(child._id))) break;
+      byId.set(String(child._id), child);
+      current = child;
+    }
+    return [...byId.values()].sort((a, b) => (a.version ?? 1) - (b.version ?? 1));
+  },
   findTenantDocumentMetadata(tenantId: string, documentId: string) {
     return TenantDocument.findOne({ _id: documentId, tenantId, status: 'active' }).select('-storageKey').lean();
   },
