@@ -448,7 +448,20 @@ export const tenancyRepository = {
     ]);
     return { items, pagination: { page: query.page, perPage: query.perPage, total, pages: Math.ceil(total / query.perPage) } };
   },
-  revokeTenantInvitationIfAvailable(tenantId: string, invitationId: string, now: Date, userId: string) {\n    const staleProcessingAt = new Date(now.getTime() - 10 * 60 * 1000);\n    return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId, $or: [\n      { status: { $in: ['pending', 'expired'] } },\n      { status: 'processing', $or: [{ processingAt: null }, { processingAt: { $lte: staleProcessingAt } }] },\n    ] }, { $set: { status: 'revoked', processingAt: null, revokedAt: now, revokedBy: userId } }, { new: true, runValidators: true }).select('-tokenHash');\n  },\n  rotateTenantInvitationIfAvailable(tenantId: string, invitationId: string, now: Date, tokenHash: string) {\n    const staleProcessingAt = new Date(now.getTime() - 10 * 60 * 1000);\n    return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId, $or: [\n      { status: { $in: ['pending', 'expired'] } },\n      { status: 'processing', $or: [{ processingAt: null }, { processingAt: { $lte: staleProcessingAt } }] },\n    ] }, { $set: { tokenHash, status: 'pending', processingAt: null, expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), revokedAt: null, revokedBy: null } }, { new: true, runValidators: true }).select('-tokenHash');\n  },
+  revokeTenantInvitationIfAvailable(tenantId: string, invitationId: string, now: Date, userId: string) {
+    const staleProcessingAt = new Date(now.getTime() - 10 * 60 * 1000);
+    return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId, $or: [
+      { status: { $in: ['pending', 'expired'] } },
+      { status: 'processing', $or: [{ processingAt: null }, { processingAt: { $lte: staleProcessingAt } }] },
+    ] }, { $set: { status: 'revoked', processingAt: null, revokedAt: now, revokedBy: userId } }, { new: true, runValidators: true }).select('-tokenHash');
+  },
+  rotateTenantInvitationIfAvailable(tenantId: string, invitationId: string, now: Date, tokenHash: string) {
+    const staleProcessingAt = new Date(now.getTime() - 10 * 60 * 1000);
+    return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId, $or: [
+      { status: { $in: ['pending', 'expired'] } },
+      { status: 'processing', $or: [{ processingAt: null }, { processingAt: { $lte: staleProcessingAt } }] },
+    ] }, { $set: { tokenHash, status: 'pending', processingAt: null, expiresAt: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000), revokedAt: null, revokedBy: null } }, { new: true, runValidators: true }).select('-tokenHash');
+  },
   claimTenantInvitation(tokenHash: string, now: Date) {
     const staleProcessingAt = new Date(now.getTime() - 10 * 60 * 1000);
     return TenantInvitation.findOneAndUpdate({
