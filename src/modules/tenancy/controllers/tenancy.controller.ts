@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
