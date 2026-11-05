@@ -159,14 +159,24 @@ export const tenancyService = {
     const token = randomBytes(32).toString('base64url');
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Date.now() + (input.expiresInDays ?? 7) * 24 * 60 * 60 * 1000);
-    const invitation = await withTenantEntitlementLock(tenantId, async () => {
-      const counts = await tenancyRepository.getDashboardCounts(tenantId);
-      await assertTenantLimit(tenantId, 'maxUsers', counts.activeMembers + counts.pendingInvitations + 1);
-      return tenancyRepository.createTenantInvitation({
-        tenantId, email, role: input.role, scope: input.scope, clinicId: input.clinicId ?? null,
-        branchIds: input.branchIds ?? [], invitedBy: userId, tokenHash, status: 'pending', expiresAt,
+    let invitation;
+    try {
+      invitation = await withTenantEntitlementLock(tenantId, async () => {
+        const counts = await tenancyRepository.getDashboardCounts(tenantId);
+        await assertTenantLimit(tenantId, 'maxUsers', counts.activeMembers + counts.pendingInvitations + 1);
+        return tenancyRepository.createTenantInvitation({
+          tenantId, email, role: input.role, scope: input.scope, clinicId: input.clinicId ?? null,
+          branchIds: input.branchIds ?? [], invitedBy: userId, tokenHash, status: 'pending', expiresAt,
+        });
       });
-    });
+    } catch (error) {
+      // The unique partial index is the final guard against concurrent invitations
+      // for the same tenant/email. Translate its race outcome into a stable API conflict.
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000) {
+        throw { status: 409, code: 'INVITATION_ALREADY_PENDING', message: 'An active invitation already exists for this email.' };
+      }
+      throw error;
+    }
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.created', targetType: 'tenant_invitation', targetId: String(invitation._id), clinicId: input.clinicId, metadata: { email, role: input.role, scope: input.scope } });
     return {
       invitation: { id: String(invitation._id), email, role: invitation.role, scope: invitation.scope, clinicId: invitation.clinicId, branchIds: invitation.branchIds, status: invitation.status, expiresAt: invitation.expiresAt },
