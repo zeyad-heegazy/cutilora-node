@@ -8,6 +8,10 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     createBranch: vi.fn(),
     updateBranch: vi.fn(),
     listBranches: vi.fn(),
+    getDashboardCounts: vi.fn().mockResolvedValue({ clinics: { total: 0 }, branches: { total: 0 }, activeMembers: 0, pendingInvitations: 0 }),
+    findSubscriptionByTenantId: vi.fn().mockResolvedValue(null),
+    acquireTenantEntitlementLock: vi.fn().mockResolvedValue({ _id: tenantId }),
+    releaseTenantEntitlementLock: vi.fn().mockResolvedValue({ modifiedCount: 1 }),
   },
 }));
 vi.mock('../../src/modules/geo/services/geo.service.js', () => ({
@@ -27,7 +31,13 @@ const clinicId = '64b000000000000000000002';
 const branchId = '64b000000000000000000003';
 
 describe('branch service', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(tenancyRepository.getDashboardCounts).mockResolvedValue({ clinics: { total: 0 }, branches: { total: 0 }, activeMembers: 0, pendingInvitations: 0 } as any);
+    vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue(null as any);
+    vi.mocked(tenancyRepository.acquireTenantEntitlementLock).mockResolvedValue({ _id: tenantId } as any);
+    vi.mocked(tenancyRepository.releaseTenantEntitlementLock).mockResolvedValue({ modifiedCount: 1 } as any);
+  });
 
   it('lists branches strictly inside the selected tenant and clinic', async () => {
     vi.mocked(tenancyRepository.listBranches).mockResolvedValue([] as any);
