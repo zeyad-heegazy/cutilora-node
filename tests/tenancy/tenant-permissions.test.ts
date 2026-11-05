@@ -81,6 +81,23 @@ describe('tenant permission matrix and scoped custom roles', () => {
     expect(denied.res.status).toHaveBeenCalledWith(403);
   });
 
+  it('rejects a branch resource that does not belong to the active tenant', async () => {
+    membershipFindOne.mockReturnValue(query({ role: 'tenant_owner', roleId: null, scope: 'tenant', clinicId: null }));
+    branchFindOne.mockReturnValue(query(null));
+    const req = {
+      auth: { userId: 'user-a' }, params: { branchId: 'branch-from-another-tenant' }, query: {},
+      tenantContext: { tenantId: 'tenant-a', clinicId: null, branchId: null },
+    } as any;
+    const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
+    const next = vi.fn();
+    await requireTenantPermission('branch.read')(req, res, next);
+    expect(branchFindOne).toHaveBeenCalledWith({
+      _id: 'branch-from-another-tenant', tenantId: 'tenant-a',
+    });
+    expect(next).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
   it('denies a custom role without an active role record', async () => {
     membershipFindOne.mockReturnValue(query({ role: 'custom_role', roleId: 'role-a', scope: 'branch', clinicId: 'clinic-a' }));
     roleFindOne.mockReturnValue(query(null));
