@@ -8,7 +8,7 @@ export const TENANT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   billing_admin: ['billing.read'],
   clinic_admin: ['clinic.settings.read', 'clinic.settings.manage', 'branch.read', 'branch.manage', 'branch.update', 'branch.holidays.read', 'branch.holidays.manage'],
   clinic_manager: ['clinic.settings.read', 'clinic.settings.manage', 'branch.read', 'branch.manage', 'branch.update', 'branch.holidays.read', 'branch.holidays.manage'],
-  branch_manager: ['branch.read', 'branch.holidays.read', 'branch.holidays.manage'],
+  branch_manager: ['branch.read', 'branch.update', 'branch.holidays.read', 'branch.holidays.manage'],
   staff: ['branch.read', 'branch.holidays.read'],
   provider: ['branch.read', 'branch.holidays.read'],
   receptionist: ['branch.read', 'branch.holidays.read'],
