@@ -6,6 +6,8 @@ import { tenancyController } from '../controllers/tenancy.controller.js';
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
 tenantRouter.get('/context', tenancyController.context);
+tenantRouter.get('/users', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.listTenantUsers);
+tenantRouter.patch('/memberships/:membershipId', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.updateTenantMembership);
 tenantRouter.get('/configuration', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.getTenantConfiguration);
 tenantRouter.patch('/configuration', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.updateTenantConfiguration);
 tenantRouter.post('/configuration/preview-apply', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.previewTenantConfigurationApply);
