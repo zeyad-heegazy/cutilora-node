@@ -962,6 +962,53 @@ export const tenancyService = {
     if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.created', targetType: 'branch', targetId: String(branch._id), clinicId, branchId: String(branch._id), metadata: { name: branch.name } });
     return branch;
   },
+  async activateBranch(id: string, tenantId: string, clinicId: string, userId: string) {
+    const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
+    if (!current) return null;
+    if (current.status === 'closed') throw { status: 409, code: 'BRANCH_PERMANENTLY_CLOSED', message: 'A permanently closed branch cannot be reactivated.' };
+    if (current.status === 'active') return current;
+    const updated = await tenancyRepository.transitionBranchStatus(id, tenantId, clinicId, ['temporarily_closed', 'suspended'], {
+      status: 'active', updatedBy: userId,
+    });
+    if (!updated) throw { status: 409, code: 'BRANCH_STATUS_CHANGED', message: 'Branch status changed concurrently. Refresh and retry.' };
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.reactivated', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { previousStatus: current.status, status: 'active' } });
+    return updated;
+  },
+  async deactivateBranch(id: string, tenantId: string, clinicId: string, userId: string) {
+    const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
+    if (!current) return null;
+    if (current.status === 'closed') throw { status: 409, code: 'BRANCH_PERMANENTLY_CLOSED', message: 'A permanently closed branch cannot change lifecycle status.' };
+    if (current.status === 'suspended') return current;
+    const updated = await tenancyRepository.transitionBranchStatus(id, tenantId, clinicId, ['active', 'temporarily_closed'], {
+      status: 'suspended', updatedBy: userId,
+    });
+    if (!updated) throw { status: 409, code: 'BRANCH_STATUS_CHANGED', message: 'Branch status changed concurrently. Refresh and retry.' };
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.suspended', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { previousStatus: current.status, status: 'suspended' } });
+    return updated;
+  },
+  async temporarilyCloseBranch(id: string, tenantId: string, clinicId: string, userId: string, reason: string) {
+    const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
+    if (!current) return null;
+    if (current.status !== 'active') throw { status: 409, code: 'BRANCH_LIFECYCLE_CONFLICT', message: 'Only an active branch can be temporarily closed.' };
+    const now = new Date();
+    const updated = await tenancyRepository.transitionBranchStatus(id, tenantId, clinicId, ['active'], {
+      status: 'temporarily_closed', closureReason: reason, temporarilyClosedAt: now, updatedBy: userId,
+    });
+    if (!updated) throw { status: 409, code: 'BRANCH_STATUS_CHANGED', message: 'Branch status changed concurrently. Refresh and retry.' };
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.temporarily_closed', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { reason, status: 'temporarily_closed' } });
+    return updated;
+  },
+  async permanentlyCloseBranch(id: string, tenantId: string, clinicId: string, userId: string, reason: string) {
+    const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
+    if (!current) return null;
+    if (current.status === 'closed') return current;
+    const updated = await tenancyRepository.transitionBranchStatus(id, tenantId, clinicId, ['active', 'temporarily_closed', 'suspended'], {
+      status: 'closed', closureReason: reason, closedAt: new Date(), updatedBy: userId,
+    });
+    if (!updated) throw { status: 409, code: 'BRANCH_STATUS_CHANGED', message: 'Branch status changed concurrently. Refresh and retry.' };
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.permanently_closed', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { reason, previousStatus: current.status, status: 'closed' } });
+    return updated;
+  },
   async updateBranch(id: string, input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
     if (!current) return null;
@@ -1023,7 +1070,7 @@ export const tenancyService = {
       update.slug = candidate;
     }
     const branch = await tenancyRepository.updateBranch(id, tenantId, clinicId, update);
-    if (branch && userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: input.status ? 'branch.status.changed' : 'branch.updated', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { changedFields: Object.keys(input), ...(input.status ? { status: input.status } : {}) } });
+    if (branch && userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.updated', targetType: 'branch', targetId: id, clinicId, branchId: id, metadata: { changedFields: Object.keys(input) } });
     return branch;
   },
 };
