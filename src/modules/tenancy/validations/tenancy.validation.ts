@@ -535,3 +535,9 @@ export const tenantRoleListQuerySchema = z.object({
   status: z.enum(['active', 'archived']).optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
 });
+
+
+export const cloneTenantRoleSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(500).optional(),
+});
