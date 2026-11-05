@@ -1,4 +1,16 @@
 paths:
+  /tenant/roles:
+    get:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: List built-in tenant role templates
+      description: Returns the built-in role catalog, allowed scopes, permissions and whether the current Tenant Owner/Admin may assign each role. Custom role creation is not supported until a shared Platform RBAC engine is available.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Built-in tenant role catalog and permission matrix }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/users:
     get:
       tags: [Tenant Memberships]
