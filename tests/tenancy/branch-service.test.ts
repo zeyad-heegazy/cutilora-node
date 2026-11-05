@@ -51,6 +51,18 @@ describe('branch service', () => {
     expect(tenancyRepository.listBranches).toHaveBeenCalledWith({ tenantId, clinicId, _id: branchId }, { page: 1, perPage: 25 });
   });
 
+  it('supports tenant-wide branch listing without a clinic filter', async () => {
+    vi.mocked(tenancyRepository.listBranches).mockResolvedValue([] as any);
+    await tenancyService.listBranches(tenantId, null, null);
+    expect(tenancyRepository.listBranches).toHaveBeenCalledWith({ tenantId }, { page: 1, perPage: 25 });
+  });
+
+  it('supports tenant-wide listing filtered to one clinic', async () => {
+    vi.mocked(tenancyRepository.listBranches).mockResolvedValue([] as any);
+    await tenancyService.listBranches(tenantId, clinicId, null);
+    expect(tenancyRepository.listBranches).toHaveBeenCalledWith({ tenantId, clinicId }, { page: 1, perPage: 25 });
+  });
+
   it('generates a unique slug and inherits the clinic timezone when creating a branch', async () => {
     vi.mocked(tenancyRepository.findClinicById).mockResolvedValue({
       timezone: 'Asia/Riyadh',
