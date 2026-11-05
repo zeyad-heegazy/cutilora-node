@@ -58,6 +58,21 @@ export const tenantCatalogService = {
     await audit(tenantId, userId, 'configuration.template.updated', templateId, { version: updated.version });
     return updated;
   },
+  async rollback(tenantId: string, userId: string, templateId: string, expectedVersion: number, targetVersion: number) {
+    const current: any = await tenancyRepository.findTenantCatalogTemplate(tenantId, templateId);
+    if (!current) return null;
+    if (current.status === 'archived') fail(409, 'TEMPLATE_ARCHIVED', 'Archived templates cannot be rolled back.');
+    const snapshot = (current.history ?? []).find((entry: any) => entry.version === targetVersion);
+    if (!snapshot) fail(404, 'TEMPLATE_VERSION_NOT_FOUND', 'The requested template version is not available in retained history.');
+    const updated = await tenancyRepository.rollbackTenantCatalogTemplate(
+      tenantId, templateId, expectedVersion, targetVersion, snapshot.content, userId,
+    );
+    if (!updated) fail(409, 'TEMPLATE_VERSION_CONFLICT', 'Template changed while rolling back. Reload and retry.');
+    await audit(tenantId, userId, 'configuration.template.rolled_back', templateId, {
+      fromVersion: expectedVersion, restoredVersion: targetVersion, version: updated.version,
+    });
+    return updated;
+  },
   async archive(tenantId: string, userId: string, templateId: string, expectedVersion: number) {
     const updated = await tenancyRepository.archiveTenantCatalogTemplate(tenantId, templateId, expectedVersion);
     if (!updated) fail(409, 'TEMPLATE_VERSION_CONFLICT', 'Template changed, is missing, or is already archived.');
