@@ -435,13 +435,15 @@ export const tenancyController = {
       const query = tenantRoleListQuerySchema.parse(req.query);
       const context = req.tenantContext!;
       const customRoles = await tenancyService.listCustomTenantRoles(context.tenantId, query);
+      const actorPermissions = getTenantRoleGrants(context.role, context).map((grant) => grant.permission);
+      const builtInRoles = getTenantRoleCatalog(context.role).filter((role) => !query.scope || role.scopes.includes(query.scope));
       res.json({ success: true, data: [
-        ...getTenantRoleCatalog(context.role),
+        ...builtInRoles,
         ...customRoles.map((role: any) => ({
           id: String(role._id), role: 'custom', label: role.name, description: role.description,
           scopes: [role.scope], permissions: role.permissions, version: role.version,
           status: role.status, customizable: true,
-          assignableByCurrentUser: context.role === 'tenant_owner' || (context.role === 'tenant_admin' && role.scope !== 'tenant'),
+          assignableByCurrentUser: (context.role === 'tenant_owner' || role.scope !== 'tenant') && role.permissions.every((permission: string) => actorPermissions.includes('*') || actorPermissions.includes(permission)),
         })),
       ] });
     } catch (e) { next(e); }
