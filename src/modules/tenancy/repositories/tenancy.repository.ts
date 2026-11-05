@@ -586,7 +586,7 @@ export const tenancyRepository = {
   updateTenantRole(tenantId: string, roleId: string, expectedVersion: number, update: Record<string, unknown>, historyEntry: Record<string, unknown>) {
     return TenantRole.findOneAndUpdate(
       { _id: roleId, tenantId, version: expectedVersion, status: 'active' },
-      { $set: { ...update, version: expectedVersion + 1 }, $push: { history: historyEntry } },
+      { $set: { ...update, version: expectedVersion + 1 }, $push: { history: { $each: [historyEntry], $slice: -100 } } },
       { new: true, runValidators: true },
     );
   },
