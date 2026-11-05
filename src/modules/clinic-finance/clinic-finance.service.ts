@@ -158,7 +158,7 @@ export const clinicFinanceService = {
     if (!payment) throw { status: 404, code: 'PAYMENT_NOT_FOUND', message: 'Payment not found on this invoice.' };
     const priorRefund = payment.refunds.find((item: any) => item.idempotencyKey === input.idempotencyKey);
     if (priorRefund) {
-      if (priorRefund.amountMinor !== input.amountMinor || priorRefund.reason !== input.reason) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different refund details.' };
+      if (priorRefund.amountMinor !== input.amountMinor || priorRefund.reason !== input.reason || priorRefund.method !== input.method) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different refund details.' };
       return current;
     }
     const refundable = payment.amountMinor - payment.refundedMinor;
