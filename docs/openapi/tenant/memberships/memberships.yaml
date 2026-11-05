@@ -4,7 +4,7 @@ paths:
       tags: [Tenant Memberships]
       x-apidog-folder: "Tenant/Users and Memberships"
       summary: List built-in role templates and tenant custom roles
-      description: Returns built-in role templates and tenant-scoped custom roles. Custom roles reuse the shared authorization engine and are restricted to the actor's permission authority.
+      description: Returns built-in role templates, starter templates (including Organization Manager, Clinic Manager, Branch Manager, Finance Viewer/Manager and Read-only Analyst), and tenant-scoped custom roles. Starter templates are cloned into tenant-owned roles and then editable; grants are restricted to the actor's permission authority.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
@@ -67,8 +67,10 @@ paths:
                 key: { type: string, minLength: 2, maxLength: 80 }
                 name: { type: string, minLength: 2, maxLength: 120 }
                 description: { type: string, maxLength: 500 }
+                clinicId: { type: string, description: Required when cloning a clinic-scoped template }
+                branchIds: { type: array, maxItems: 50, items: { type: string }, description: Required when cloning a branch-scoped template }
       responses:
-        "201": { description: Cloned role }
+        "201": { description: Cloned tenant-owned role from a custom role or starter template }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/roles/{roleId}/deactivate:
     post:
