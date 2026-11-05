@@ -62,6 +62,14 @@ export const tenancyRepository = {
       { new: true, runValidators: true },
     );
   },
+  rollbackTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number, targetVersion: number, content: Record<string, unknown>, changedBy: string) {
+    const nextVersion = expectedVersion + 1;
+    return TenantCatalogTemplate.findOneAndUpdate(
+      { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
+      { $set: { content, version: nextVersion, status: 'draft', publishedAt: null, publishedBy: null }, $push: { history: { $each: [{ version: nextVersion, content, changedBy, changedAt: new Date() }], $slice: -50 } } },
+      { new: true, runValidators: true },
+    );
+  },
   archiveTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number) {
     return TenantCatalogTemplate.findOneAndUpdate(
       { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
