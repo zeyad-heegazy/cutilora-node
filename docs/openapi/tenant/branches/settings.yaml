@@ -10,13 +10,13 @@ paths:
         - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
         - { name: branchId, in: path, required: true, schema: { type: string } }
       responses:
-        "200": { description: Branch-specific settings, timezone and operating hours }
+        "200": { description: Inherited clinic values, branch overrides, effective values, timezone and operating hours }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches/Settings"
-      summary: Update branch-specific settings
+      summary: Update branch-specific overrides
       description: Merges supplied branch settings without changing organization defaults or clinic settings.
       security: [{ bearerAuth: [] }]
       parameters:
@@ -29,11 +29,11 @@ paths:
           application/json:
             schema:
               type: object
-              required: [settings]
+              required: [overrides]
               properties:
-                settings: { type: object, minProperties: 1, additionalProperties: true }
+                overrides: { type: object, minProperties: 1, additionalProperties: true }
       responses:
-        "200": { description: Updated branch settings }
+        "200": { description: Updated effective branch configuration }
         "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
