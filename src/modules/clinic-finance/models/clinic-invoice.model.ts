@@ -14,6 +14,8 @@ const lineSchema = new Schema({
 }, { _id: true });
 
 const refundSchema = new Schema({
+  method: { type: String, enum: ['cash', 'card', 'bank_transfer', 'online', 'wallet', 'other'], required: true },
+  cashSessionId: { type: Schema.Types.ObjectId, ref: 'ClinicCashSession', default: null },
   idempotencyKey: { type: String, required: true, trim: true, maxlength: 128 },
   amountMinor: { type: Number, required: true, min: 1 },
   reason: { type: String, required: true, trim: true, maxlength: 500 },
@@ -22,6 +24,7 @@ const refundSchema = new Schema({
 }, { timestamps: false });
 
 const paymentSchema = new Schema({
+  cashSessionId: { type: Schema.Types.ObjectId, ref: 'ClinicCashSession', default: null },
   idempotencyKey: { type: String, required: true, trim: true, maxlength: 128 },
   method: { type: String, enum: ['cash', 'card', 'bank_transfer', 'online', 'wallet', 'other'], required: true },
   amountMinor: { type: Number, required: true, min: 1 },
