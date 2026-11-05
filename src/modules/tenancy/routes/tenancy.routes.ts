@@ -8,7 +8,7 @@ import { tenantRolesController } from '../controllers/tenant-roles.controller.js
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
 tenantRouter.get('/context', tenancyController.context);
-tenantRouter.get('/permissions', tenancyController.getPermissions);
+tenantRouter.get('/permissions', tenantRolesController.currentAccess);
 tenantRouter.get('/roles', requireTenantScope, requireTenantPermission('memberships.manage'), tenantRolesController.list);
 tenantRouter.post('/roles', requireTenantScope, requireTenantPermission('memberships.manage'), tenantRolesController.create);
 tenantRouter.get('/roles/:roleId', requireTenantScope, requireTenantPermission('memberships.manage'), tenantRolesController.get);
