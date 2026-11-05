@@ -86,6 +86,11 @@ async function audit(tenantId: string, actorUserId: string, action: string, targ
   await TenantAuditEvent.create({ tenantId, actorUserId, action, targetType: 'tenant_role', targetId, metadata });
 }
 
+const scopeRank: Record<string, number> = { tenant: 0, clinic: 1, branch: 2 };
+function withGrantSource(grant: PermissionGrant, requestedScope: string) {
+  return { ...grant, source: scopeRank[grant.scope] < scopeRank[requestedScope] ? 'inherited' : 'direct' };
+}
+
 function serialize(role: any) {
   return {
     id: String(role._id), key: role.key, name: role.name, description: role.description,
@@ -194,7 +199,8 @@ export const tenantRolesService = {
     if (membership.roleId) {
       const role = await TenantRole.findOne({ _id: membership.roleId, tenantId, status: 'active' }).lean() as any;
       if (!role) return { role: 'custom_role', roleId: String(membership.roleId), scope: membership.scope, permissions: [], status: 'role_unavailable' };
-      const grants = (role.permissions as PermissionGrant[]).filter((grant) => grant.scope === 'tenant' || (grant.clinicId && String(grant.clinicId) === String(membership.clinicId) && (grant.scope !== 'branch' || (branchId && String(grant.branchId) === branchId))));
+      const requestedScope = branchId ? 'branch' : clinicId ? 'clinic' : 'tenant';
+      const grants = (role.permissions as PermissionGrant[]).filter((grant) => hasScopedPermission([grant], grant.permission, { scope: requestedScope, clinicId, branchId })).map((grant) => withGrantSource(grant, requestedScope));
       return { role: 'custom_role', roleId: String(role._id), roleName: role.name, scope: membership.scope, clinicId: membership.clinicId ? String(membership.clinicId) : null, branchIds: (membership.branchIds ?? []).map(String), permissions: grants, roleVersion: role.version };
     }
     return { role: membership.role, scope: membership.scope, clinicId: membership.clinicId ? String(membership.clinicId) : null, branchIds: (membership.branchIds ?? []).map(String), permissions: getTenantRolePermissions(membership.role) };
@@ -210,7 +216,7 @@ export const tenantRolesService = {
       if (membership.status === 'active') {
         if (membership.roleId) {
           role = await TenantRole.findOne({ _id: membership.roleId, tenantId, status: 'active' }).lean();
-          permissions = role?.permissions ?? [];
+          permissions = (role?.permissions ?? []).map((grant: PermissionGrant) => withGrantSource(grant, membership.scope));
         } else permissions = getTenantRolePermissions(membership.role);
       }
       access.push({ membershipId: String(membership._id), status: membership.status, role: membership.role, roleId: membership.roleId ? String(membership.roleId) : null, roleName: role?.name ?? null, roleVersion: role?.version ?? null, scope: membership.scope, clinicId: membership.clinicId ? String(membership.clinicId) : null, branchIds: (membership.branchIds ?? []).map(String), permissions });
