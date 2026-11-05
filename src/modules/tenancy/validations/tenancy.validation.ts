@@ -446,3 +446,13 @@ export const createTenantInvitationSchema = z.object({
   branchIds: z.array(z.string().regex(/^[a-f0-9]{24}$/i)).max(100).optional(),
   expiresInDays: z.coerce.number().int().min(1).max(30).default(7),
 });
+
+export const tenantUserListQuerySchema = z.object({
+  search: z.string().trim().min(1).max(100).optional(),
+  status: z.enum(['active', 'invited', 'suspended']).optional(),
+  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
+  scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
+  clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+});
