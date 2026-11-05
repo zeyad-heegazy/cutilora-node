@@ -294,3 +294,21 @@ export const createTenantDocumentSchema = z.object({
   fileBase64: z.string().min(1).max(4_200_000),
   expiresAt: z.coerce.date().nullable().optional(),
 });
+
+const dateOnly = z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, 'Date must use YYYY-MM-DD.');
+export const createBranchHolidaySchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  type: z.enum(['closure', 'modified_hours']),
+  startDate: dateOnly,
+  endDate: dateOnly,
+  isAllDay: z.boolean().default(true),
+  startTime: timeString.optional(),
+  endTime: timeString.optional(),
+  reason: optionalText(500),
+}).refine((data) => data.startDate <= data.endDate, {
+  message: 'endDate must be on or after startDate.',
+  path: ['endDate'],
+}).refine((data) => data.type !== 'modified_hours' || (!data.isAllDay && Boolean(data.startTime && data.endTime && data.startTime < data.endTime)), {
+  message: 'Modified hours require isAllDay=false and a valid startTime before endTime.',
+  path: ['startTime'],
+});
