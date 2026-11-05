@@ -10,7 +10,7 @@ export async function invitationAcceptanceRateLimit(req: Request, res: Response,
   const key = createHash('sha256').update(ip).digest('hex');
 
   try {
-    const bucket = await authRepository.consumeInvitationAttempt(key, new Date(), WINDOW_MS);
+    const bucket = await authRepository.consumeInvitationAttempt(key, new Date(), WINDOW_MS) as { count: number; expiresAt: Date } | null;
     if (!bucket) {
       return res.status(503).json({
         success: false,
