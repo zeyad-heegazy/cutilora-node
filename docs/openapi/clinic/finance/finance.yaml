@@ -17,7 +17,7 @@ paths:
         '200': { description: Paginated clinic invoices }
     post:
       tags: [Clinic Finance]
-      summary: Create a draft clinic invoice
+      summary: Create a draft clinic invoice; an idempotencyKey is required
       responses:
         '201': { description: Draft invoice created }
   /clinic/invoices/{invoiceId}:
@@ -78,7 +78,7 @@ paths:
         '200': { description: Paginated expenses }
     post:
       tags: [Clinic Finance]
-      summary: Record a clinic expense
+      summary: Record a clinic expense; an idempotencyKey is required
       responses:
         '201': { description: Expense recorded }
   /clinic/expenses/{expenseId}/pay:
