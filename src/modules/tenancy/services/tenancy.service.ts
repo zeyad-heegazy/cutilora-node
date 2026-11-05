@@ -98,6 +98,19 @@ export const tenancyService = {
       updatedBy: userId,
     });
   },
+  async getSubscriptionOverview(tenantId: string) {
+    const subscription = await tenancyRepository.findSubscriptionByTenantId(tenantId);
+    if (!subscription) return null;
+    return {
+      plan: subscription.plan,
+      billingCycle: subscription.billingCycle,
+      status: subscription.status,
+      trialEndsAt: subscription.trialEndsAt,
+      currentPeriodEndsAt: subscription.currentPeriodEndsAt,
+      nextBillingAt: subscription.nextBillingAt,
+      cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
+    };
+  },
   getDashboardCounts(tenantId: string) {
     return tenancyRepository.getDashboardCounts(tenantId);
   },
