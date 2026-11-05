@@ -184,8 +184,7 @@ export const clinicFinanceService = {
     }
     const refundable = payment.amountMinor - payment.refundedMinor;
     if (input.amountMinor > refundable) throw { status: 400, code: 'REFUND_EXCEEDS_PAYMENT', message: 'Refund exceeds the remaining refundable payment amount.' };
-    const cashSession = input.method === 'cash' ? await ClinicCashSession.findOne({ ...invoiceFilter(scope), status: 'open' }).select('_id') : null;
-    if (input.method === 'cash' && !cashSession) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording a cash refund.' };
+    const cashSessionId = input.method === 'cash' ? await reserveCashSession(scope) : null;
     const now = new Date();
     const nextRefunded = current.refundedMinor + input.amountMinor;
     const nextBalance = current.totalMinor - (current.paidMinor - nextRefunded);
@@ -193,7 +192,7 @@ export const clinicFinanceService = {
     const updated = await ClinicInvoice.findOneAndUpdate(
       { _id: invoiceId, ...invoiceFilter(scope), version: current.version, 'payments._id': payment._id, 'payments.refundedMinor': payment.refundedMinor },
       { $inc: { 'payments.$.refundedMinor': input.amountMinor, refundedMinor: input.amountMinor, version: 1 },
-        $push: { 'payments.$.refunds': { idempotencyKey: input.idempotencyKey, method: input.method, cashSessionId: cashSession?._id ?? null, amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
+        $push: { 'payments.$.refunds': { idempotencyKey: input.idempotencyKey, method: input.method, cashSessionId, amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
           events: { type: 'payment.refunded', actorUserId: scope.userId, occurredAt: now, metadata: { paymentId, amountMinor: input.amountMinor, reason: input.reason } } },
         $set: { balanceDueMinor: nextBalance, status: nextStatus, updatedBy: scope.userId } },
       { new: true, runValidators: true },
