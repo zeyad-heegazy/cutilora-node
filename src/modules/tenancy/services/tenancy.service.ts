@@ -41,6 +41,18 @@ function locationFrom(input: Record<string, any>) {
 }
 
 export const tenancyService = {
+  getProfile(tenantId: string) {
+    return tenancyRepository.findTenantById(tenantId);
+  },
+  async updatePreferences(tenantId: string, userId: string, preferences: Record<string, any>) {
+    const current = await tenancyRepository.findTenantById(tenantId);
+    if (!current) return null;
+    const existing = current.preferences?.toObject?.() ?? current.preferences ?? {};
+    return tenancyRepository.updateTenant(tenantId, {
+      preferences: deepMerge(existing, preferences),
+      updatedBy: userId,
+    });
+  },
   getContext(context: { tenantId: string; clinicId: string | null; branchId: string | null }) {
     return tenancyRepository.getTenantContext(context.tenantId, context.clinicId, context.branchId);
   },
