@@ -1,0 +1,41 @@
+paths:
+  /tenant/users:
+    get:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: List tenant users and memberships
+      description: Lists tenant memberships with linked user identity and clinic/branch scopes. Invitation delivery and acceptance are not included in this endpoint.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant memberships and scoped user identities }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/memberships/{membershipId}:
+    patch:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Update tenant membership role, scope or status
+      description: Enforces role-to-scope compatibility, validates clinic/branch ownership, prevents self-modification and protects the last active Tenant Owner.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: membershipId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] }
+                scope: { type: string, enum: [tenant, clinic, branch] }
+                clinicId: { type: string, nullable: true }
+                branchIds: { type: array, items: { type: string }, maxItems: 50 }
+                status: { type: string, enum: [active, suspended] }
+      responses:
+        "200": { description: Membership updated }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { description: Last active Tenant Owner cannot be demoted or suspended }
