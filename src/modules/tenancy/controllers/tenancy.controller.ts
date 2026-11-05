@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -36,6 +36,20 @@ export const tenancyController = {
       const item = await tenancyService.updatePreferences(req.tenantContext!.tenantId, req.auth!.userId, input.preferences);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
       res.json({ success: true, data: item.preferences });
+    } catch (e) { next(e); }
+  },
+  async listTenantUsers(req: Request, res: Response, next: NextFunction) {
+    try {
+      res.json({ success: true, data: await tenancyService.listTenantMemberships(req.tenantContext!.tenantId) });
+    } catch (e) { next(e); }
+  },
+  async updateTenantMembership(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = updateTenantMembershipSchema.parse(req.body);
+      const context = req.tenantContext!;
+      const item = await tenancyService.updateTenantMembership(context.tenantId, String(req.params.membershipId ?? ''), req.auth!.userId, context.role, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Membership not found.' } });
+      res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
   async getTenantConfiguration(req: Request, res: Response, next: NextFunction) {
