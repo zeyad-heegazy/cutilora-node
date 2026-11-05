@@ -189,16 +189,20 @@ export const clinicFinanceService = {
     const nextRefunded = current.refundedMinor + input.amountMinor;
     const nextBalance = current.totalMinor - (current.paidMinor - nextRefunded);
     const nextStatus = current.paidMinor - nextRefunded <= 0 ? 'issued' : (nextBalance === 0 ? 'paid' : 'partially_paid');
-    const updated = await ClinicInvoice.findOneAndUpdate(
-      { _id: invoiceId, ...invoiceFilter(scope), version: current.version, 'payments._id': payment._id, 'payments.refundedMinor': payment.refundedMinor },
-      { $inc: { 'payments.$.refundedMinor': input.amountMinor, refundedMinor: input.amountMinor, version: 1 },
-        $push: { 'payments.$.refunds': { idempotencyKey: input.idempotencyKey, method: input.method, cashSessionId, amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
-          events: { type: 'payment.refunded', actorUserId: scope.userId, occurredAt: now, metadata: { paymentId, amountMinor: input.amountMinor, reason: input.reason } } },
-        $set: { balanceDueMinor: nextBalance, status: nextStatus, updatedBy: scope.userId } },
-      { new: true, runValidators: true },
-    );
-    if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Payment changed while recording refund. Reload and retry.' };
-    return updated;
+    try {
+      const updated = await ClinicInvoice.findOneAndUpdate(
+        { _id: invoiceId, ...invoiceFilter(scope), version: current.version, 'payments._id': payment._id, 'payments.refundedMinor': payment.refundedMinor },
+        { $inc: { 'payments.$.refundedMinor': input.amountMinor, refundedMinor: input.amountMinor, version: 1 },
+          $push: { 'payments.$.refunds': { idempotencyKey: input.idempotencyKey, method: input.method, cashSessionId, amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
+            events: { type: 'payment.refunded', actorUserId: scope.userId, occurredAt: now, metadata: { paymentId, amountMinor: input.amountMinor, reason: input.reason } } },
+          $set: { balanceDueMinor: nextBalance, status: nextStatus, updatedBy: scope.userId } },
+        { new: true, runValidators: true },
+      );
+      if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Payment changed while recording refund. Reload and retry.' };
+      return updated;
+    } finally {
+      if (cashSessionId) await releaseCashSession(scope, cashSessionId);
+    }
   },
 
   async voidInvoice(scope: Scope, invoiceId: string, reason: string) {
