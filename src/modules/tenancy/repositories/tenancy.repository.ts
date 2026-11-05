@@ -95,7 +95,23 @@ export const tenancyRepository = {
     return Subscription.deleteOne({ tenantId });
   },
   async listSubscriptionPayments(tenantId: string) {
-    return SubscriptionPayment.find({ tenantId }).sort({ createdAt: 1 });
+    return SubscriptionPayment.find({ tenantId })
+      .select('amount currency status method provider invoiceNumber invoiceUrl paidAt failureReason recordedAt createdAt')
+      .sort({ createdAt: -1 })
+      .lean();
+  },
+  listTenantInvoices(tenantId: string) {
+    return SubscriptionPayment.find({
+      tenantId,
+      $or: [{ invoiceNumber: { $gt: '' } }, { invoiceUrl: { $gt: '' } }],
+    }).select('amount currency status method provider invoiceNumber invoiceUrl paidAt recordedAt createdAt').sort({ createdAt: -1 }).lean();
+  },
+  findTenantInvoice(tenantId: string, invoiceId: string) {
+    return SubscriptionPayment.findOne({
+      _id: invoiceId,
+      tenantId,
+      $or: [{ invoiceNumber: { $gt: '' } }, { invoiceUrl: { $gt: '' } }],
+    }).select('amount currency status method provider invoiceNumber invoiceUrl paidAt failureReason recordedAt createdAt').lean();
   },
   async addSubscriptionPayment(
     tenantId: string,
