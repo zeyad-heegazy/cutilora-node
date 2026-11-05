@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { getTenantRolePermissions, requireTenantPermission } from '../../src/modules/tenancy/middleware/tenant-permissions.js';
+import { getTenantRoleCatalog, getTenantRolePermissions, requireTenantPermission } from '../../src/modules/tenancy/middleware/tenant-permissions.js';
 
 function runPermission(role: string, permission: string) {
   const req = { tenantContext: { role } } as any;
@@ -32,4 +32,17 @@ describe('tenant permission matrix', () => {
     expect(getTenantRolePermissions('custom_unknown_role')).toEqual([]);
     expect(runPermission('custom_unknown_role', 'organization.manage').next).not.toHaveBeenCalled();
   });
+  it('exposes only built-in role templates and marks actor-grantable roles', () => {
+    const ownerCatalog = getTenantRoleCatalog('tenant_owner');
+    const adminCatalog = getTenantRoleCatalog('tenant_admin');
+    const ownerRole = ownerCatalog.find((role) => role.role === 'tenant_owner');
+    const clinicAdmin = adminCatalog.find((role) => role.role === 'clinic_admin');
+    const tenantAdmin = adminCatalog.find((role) => role.role === 'tenant_admin');
+
+    expect(ownerRole).toMatchObject({ scopes: ['tenant'], customizable: false, assignableByCurrentUser: false });
+    expect(clinicAdmin).toMatchObject({ scopes: ['clinic'], assignableByCurrentUser: true });
+    expect(tenantAdmin?.assignableByCurrentUser).toBe(false);
+    expect(ownerCatalog.some((role) => role.role === 'custom')).toBe(false);
+  });
+
 });
