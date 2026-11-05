@@ -280,6 +280,14 @@ export const tenancyService = {
       const customRole = membership.role === 'custom' && membership.customRoleId
         ? await tenancyRepository.findActiveTenantRoleById(tenantId, String(membership.customRoleId))
         : null;
+      const rolePermissions = membership.role === 'custom'
+        ? (customRole?.permissions ?? [])
+        : getTenantRolePermissions(membership.role);
+      const overrides = membership.permissionOverrides ?? { allow: [], deny: [] };
+      const denied = new Set(overrides.deny ?? []);
+      const effectivePermissions = membership.status !== 'active' ? [] : [...new Set([
+        ...rolePermissions, ...(overrides.allow ?? []),
+      ])].filter((permission) => !denied.has(permission));
       return {
         membershipId: String(membership._id),
         status: membership.status,
@@ -289,10 +297,14 @@ export const tenancyService = {
         branches: membership.branchIds ?? [],
         customRoleId: membership.customRoleId ? String(membership.customRoleId) : null,
         customRoleName: customRole?.name ?? null,
-        permissions: membership.status !== 'active' ? [] : membership.role === 'custom'
-          ? (customRole?.permissions ?? [])
-          : getTenantRolePermissions(membership.role),
+        permissions: effectivePermissions,
         permissionSource: membership.role === 'custom' ? 'custom_role' : 'built_in_role',
+        permissionOverrides: overrides,
+        permissionOrigins: effectivePermissions.map((permission) => ({
+          permission,
+          source: (overrides.allow ?? []).includes(permission) ? 'direct' : 'role',
+          inheritedTo: membership.scope === 'tenant' ? ['clinic', 'branch'] : membership.scope === 'clinic' ? ['branch'] : [],
+        })),
       };
     }));
     return { userId, memberships: resolved };
