@@ -7,6 +7,8 @@ describe('clinic finance permissions', () => {
     expect(permissions).toContain('finance.read');
     expect(permissions).toContain('finance.invoices.read');
     expect(permissions).toContain('finance.expenses.read');
+    expect(permissions).toContain('finance.receivables.read');
+    expect(permissions).toContain('finance.reports.read');
     expect(permissions).not.toContain('finance.invoices.manage');
     expect(permissions).not.toContain('finance.payments.manage');
     expect(permissions).not.toContain('finance.refunds.manage');
