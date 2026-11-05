@@ -44,6 +44,9 @@ export const tenancyRepository = {
   createTenantAuditEvent(data: Record<string, unknown>) {
     return TenantAuditEvent.create(data);
   },
+  async exportTenantAuditEvents(filter: Record<string, unknown>, limit: number) {
+    return TenantAuditEvent.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+  },
   async listTenantAuditEvents(filter: Record<string, unknown>, page: number, perPage: number) {
     const [items, total] = await Promise.all([
       TenantAuditEvent.find(filter).sort({ createdAt: -1 }).skip((page - 1) * perPage).limit(perPage).lean(),
