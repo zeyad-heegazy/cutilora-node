@@ -54,6 +54,25 @@ export const tenancyRepository = {
     ]);
     return { items, pagination: { page, perPage, total, pages: Math.ceil(total / perPage) } };
   },
+  async listTenantMembershipHistory(tenantId: string, membershipId: string, page: number, perPage: number) {
+    const acceptance = await TenantAuditEvent.findOne({
+      tenantId, targetType: 'tenant_membership', targetId: membershipId,
+      action: 'membership.invitation.accepted',
+    }).select('metadata.invitationId').lean() as any;
+    const invitationId = acceptance?.metadata?.invitationId;
+    const filter: Record<string, unknown> = {
+      tenantId,
+      $or: [
+        { targetType: 'tenant_membership', targetId: membershipId },
+        ...(invitationId ? [{ targetType: 'tenant_invitation', targetId: String(invitationId) }] : []),
+      ],
+    };
+    const [items, total] = await Promise.all([
+      TenantAuditEvent.find(filter).sort({ createdAt: -1 }).skip((page - 1) * perPage).limit(perPage).lean(),
+      TenantAuditEvent.countDocuments(filter),
+    ]);
+    return { items, pagination: { page, perPage, total, pages: Math.ceil(total / perPage) } };
+  },
   createTenantDocument(data: Record<string, unknown>) {
     return TenantDocument.create(data);
   },
