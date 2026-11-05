@@ -97,7 +97,7 @@ export const authService = {
         if (!sameScope || existingMembership.status !== 'active') {
           throw new AuthError('MEMBERSHIP_ALREADY_EXISTS', 'This user already has a different membership for the invited scope.', 409);
         }
-        const acceptedExisting = await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), {
+        const acceptedExisting = await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), invitation.processingAt, {
           status: 'accepted', acceptedAt: new Date(), acceptedBy: String(user._id), processingAt: null,
         });
         if (!acceptedExisting) throw new AuthError('INVITATION_ACCEPTANCE_CONFLICT', 'The invitation could not be completed. Please try again.', 409);
