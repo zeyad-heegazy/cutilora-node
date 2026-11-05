@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { tenantRolesService, TENANT_PERMISSION_CATALOG } from '../services/tenant-roles.service.js';
+import { getTenantRoleCatalog } from '../services/tenant-access.service.js';
 
 const grantSchema = z.object({
   permission: z.string().trim().min(3).max(120),
@@ -42,7 +43,7 @@ export const tenantRolesController = {
     res.json({ success: true, data: TENANT_PERMISSION_CATALOG });
   },
   async list(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: await tenantRolesService.list(req.tenantContext!.tenantId) }); }
+    try { res.json({ success: true, data: { templates: getTenantRoleCatalog(req.tenantContext!.role), customRoles: await tenantRolesService.list(req.tenantContext!.tenantId) } }); }
     catch (error) { next(error); }
   },
   async get(req: Request, res: Response, next: NextFunction) {
