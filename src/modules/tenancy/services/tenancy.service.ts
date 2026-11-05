@@ -2,6 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
+import { getTenantRolePermissions } from './tenant-access.service.js';
 import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
 import { readPrivateTenantDocument, removePrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
 import { logger } from '../../../shared/logger/logger.js';
