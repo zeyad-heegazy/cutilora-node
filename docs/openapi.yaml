@@ -83,6 +83,14 @@ paths:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}"
   /tenant/documents/{documentId}/download:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1download"
+  /tenant/subscription:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription"
+  /tenant/subscription/usage:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription~1usage"
+  /tenant/invoices:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1invoices"
+  /tenant/invoices/{invoiceId}:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1invoices~1{invoiceId}"
   /tenant/profile:
     $ref: "./openapi/tenant/profile/profile.yaml#/paths/~1tenant~1profile"
   /tenant/preferences:
