@@ -418,7 +418,7 @@ export const tenancyRepository = {
     const skip = (query.page - 1) * query.perPage;
     const [items, total] = await Promise.all([
       TenantMembership.find(filter)
-        .populate('userId', 'name email isActive')
+        .populate('userId', 'name email isActive lastLoginAt')
         .populate('clinicId', 'name slug status')
         .populate('branchIds', 'name slug status')
         .sort({ createdAt: -1 })
