@@ -1,13 +1,14 @@
-import { createHash } from 'node:crypto';
+import { createHmac } from 'node:crypto';
 import type { NextFunction, Request, Response } from 'express';
 import { authRepository } from '../repositories/auth.repository.js';
+import { env } from '../../../config/env.js';
 
 const WINDOW_MS = 15 * 60 * 1000;
 const MAX_ATTEMPTS = 10;
 
 export async function invitationAcceptanceRateLimit(req: Request, res: Response, next: NextFunction) {
   const ip = req.ip || req.socket.remoteAddress || 'unknown';
-  const key = createHash('sha256').update(ip).digest('hex');
+  const key = createHmac('sha256', env.JWT_SECRET).update(ip).digest('hex');
 
   try {
     const bucket = await authRepository.consumeInvitationAttempt(key, new Date(), WINDOW_MS) as { count: number; expiresAt: Date } | null;
