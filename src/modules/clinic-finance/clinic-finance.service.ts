@@ -6,7 +6,7 @@ import { ClinicExpense } from './models/clinic-expense.model.js';
 import { ClinicCashSession } from './models/clinic-cash-session.model.js';
 
 type Scope = { tenantId: string; clinicId: string; branchId: string | null; userId: string };
-type InvoiceInput = { customer?: any; lines?: any[]; currency?: string; dueAt?: Date };
+type InvoiceInput = { idempotencyKey?: string; customer?: any; lines?: any[]; currency?: string; dueAt?: Date };
 
 function calculateBasisPoints(amountMinor: number, basisPoints: number): number {
   return Number((BigInt(amountMinor) * BigInt(basisPoints)) / 10000n);
