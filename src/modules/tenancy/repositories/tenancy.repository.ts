@@ -359,6 +359,13 @@ export const tenancyRepository = {
       { new: true, runValidators: true },
     );
   },
+  transitionBranchStatus(id: string, tenantId: string, clinicId: string, allowedStatuses: string[], data: Record<string, unknown>) {
+    return Branch.findOneAndUpdate(
+      { _id: id, tenantId, clinicId, status: { $in: allowedStatuses } },
+      { $set: data },
+      { new: true, runValidators: true },
+    );
+  },
   getTenantContext(
     tenantId: string,
     clinicId: string | null,
