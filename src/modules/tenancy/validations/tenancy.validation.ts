@@ -33,8 +33,13 @@ const brandingSchema = z.object({
     .regex(/^#[0-9a-fA-F]{6}$/)
     .optional(),
 });
+const timezoneSchema = z.string().trim().min(1).max(100).refine((value) => {
+  try { new Intl.DateTimeFormat('en-US', { timeZone: value }); return true; }
+  catch { return false; }
+}, 'Timezone must be a valid IANA timezone.');
+
 const preferencesSchema = z.object({
-  timezone: z.string().trim().min(1).max(100).optional(),
+  timezone: timezoneSchema.optional(),
   locale: z.string().trim().min(2).max(10).optional(),
   currency: z
     .string()
@@ -70,6 +75,11 @@ const operatingHourSchema = z.object({
     .optional(),
 });
 
+const operatingHoursArraySchema = z.array(operatingHourSchema).max(7).refine(
+  (hours) => new Set(hours.map((hour) => hour.dayOfWeek)).size === hours.length,
+  'Operating hours must contain at most one entry per day.',
+);
+
 const clinicFields = {
   name: z.string().trim().min(2).max(160),
   code: optionalText(30),
@@ -80,10 +90,10 @@ const clinicFields = {
   specialties: z.array(z.string().trim().min(2).max(80)).max(50).optional(),
   contact: contactSchema.optional(),
   address: addressSchema.optional(),
-  timezone: z.string().trim().min(1).max(100).default('Africa/Cairo'),
+  timezone: timezoneSchema.default('Africa/Cairo'),
   preferences: preferencesSchema.optional(),
   settings: z.record(z.unknown()).optional(),
-  operatingHours: z.array(operatingHourSchema).max(7).optional(),
+  operatingHours: operatingHoursArraySchema.optional(),
   branding: brandingSchema.optional(),
   bookingSettings: z
     .object({
@@ -173,7 +183,7 @@ export const updateClinicSchema = z
     specialties: clinicFields.specialties,
     contact: contactSchema.partial().optional(),
     address: addressSchema.partial().optional(),
-    timezone: z.string().trim().min(1).max(100).optional(),
+    timezone: timezoneSchema.optional(),
     preferences: preferencesSchema.partial().optional(),
     settings: z.record(z.unknown()).optional(),
     countryId: z.string().optional(),
@@ -202,11 +212,6 @@ export const updateClinicSchema = z
     message: 'At least one field must be provided.',
   });
 
-const timezoneSchema = z.string().trim().min(1).max(100).refine((value) => {
-  try { new Intl.DateTimeFormat('en-US', { timeZone: value }); return true; }
-  catch { return false; }
-}, 'Timezone must be a valid IANA timezone.');
-
 const branchFields = {
   name: z.string().trim().min(2).max(160),
   slug: slug.optional(),
@@ -214,7 +219,7 @@ const branchFields = {
   address: z.string().trim().max(500).optional(),
   cityId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
   timezone: timezoneSchema,
-  operatingHours: z.array(operatingHourSchema).max(7),
+  operatingHours: operatingHoursArraySchema,
 };
 
 export const createBranchSchema = z.object({
