@@ -6,6 +6,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     findTenantUserDetails: vi.fn(),
     listTenantInvitations: vi.fn(),
     listTenantAuditEvents: vi.fn(),
+    listTenantMembershipHistory: vi.fn(),
     listMembershipsForUser: vi.fn(),
     findTenantMembershipById: vi.fn(),
     countActiveTenantOwners: vi.fn(),
@@ -252,7 +253,7 @@ describe('tenant membership administration', () => {
 
     await expect(tenancyService.listTenantMembershipHistory(tenantId, membershipId)).resolves.toBeNull();
 
-    expect(tenancyRepository.listTenantAuditEvents).not.toHaveBeenCalled();
+    expect(tenancyRepository.listTenantMembershipHistory).not.toHaveBeenCalled();
   });
 
   it('returns tenant user details through a tenant-scoped repository query', async () => {
