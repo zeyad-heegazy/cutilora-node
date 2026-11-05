@@ -298,7 +298,7 @@ export const tenancyService = {
     const csv = [
       columns.join(','),
       ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(row[column])).join(',')),
-    ].join('\\r\\n');
+    ].join('\r\n');
     return { csv, truncated, exported: Math.min(rows.length, limit) };
   },
   async replaceTenantDocument(tenantId: string, documentId: string, userId: string, input: Record<string, any>) {
