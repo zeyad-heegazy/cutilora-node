@@ -108,4 +108,20 @@ describe('tenant membership administration', () => {
       status: 'suspended',
     })).rejects.toMatchObject({ status: 403, code: 'SELF_MEMBERSHIP_CHANGE_DENIED' });
   });
+  it('passes tenant user directory filters and pagination to the repository', async () => {
+    vi.mocked(tenancyRepository.listTenantMemberships).mockResolvedValue({
+      items: [{ _id: membershipId }],
+      pagination: { page: 2, perPage: 10, total: 21, pages: 3 },
+    } as any);
+
+    const result = await tenancyService.listTenantMemberships(tenantId, {
+      search: 'manager', status: 'active', role: 'clinic_manager', scope: 'clinic', clinicId, page: 2, perPage: 10,
+    });
+
+    expect(tenancyRepository.listTenantMemberships).toHaveBeenCalledWith(tenantId, {
+      search: 'manager', status: 'active', role: 'clinic_manager', scope: 'clinic', clinicId, page: 2, perPage: 10,
+    });
+    expect(result.pagination).toMatchObject({ page: 2, perPage: 10, total: 21 });
+  });
+
 });
