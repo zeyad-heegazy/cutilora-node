@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenantCatalogTemplateService } from './tenant-catalog-template.service.js';
-import { createCatalogTemplateSchema, listCatalogTemplatesQuerySchema, publishCatalogTemplateSchema, updateCatalogTemplateSchema } from './tenant-catalog-template.validation.js';
+import { createCatalogTemplateSchema, listCatalogTemplatesQuerySchema, previewCatalogTemplatePublishSchema, publishCatalogTemplateSchema, updateCatalogTemplateSchema } from './tenant-catalog-template.validation.js';
 
 export const tenantCatalogTemplateController = {
   async list(req: Request, res: Response, next: NextFunction) {
@@ -34,7 +34,7 @@ export const tenantCatalogTemplateController = {
   },
   async previewPublish(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = publishCatalogTemplateSchema.omit({ confirm: true }).parse(req.body);
+      const input = previewCatalogTemplatePublishSchema.parse(req.body);
       const item = await tenantCatalogTemplateService.previewPublish(req.tenantContext!.tenantId, String(req.params.templateId ?? ''), input);
       if (!item) return res.status(404).json({ success: false, error: { code: 'TEMPLATE_NOT_FOUND', message: 'Catalog template not found.' } });
       res.json({ success: true, data: item });

@@ -33,12 +33,14 @@ export const listCatalogTemplatesQuerySchema = z.object({
   perPage: z.coerce.number().int().min(1).max(100).default(25),
 });
 
-export const publishCatalogTemplateSchema = z.object({
+const publishCatalogTemplateFieldsSchema = z.object({
   applyTo: z.enum(['new_clinics', 'all', 'selected']),
-  clinicIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).min(1).max(100)
+  clinicIds: z.array(z.string().regex(/^[0-9a-f]{24}$/i)).min(1).max(100)
     .refine((ids) => new Set(ids).size === ids.length, 'clinicIds must be unique.').optional(),
-  confirm: z.literal(true),
-}).refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
-  message: 'clinicIds are required when applyTo=selected.',
-  path: ['clinicIds'],
+});
+export const previewCatalogTemplatePublishSchema = publishCatalogTemplateFieldsSchema.refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
+  message: 'clinicIds are required when applyTo=selected.', path: ['clinicIds'],
+});
+export const publishCatalogTemplateSchema = publishCatalogTemplateFieldsSchema.extend({ confirm: z.literal(true) }).refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
+  message: 'clinicIds are required when applyTo=selected.', path: ['clinicIds'],
 });
