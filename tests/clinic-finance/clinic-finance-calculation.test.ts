@@ -75,7 +75,7 @@ describe('invoice credit note settlement', () => {
 
   it('recalculates the receivable after a refund on a credited invoice', () => {
     expect(calculateInvoiceSettlement(10000, 2000, 5000, 4000)).toEqual({
-      balanceDueMinor: 1000, creditBalanceMinor: 0, status: 'partially_paid',
+      balanceDueMinor: 7000, creditBalanceMinor: 0, status: 'partially_paid',
     });
   });
 });
