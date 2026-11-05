@@ -69,7 +69,7 @@ export const tenancyService = {
         tenantId,
         uploadedBy: userId,
         category: input.category,
-        name: String(input.name).trim(),
+        name: String(input.name).trim().replace(/[\\/\\r\\n\"\\\\]/g, '_'),
         mimeType: decoded.mimeType,
         sizeBytes: decoded.content.length,
         storageKey,
@@ -88,6 +88,9 @@ export const tenancyService = {
     if (!document) return null;
     const content = await readPrivateTenantDocument(document.storageKey);
     return { document, content };
+  },
+  getTenantDocumentMetadata(tenantId: string, documentId: string) {
+    return tenancyRepository.findTenantDocumentMetadata(tenantId, documentId);
   },
   archiveTenantDocument(tenantId: string, documentId: string, userId: string) {
     return tenancyRepository.archiveTenantDocument(tenantId, documentId, userId);
