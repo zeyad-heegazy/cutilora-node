@@ -1,4 +1,5 @@
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
+import { logger } from '../../../shared/logger/logger.js';
 
 const TEMPLATE_TYPES = new Set([
   'service_treatment', 'pricing', 'appointment_policy', 'cancellation_policy',
@@ -21,10 +22,17 @@ function normalizeTemplate(input: Record<string, any>) {
 }
 
 async function audit(tenantId: string, userId: string, action: string, templateId: string, metadata: Record<string, unknown> = {}) {
-  await tenancyRepository.createTenantAuditEvent({
-    tenantId, actorUserId: userId, action, targetType: 'tenant_catalog_template',
-    targetId: templateId, metadata,
-  });
+  try {
+    await tenancyRepository.createTenantAuditEvent({
+      tenantId, actorUserId: userId, action, targetType: 'tenant_catalog_template',
+      targetId: templateId, metadata,
+    });
+  } catch (error) {
+    logger.error('Failed to persist tenant catalog template audit event', {
+      tenantId, action, templateId,
+      error: error instanceof Error ? error.message : 'unknown',
+    });
+  }
 }
 
 export const tenantCatalogService = {
