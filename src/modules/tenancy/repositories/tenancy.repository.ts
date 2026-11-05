@@ -583,11 +583,19 @@ export const tenancyRepository = {
   listTenantRoles(tenantId: string, filters: { status?: string; scope?: string } = {}) {
     return TenantRole.find({ tenantId, ...(filters.status ? { status: filters.status } : {}), ...(filters.scope ? { scope: filters.scope } : {}) }).sort({ status: 1, scope: 1, name: 1 }).lean();
   },
-  updateTenantRole(tenantId: string, roleId: string, expectedVersion: number, update: Record<string, unknown>) {
-    return TenantRole.findOneAndUpdate({ _id: roleId, tenantId, version: expectedVersion, status: 'active' }, { $set: { ...update, version: expectedVersion + 1 } }, { new: true, runValidators: true });
+  updateTenantRole(tenantId: string, roleId: string, expectedVersion: number, update: Record<string, unknown>, historyEntry: Record<string, unknown>) {
+    return TenantRole.findOneAndUpdate(
+      { _id: roleId, tenantId, version: expectedVersion, status: 'active' },
+      { $set: { ...update, version: expectedVersion + 1 }, $push: { history: historyEntry } },
+      { new: true, runValidators: true },
+    );
   },
-  archiveTenantRole(tenantId: string, roleId: string) {
-    return TenantRole.findOneAndUpdate({ _id: roleId, tenantId, status: 'active' }, { $set: { status: 'archived' } }, { new: true });
+  archiveTenantRole(tenantId: string, roleId: string, actorUserId: string, historyEntry: Record<string, unknown>) {
+    return TenantRole.findOneAndUpdate(
+      { _id: roleId, tenantId, status: 'active' },
+      { $set: { status: 'archived', updatedBy: actorUserId }, $push: { history: historyEntry } },
+      { new: true, runValidators: true },
+    );
   },
   countMembershipsUsingRole(tenantId: string, roleId: string) { return TenantMembership.countDocuments({ tenantId, customRoleId: roleId }); },
   findMembership(userId: string, tenantId: string, clinicId: string | null) {
