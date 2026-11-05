@@ -94,6 +94,7 @@ export const tenancyService = {
       if (!input.clinicId || !await tenancyRepository.findBranchById(branchId, tenantId, input.clinicId)) throw { status: 400, code: 'BRANCH_SCOPE_INVALID', message: 'Every selected branch must belong to the selected clinic and tenant.' };
     }
     const email = input.email.trim().toLowerCase();
+    await tenancyRepository.expirePendingTenantInvitations(tenantId, email, new Date());
     const pending = await tenancyRepository.findPendingTenantInvitation(tenantId, email);
     if (pending) throw { status: 409, code: 'INVITATION_ALREADY_PENDING', message: 'An active invitation already exists for this email.' };
     const token = randomBytes(32).toString('base64url');
