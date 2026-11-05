@@ -287,6 +287,7 @@ export const createBranchSchema = z.object({
   operatingHours: branchFields.operatingHours.optional(),
   settings: branchFields.settings,
   openingDate: branchFields.openingDate,
+  status: z.enum(['draft', 'active']).optional(),
 });
 
 const branchWeeklyOperatingHoursSchema = operatingHoursArraySchema.refine(
