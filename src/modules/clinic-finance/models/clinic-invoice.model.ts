@@ -48,6 +48,7 @@ const schema = new Schema({
   clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', required: true, immutable: true },
   branchId: { type: Schema.Types.ObjectId, ref: 'Branch', default: null, immutable: true },
   invoiceNumber: { type: String, trim: true, default: null },
+  dueAt: { type: Date, default: null },
   customer: {
     displayName: { type: String, required: true, trim: true, maxlength: 160 },
     phone: { type: String, trim: true, maxlength: 40, default: '' },
