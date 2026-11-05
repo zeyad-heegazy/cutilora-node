@@ -10,6 +10,7 @@ vi.mock('../src/modules/auth/repositories/auth.repository.js', () => ({
 vi.mock('../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     claimTenantInvitation: vi.fn(),
+    createTenantAuditEvent: vi.fn().mockResolvedValue({}),
     findActiveTenant: vi.fn(),
     findActiveClinic: vi.fn(),
     findActiveBranch: vi.fn(),
@@ -53,6 +54,7 @@ describe('tenant invitation acceptance', () => {
     vi.resetAllMocks();
     vi.mocked(hashPassword).mockResolvedValue('hashed-password');
     vi.mocked(tenancyRepository.claimTenantInvitation).mockResolvedValue(invitation as any);
+    vi.mocked(tenancyRepository.createTenantAuditEvent).mockResolvedValue({} as any);
     vi.mocked(tenancyRepository.findActiveTenant).mockResolvedValue({ _id: tenantId } as any);
     vi.mocked(tenancyRepository.findActiveClinic).mockResolvedValue({ _id: invitation.clinicId } as any);
     vi.mocked(tenancyRepository.findExistingMembershipForInvitation).mockResolvedValue(null as any);
