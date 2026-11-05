@@ -6,13 +6,17 @@ import { ClinicExpense } from './models/clinic-expense.model.js';
 type Scope = { tenantId: string; clinicId: string; branchId: string | null; userId: string };
 type InvoiceInput = { customer?: any; lines?: any[]; currency?: string };
 
+function calculateBasisPoints(amountMinor: number, basisPoints: number): number {
+  return Number((BigInt(amountMinor) * BigInt(basisPoints)) / 10000n);
+}
+
 export function calculateInvoiceLines(lines: any[]) {
   const calculated = lines.map((line) => {
     const subtotalMinor = line.quantity * line.unitPriceMinor;
     if (!Number.isSafeInteger(subtotalMinor)) throw { status: 400, code: 'AMOUNT_OUT_OF_RANGE', message: 'Invoice line amount exceeds the supported range.' };
-    const discountMinor = Math.floor(subtotalMinor * (line.discountBps ?? 0) / 10000);
+    const discountMinor = calculateBasisPoints(subtotalMinor, line.discountBps ?? 0);
     const taxableMinor = subtotalMinor - discountMinor;
-    const taxMinor = Math.floor(taxableMinor * (line.taxBps ?? 0) / 10000);
+    const taxMinor = calculateBasisPoints(taxableMinor, line.taxBps ?? 0);
     return { ...line, subtotalMinor, discountMinor, taxMinor, totalMinor: taxableMinor + taxMinor };
   });
   const totals = calculated.reduce((acc, line) => ({
