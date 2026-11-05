@@ -370,15 +370,15 @@ export const tenancyService = {
     const tenantRoles = ['tenant_owner', 'tenant_admin', 'billing_admin'];
     const clinicRoles = ['clinic_admin', 'clinic_manager', 'staff', 'provider', 'receptionist'];
     const branchRoles = ['branch_manager', 'staff', 'provider', 'receptionist'];
-    if (next.scope === 'tenant') {
-      const directAllows = next.permissionOverrides.allow as string[];
+    const directAllows = next.permissionOverrides.allow as string[];
     const directDenials = next.permissionOverrides.deny as string[];
     const overridePermissions = [...new Set([...directAllows, ...directDenials])];
     const unknownOverrides = overridePermissions.filter((permission) => !TENANT_PERMISSION_CATALOG.includes(permission));
     if (unknownOverrides.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more direct permission overrides are unknown.', details: { permissions: unknownOverrides } };
     if (next.role === 'tenant_owner' && overridePermissions.length) throw { status: 400, code: 'OWNER_PERMISSION_OVERRIDE_DENIED', message: 'Tenant Owner access cannot be altered through direct permission overrides.' };
     if (!directAllows.every((permission) => hasPermission(actorPermissions ?? getTenantRolePermissions(actorRole), permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'Direct permission grants cannot exceed the current actor permissions.' };
-    if (next.role === 'custom') {
+    if (next.scope === 'tenant') {
+      if (next.role === 'custom') {
         if (!next.customRoleId) throw { status: 400, code: 'CUSTOM_ROLE_REQUIRED', message: 'Select a custom role to assign.' };
         const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, next.customRoleId);
         if (!customRole || customRole.scope !== 'tenant') throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role is not available at tenant scope.' };
@@ -411,7 +411,7 @@ export const tenancyService = {
     if (next.role === 'custom') {
       const selectedRole = await tenancyRepository.findActiveTenantRoleById(tenantId, String(next.customRoleId ?? ''));
       if (!selectedRole || selectedRole.scope !== next.scope) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role does not match the membership scope.' };
-      if (actorRole !== 'tenant_owner' && !selectedRole.permissions.every((permission: string) => hasPermission(getTenantRolePermissions(actorRole), permission))) {
+      if (actorRole !== 'tenant_owner' && !selectedRole.permissions.every((permission: string) => hasPermission(actorPermissions ?? getTenantRolePermissions(actorRole), permission))) {
         throw { status: 403, code: 'ROLE_GRANT_DENIED', message: 'You cannot assign a custom role with permissions beyond your own access.' };
       }
     }
