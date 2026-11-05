@@ -31,6 +31,14 @@ function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
   return filter;
 }
 
+function getSettingSources(layers: Array<{ source: string; values: Record<string, unknown> }>) {
+  const keys = new Set(layers.flatMap((layer) => Object.keys(layer.values ?? {})));
+  return Object.fromEntries([...keys].map((key) => {
+    const layer = [...layers].reverse().find((item) => Object.prototype.hasOwnProperty.call(item.values ?? {}, key));
+    return [key, layer?.source ?? 'unknown'];
+  }));
+}
+
 const DEFAULT_CLINIC_PREFERENCES = { timezone: 'Africa/Cairo', locale: 'en', currency: 'EGP', dateFormat: 'YYYY-MM-DD', weekStartsOn: 6, supportedLanguages: ['en', 'ar'] };
 const DEFAULT_BOOKING_SETTINGS = { allowOnlineBooking: false, requireAppointmentConfirmation: true, defaultAppointmentDurationMinutes: 30, bufferMinutes: 0, cancellationWindowHours: 24 };
 
@@ -271,6 +279,7 @@ export const tenancyService = {
           hasOverrides: Object.keys(overrides).length > 0,
           willUpdate: (settings.organizationDefaultsVersion ?? 0) < configuration.version,
           effectiveValues: deepMerge(configuration.values ?? {}, overrides),
+          sources: getSettingSources([{ source: 'tenant_default', values: configuration.values ?? {} }, { source: 'clinic_override', values: overrides }]),
         };
       }),
     };
@@ -682,6 +691,7 @@ export const tenancyService = {
       defaults,
       overrides,
       effectiveValues: deepMerge(defaults, overrides),
+      sources: getSettingSources([{ source: 'tenant_default', values: defaults }, { source: 'clinic_override', values: overrides }]),
       inheritedVersion: settings.organizationDefaultsVersion ?? 0,
       overrideKeys: Object.keys(overrides),
     };
@@ -718,6 +728,11 @@ export const tenancyService = {
       inheritedValues,
       overrides,
       effectiveValues: deepMerge(inheritedValues, overrides),
+      sources: getSettingSources([
+        { source: 'tenant_default', values: clinicSettings.organizationDefaults ?? {} },
+        { source: 'clinic_override', values: clinicSettings.organizationOverrides ?? {} },
+        { source: 'branch_override', values: overrides },
+      ]),
       inheritedVersion: clinicSettings.organizationDefaultsVersion ?? 0,
       timezone: branch.timezone,
       operatingHours: branch.operatingHours ?? [],
