@@ -67,7 +67,7 @@ export const cashSessionService = {
     }
     if (session.status !== 'open') throw { status: 409, code: 'CASH_SESSION_LOCKED', message: 'Cash movements can only be recorded in an open session.' };
     const updated = await ClinicCashSession.findOneAndUpdate(
-      { _id: sessionId, ...scopeFilter(scope), status: 'open', version: session.version },
+      { _id: sessionId, ...scopeFilter(scope), status: 'open', pendingMutations: 0, version: session.version },
       { $push: { movements: { ...input, recordedAt: new Date(), recordedBy: scope.userId }, events: { type: 'cash_movement.recorded', actorUserId: scope.userId, occurredAt: new Date(), metadata: { direction: input.direction, amountMinor: input.amountMinor } } }, $inc: { version: 1 } },
       { new: true, runValidators: true },
     );
@@ -82,6 +82,7 @@ export const cashSessionService = {
       if (['pending_review', 'approved'].includes(session.status) && String(session.closedBy) === scope.userId && session.countedBalanceMinor === input.countedBalanceMinor && session.varianceReason === (input.varianceReason ?? '')) return session;
       throw { status: 409, code: 'CASH_SESSION_NOT_OPEN', message: 'Cash session is already closed or locked.' };
     }
+    if (session.pendingMutations > 0) throw { status: 409, code: 'CASH_SESSION_BUSY', message: 'Cash transactions are still being recorded. Retry closing shortly.' };
     const expectedBalanceMinor = await calculateExpected(session, scope);
     const varianceMinor = input.countedBalanceMinor - expectedBalanceMinor;
     if (varianceMinor !== 0 && !input.varianceReason?.trim()) throw { status: 400, code: 'CASH_VARIANCE_REASON_REQUIRED', message: 'A reason is required when counted cash differs from expected cash.' };
