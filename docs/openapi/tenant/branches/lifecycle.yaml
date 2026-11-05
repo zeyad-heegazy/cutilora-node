@@ -1,0 +1,31 @@
+paths:
+  /tenant/branches/{branchId}/activate:
+    post:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches"
+      summary: Activate a branch
+      description: Reactivates a suspended branch within the selected tenant and clinic.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Branch activated }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/branches/{branchId}/deactivate:
+    post:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches"
+      summary: Suspend a branch
+      description: Suspends the branch without deleting its history.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Branch suspended }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
