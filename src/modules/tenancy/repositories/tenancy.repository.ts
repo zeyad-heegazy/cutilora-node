@@ -363,7 +363,7 @@ export const tenancyRepository = {
   createTenantInvitation(data: Record<string, unknown>) { return TenantInvitation.create(data); },
   findTenantInvitationById(tenantId: string, invitationId: string) { return TenantInvitation.findOne({ _id: invitationId, tenantId }); },
   expirePendingTenantInvitations(tenantId: string, email: string, now: Date) { return TenantInvitation.updateMany({ tenantId, email, status: 'pending', expiresAt: { $lte: now } }, { $set: { status: 'expired' } }); },
-  findPendingTenantInvitation(tenantId: string, email: string) { return TenantInvitation.findOne({ tenantId, email, status: 'pending', expiresAt: { $gt: new Date() } }); },
+  findPendingTenantInvitation(tenantId: string, email: string) { return TenantInvitation.findOne({ tenantId, email, status: { $in: ['pending', 'processing'] }, expiresAt: { $gt: new Date() } }); },
   findTenantInvitationByTokenHash(tokenHash: string) { return TenantInvitation.findOne({ tokenHash }).select('+tokenHash'); },
   async listTenantInvitations(tenantId: string, query: { search?: string; status?: string; page: number; perPage: number } = { page: 1, perPage: 25 }) {
     const filter: Record<string, unknown> = { tenantId };
