@@ -575,7 +575,8 @@ export const tenancyController = {
 
       const branchId = context.scope === 'branch' ? context.branchId : null;
       const result = await tenancyService.listBranches(context.tenantId, context.clinicId, branchId, query);
-      res.json({ success: true, data: result!.items, pagination: result!.pagination });
+      if (!result) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch scope not found.' } });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
   async listBranchActivity(req: Request, res: Response, next: NextFunction) {
