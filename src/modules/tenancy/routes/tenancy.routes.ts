@@ -16,6 +16,7 @@ tenantRouter.get('/subscription/usage', requireTenantScope, requireTenantRoles('
 tenantRouter.get('/invoices', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin', 'billing_admin'), tenancyController.listTenantInvoices);
 tenantRouter.get('/invoices/:invoiceId', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin', 'billing_admin'), tenancyController.getTenantInvoice);
 tenantRouter.get('/dashboard/summary', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.dashboardSummary);
+tenantRouter.get('/dashboard/activity', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.dashboardActivity);
 tenantRouter.get('/dashboard/clinics', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.dashboardClinics);
 tenantRouter.get('/dashboard/alerts', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.dashboardAlerts);
 tenantRouter.get('/documents', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.listTenantDocuments);
