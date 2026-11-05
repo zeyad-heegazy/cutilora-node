@@ -90,7 +90,24 @@ export const authService = {
       const existingMembership = await tenancyRepository.findExistingMembershipForInvitation(
         String(user._id), String(invitation.tenantId), invitation.clinicId ? String(invitation.clinicId) : null,
       );
-      if (existingMembership) throw new AuthError('MEMBERSHIP_ALREADY_EXISTS', 'This user already has a membership for the invited scope.', 409);
+      if (existingMembership) {
+        const sameScope = existingMembership.scope === invitation.scope
+          && existingMembership.role === invitation.role
+          && (existingMembership.branchIds ?? []).map((id: unknown) => String(id)).join(',') === (invitation.branchIds ?? []).map((id: unknown) => String(id)).join(',');
+        if (!sameScope || existingMembership.status !== 'active') {
+          throw new AuthError('MEMBERSHIP_ALREADY_EXISTS', 'This user already has a different membership for the invited scope.', 409);
+        }
+        const acceptedExisting = await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), {
+          status: 'accepted', acceptedAt: new Date(), acceptedBy: String(user._id), processingAt: null,
+        });
+        if (!acceptedExisting) throw new AuthError('INVITATION_ACCEPTANCE_CONFLICT', 'The invitation could not be completed. Please try again.', 409);
+        return {
+          user: { id: String(user._id), name: user.name, email: user.email },
+          membership: { id: String(existingMembership._id), tenantId: String(invitation.tenantId), clinicId: invitation.clinicId ? String(invitation.clinicId) : null, branchIds: (invitation.branchIds ?? []).map((id: unknown) => String(id)), scope: invitation.scope, role: invitation.role, status: 'active' },
+          accountCreated: Boolean(createdUserId),
+          alreadyMember: true,
+        };
+      }
 
       const membership = await tenancyRepository.createTenantMembership({
         userId: String(user._id),
@@ -107,6 +124,7 @@ export const authService = {
         status: 'accepted',
         acceptedAt: new Date(),
         acceptedBy: String(user._id),
+        processingAt: null,
       });
       if (!accepted) throw new AuthError('INVITATION_ACCEPTANCE_CONFLICT', 'The invitation could not be completed. Please try again.', 409);
 
@@ -144,7 +162,7 @@ export const authService = {
     } catch (error) {
       if (createdMembershipId) await tenancyRepository.deleteTenantMembershipById(createdMembershipId).catch(() => null);
       if (createdUserId) await authRepository.deleteUserById(createdUserId).catch(() => null);
-      await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), { status: 'pending' }).catch(() => null);
+      await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), { status: 'pending', processingAt: null }).catch(() => null);
       throw error;
     }
   },
