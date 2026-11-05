@@ -107,7 +107,7 @@ describe('tenant dashboard service', () => {
   });
   it('exports only safe audit fields with tenant-scoped filters and a row cap', async () => {
     vi.mocked(tenancyRepository.exportTenantAuditEvents).mockResolvedValue([
-      { createdAt: new Date('2026-11-05T10:00:00.000Z'), actorUserId: 'user-1', action: 'membership.updated', targetType: 'membership', targetId: 'm-1', clinicId: null, branchId: null, result: 'success', requestId: 'req-1', metadata: { secret: 'must-not-export' } },
+      { createdAt: new Date('2026-11-05T10:00:00.000Z'), actorUserId: 'user-1', action: 'membership.updated', targetType: 'membership', targetId: 'm-1', clinicId: null, branchId: null, result: 'success', requestId: '=SUM(1,1)', metadata: { secret: 'must-not-export' } },
     ] as any);
 
     const result = await tenancyService.exportTenantAuditEvents(tenantId, {
@@ -119,6 +119,7 @@ describe('tenant dashboard service', () => {
     }, 5001);
     expect(result.csv).toContain('membership.updated');
     expect(result.csv).not.toContain('must-not-export');
+    expect(result.csv).toContain("'=SUM(1,1)");
     expect(result.truncated).toBe(false);
   });
 
