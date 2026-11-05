@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { authRepository } from '../repositories/auth.repository.js';
 import { tenancyRepository } from '../../tenancy/repositories/tenancy.repository.js';
 import { hashPassword } from './auth.security.js';
@@ -19,7 +19,7 @@ export class AuthError extends Error {
   }
 }
 export const authService = {
-  async login(email: string, password: string) {
+  async login(email: string, password: string, client: { userAgent?: string | null } = {}) {
     const user = await authRepository.findUserByEmail(email.toLowerCase());
     if (
       !user ||
@@ -39,8 +39,18 @@ export const authService = {
       });
     });
     const memberships = await authRepository.findActiveMemberships(user.id);
+    const sessionId = randomUUID();
+    const issuedAt = new Date();
+    const expiresAt = new Date(issuedAt.getTime() + 1000 * (await import('../../../config/env.js')).env.ACCESS_TOKEN_TTL_SECONDS);
+    await authRepository.createUserSession({
+      sessionId,
+      userId: user.id,
+      userAgent: client.userAgent?.slice(0, 512) ?? null,
+      lastSeenAt: issuedAt,
+      expiresAt,
+    });
     return {
-      access_token: signAccessToken(user.id, 'user'),
+      access_token: signAccessToken(user.id, 'user', sessionId),
       token_type: 'Bearer',
       user: { id: user.id, name: user.name, email: user.email },
       memberships: memberships
@@ -196,7 +206,26 @@ export const authService = {
         'INVALID_TOKEN_TYPE',
         'A regular user access token is required.',
       );
+    if (payload.sessionId) {
+      await authRepository.revokeUserSession(payload.sub, payload.sessionId, new Date());
+    }
     await tokenRevocationService.revoke(token, payload.exp);
+  },
+  async listUserSessionSummaries(userId: string) {
+    const now = new Date();
+    const sessions = await authRepository.listUserSessions(userId);
+    return sessions.map((session: any) => ({
+      sessionId: session.sessionId,
+      userAgent: session.userAgent ?? null,
+      createdAt: session.createdAt,
+      lastSeenAt: session.lastSeenAt,
+      expiresAt: session.expiresAt,
+      revokedAt: session.revokedAt ?? null,
+      status: session.revokedAt ? 'revoked' : new Date(session.expiresAt).getTime() <= now.getTime() ? 'expired' : 'active',
+    }));
+  },
+  async revokeUserSession(userId: string, sessionId: string) {
+    return authRepository.revokeUserSession(userId, sessionId, new Date());
   },
   async me(userId: string) {
     const [user, memberships] = await Promise.all([
