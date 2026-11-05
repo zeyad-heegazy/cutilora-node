@@ -11,6 +11,8 @@ const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, immutable: true },
   clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', required: true, immutable: true },
   branchId: { type: Schema.Types.ObjectId, ref: 'Branch', default: null, immutable: true },
+  idempotencyKey: { type: String, required: true, trim: true, maxlength: 128, immutable: true },
+  requestFingerprint: { type: String, required: true, immutable: true, select: false },
   description: { type: String, required: true, trim: true, maxlength: 240 },
   category: { type: String, required: true, trim: true, lowercase: true, maxlength: 80 },
   supplier: {
@@ -33,6 +35,8 @@ const schema = new Schema({
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true, minimize: false });
 
+schema.index({ tenantId: 1, clinicId: 1, idempotencyKey: 1 }, { unique: true });
+schema.set('toJSON', { transform: (_doc: unknown, ret: any) => { delete ret.requestFingerprint; return ret; } });
 schema.index({ tenantId: 1, clinicId: 1, incurredAt: -1 });
 schema.index({ tenantId: 1, clinicId: 1, category: 1, incurredAt: -1 });
 schema.index({ tenantId: 1, clinicId: 1, branchId: 1, status: 1 });
