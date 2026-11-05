@@ -80,6 +80,19 @@ describe('tenant membership administration', () => {
     expect(tenancyRepository.transitionBranchStatus).not.toHaveBeenCalled();
   });
 
+  it('activates a draft branch and records the activation event', async () => {
+    vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId, status: 'draft' } as any);
+    const updated = { _id: branchId, status: 'active' };
+    vi.mocked(tenancyRepository.transitionBranchStatus).mockResolvedValue(updated as any);
+
+    await expect(tenancyService.activateBranch(branchId, tenantId, clinicId, actorId)).resolves.toEqual(updated);
+    expect(tenancyRepository.transitionBranchStatus).toHaveBeenCalledWith(
+      branchId, tenantId, clinicId, ['draft', 'temporarily_closed', 'suspended'],
+      expect.objectContaining({ status: 'active', updatedBy: actorId }),
+    );
+    expect(tenancyRepository.createTenantAuditEvent).toHaveBeenCalledWith(expect.objectContaining({ action: 'branch.activated', branchId }));
+  });
+
   it('does not reactivate a permanently closed branch', async () => {
     vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId, status: 'closed' } as any);
     await expect(tenancyService.activateBranch(branchId, tenantId, clinicId, actorId)).rejects.toMatchObject({ status: 409, code: 'BRANCH_PERMANENTLY_CLOSED' });
@@ -91,7 +104,7 @@ describe('tenant membership administration', () => {
     const updated = { _id: branchId, status: 'closed', closureReason: 'Business ended' };
     vi.mocked(tenancyRepository.transitionBranchStatus).mockResolvedValue(updated as any);
     await expect(tenancyService.permanentlyCloseBranch(branchId, tenantId, clinicId, actorId, 'Business ended')).resolves.toEqual(updated);
-    expect(tenancyRepository.transitionBranchStatus).toHaveBeenCalledWith(branchId, tenantId, clinicId, ['active', 'temporarily_closed', 'suspended'], expect.objectContaining({ status: 'closed', closureReason: 'Business ended' }));
+    expect(tenancyRepository.transitionBranchStatus).toHaveBeenCalledWith(branchId, tenantId, clinicId, ['draft', 'active', 'temporarily_closed', 'suspended'], expect.objectContaining({ status: 'closed', closureReason: 'Business ended' }));
   });
 
   it('filters activity events by both clinic and branch ownership', async () => {
