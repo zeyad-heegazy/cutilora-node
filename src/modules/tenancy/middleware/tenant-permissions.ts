@@ -25,7 +25,7 @@ export function requireTenantPermission(permission: string) {
         error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission}.` },
       });
       let resourceClinicId = String(req.params.clinicId ?? req.query.clinicId ?? context.clinicId ?? membership.clinicId ?? '') || null;
-      let resourceBranchId = String(req.params.branchId ?? context.branchId ?? '') || null;
+      let resourceBranchId = String(req.params.branchId ?? req.query.branchId ?? context.branchId ?? '') || null;
       if (resourceBranchId) {
         const branch = await Branch.findOne({ _id: resourceBranchId, tenantId: context.tenantId }).select('clinicId').lean() as any;
         if (!branch) return res.status(404).json({ success: false, error: { code: 'BRANCH_NOT_FOUND', message: 'Branch not found in this tenant.' } });
