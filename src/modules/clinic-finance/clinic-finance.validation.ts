@@ -16,7 +16,7 @@ const customerSchema = z.object({
   email: z.string().trim().email().max(254).optional(),
   externalPatientReference: z.string().trim().max(100).optional(),
 });
-export const createInvoiceSchema = z.object({ customer: customerSchema, lines: z.array(lineSchema).min(1).max(100), currency: currencySchema.optional(), dueAt: z.coerce.date().optional() });
+export const createInvoiceSchema = z.object({ idempotencyKey: z.string().trim().min(8).max(128), customer: customerSchema, lines: z.array(lineSchema).min(1).max(100), currency: currencySchema.optional(), dueAt: z.coerce.date().optional() });
 export const updateInvoiceSchema = createInvoiceSchema.partial().refine((v) => Object.keys(v).length > 0, 'At least one field is required.');
 export const invoiceListQuerySchema = z.object({
   status: z.enum(['draft', 'issued', 'partially_paid', 'paid', 'void']).optional(),
@@ -40,6 +40,7 @@ export const refundPaymentSchema = z.object({
 });
 export const voidInvoiceSchema = z.object({ reason: z.string().trim().min(3).max(500) });
 export const createExpenseSchema = z.object({
+  idempotencyKey: z.string().trim().min(8).max(128),
   description: z.string().trim().min(1).max(240),
   category: z.string().trim().min(1).max(80),
   supplier: z.object({ name: z.string().trim().max(160).optional(), reference: z.string().trim().max(120).optional() }).optional(),
