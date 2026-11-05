@@ -405,14 +405,22 @@ export const tenancyRepository = {
     if (query.role) filter.role = query.role;
     if (query.scope) filter.scope = query.scope;
     if (query.clinicId) filter.clinicId = query.clinicId;
+    const userFilter: Record<string, unknown> = {};
     if (query.search) {
       const escaped = [...query.search].map((char) => '.*+?^$()|[]{}\\'.includes(char) ? '\\' + char : char).join('');
-      const userIds = await User.find({
-        $or: [
-          { name: { $regex: escaped, $options: 'i' } },
-          { email: { $regex: escaped, $options: 'i' } },
-        ],
-      }).distinct('_id');
+      userFilter.$or = [
+        { name: { $regex: escaped, $options: 'i' } },
+        { email: { $regex: escaped, $options: 'i' } },
+      ];
+    }
+    if (query.lastLoginFrom || query.lastLoginTo) {
+      userFilter.lastLoginAt = {
+        ...(query.lastLoginFrom ? { $gte: query.lastLoginFrom } : {}),
+        ...(query.lastLoginTo ? { $lte: query.lastLoginTo } : {}),
+      };
+    }
+    if (Object.keys(userFilter).length) {
+      const userIds = await User.find(userFilter).distinct('_id');
       filter.userId = { $in: userIds };
     }
     const skip = (query.page - 1) * query.perPage;
