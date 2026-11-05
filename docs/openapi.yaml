@@ -107,6 +107,10 @@ paths:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1invitations~1{invitationId}~1resend"
   /tenant/roles:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles"
+  /tenant/roles/{roleId}:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}"
+  /tenant/roles/{roleId}/archive:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1archive"
   /tenant/users/{userId}/effective-access:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users~1{userId}~1effective-access"
   /tenant/users/{userId}:
@@ -133,6 +137,8 @@ paths:
     $ref: "./openapi/tenant/profile/profile.yaml#/paths/~1tenant~1preferences"
   /tenant/permissions:
     $ref: "./openapi/tenant/context/permissions.yaml#/paths/~1tenant~1permissions"
+  /tenant/permissions/catalog:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1permissions~1catalog"
   /tenant/context:
     $ref: "./openapi/tenant/context/context.yaml#/paths/~1tenant~1context"
   /tenant/clinics:
