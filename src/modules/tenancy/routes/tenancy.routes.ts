@@ -14,6 +14,7 @@ tenantRouter.post('/invitations', requireTenantScope, requireTenantPermission('m
 tenantRouter.post('/invitations/:invitationId/revoke', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.revokeTenantInvitation);
 tenantRouter.post('/invitations/:invitationId/resend', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.resendTenantInvitation);
 tenantRouter.get('/users', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.listTenantUsers);
+tenantRouter.get('/users/:userId', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.getTenantUserDetails);
 tenantRouter.get('/users/:userId/effective-access', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.getTenantUserEffectiveAccess);
 tenantRouter.get('/memberships/:membershipId/history', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.listTenantMembershipHistory);
 tenantRouter.patch('/memberships/:membershipId', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.updateTenantMembership);
