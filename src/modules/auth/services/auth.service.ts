@@ -9,7 +9,6 @@ import {
 } from './auth.security.js';
 import { tokenRevocationService } from './token-revocation.service.js';
 import { logger } from '../../../shared/logger/logger.js';
-import { env } from '../../../config/env.js';
 export class AuthError extends Error {
   constructor(
     public code: string,
@@ -42,7 +41,7 @@ export const authService = {
     const memberships = await authRepository.findActiveMemberships(user.id);
     const sessionId = randomUUID();
     const issuedAt = new Date();
-    const expiresAt = new Date(issuedAt.getTime() + 1000 * env.ACCESS_TOKEN_TTL_SECONDS);
+    const expiresAt = new Date(issuedAt.getTime() + 1000 * Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 3600));
     await authRepository.createUserSession({
       sessionId,
       userId: user.id,
