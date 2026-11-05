@@ -258,11 +258,11 @@ export const tenancyService = {
     const current = await tenancyRepository.findTenantRoleById(tenantId, roleId);
     if (!current || current.status !== 'active') return null;
     if (actorRole !== 'tenant_owner' && current.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin cannot manage tenant-scoped roles.' };
-    const permissions = input.permissions ?? current.permissions;
-    const invalid = permissions.filter((permission) => !TENANT_PERMISSION_CATALOG.includes(permission));
+    const permissions: string[] = input.permissions ?? (current.permissions as string[]);
+    const invalid = permissions.filter((permission: string) => !TENANT_PERMISSION_CATALOG.includes(permission));
     if (invalid.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more permissions are not in the tenant permission catalog.', details: { permissions: invalid } };
     const actorPermissions = getTenantRolePermissions(actorRole);
-    if (!permissions.every((permission) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
+    if (!permissions.every((permission: string) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
     const update: Record<string, unknown> = { updatedBy: actorUserId, permissions: [...new Set(permissions)].sort() };
     if (input.description !== undefined) update.description = input.description;
     if (input.name !== undefined) {
