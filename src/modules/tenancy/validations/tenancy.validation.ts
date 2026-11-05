@@ -59,35 +59,57 @@ const timeString = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:mm format');
 
+const breakTimesSchema = z.array(z.object({
+  startTime: timeString,
+  endTime: timeString,
+})).max(5);
+
+const operatingShiftSchema = z.object({
+  startTime: timeString,
+  endTime: timeString,
+  breakTimes: breakTimesSchema.optional(),
+});
+
 const operatingHourSchema = z.object({
   dayOfWeek: z.number().int().min(0).max(6),
   isClosed: z.boolean().optional(),
+  // Legacy single-window fields remain supported for existing records and clients.
   openTime: timeString.optional(),
   closeTime: timeString.optional(),
-  breakTimes: z
-    .array(
-      z.object({
-        startTime: timeString,
-        endTime: timeString,
-      }),
-    )
-    .max(5)
-    .optional(),
-}).refine((hour) => hour.isClosed || Boolean(hour.openTime && hour.closeTime && hour.openTime < hour.closeTime), {
-  message: 'Open days require openTime before closeTime; overnight hours are not supported.',
-  path: ['openTime'],
+  breakTimes: breakTimesSchema.optional(),
+  // New split-shift schedule; intervals are local to the branch timezone.
+  shifts: z.array(operatingShiftSchema).min(1).max(3).optional(),
 }).refine((hour) => {
-  if (hour.isClosed || !hour.openTime || !hour.closeTime) return true;
-  const breaks = [...(hour.breakTimes ?? [])].sort((a, b) => a.startTime.localeCompare(b.startTime));
-  return breaks.every((item, index) =>
-    item.startTime < item.endTime &&
-    item.startTime >= hour.openTime! &&
-    item.endTime <= hour.closeTime! &&
-    (index === 0 || breaks[index - 1]!.endTime <= item.startTime)
-  );
+  if (hour.isClosed) return !(hour.shifts?.length || hour.openTime || hour.closeTime || hour.breakTimes?.length);
+  if (hour.shifts?.length) return !hour.openTime && !hour.closeTime && !hour.breakTimes?.length;
+  return Boolean(hour.openTime && hour.closeTime && hour.openTime < hour.closeTime);
 }, {
-  message: 'Breaks must be inside operating hours and must not overlap.',
-  path: ['breakTimes'],
+  message: 'Open days require either one valid open/close window or one to three split shifts; overnight hours are not supported.',
+  path: ['shifts'],
+}).refine((hour) => {
+  if (hour.isClosed) return true;
+  const validateBreaks = (breaks: Array<{ startTime: string; endTime: string }>, start: string, end: string) => {
+    const sorted = [...breaks].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return sorted.every((item, index) =>
+      item.startTime < item.endTime &&
+      item.startTime >= start &&
+      item.endTime <= end &&
+      (index === 0 || sorted[index - 1]!.endTime <= item.startTime)
+    );
+  };
+  if (hour.shifts?.length) {
+    const shifts = [...hour.shifts].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return shifts.every((shift, index) =>
+      shift.startTime < shift.endTime &&
+      (index === 0 || shifts[index - 1]!.endTime <= shift.startTime) &&
+      validateBreaks(shift.breakTimes ?? [], shift.startTime, shift.endTime)
+    );
+  }
+  if (!hour.openTime || !hour.closeTime) return true;
+  return validateBreaks(hour.breakTimes ?? [], hour.openTime, hour.closeTime);
+}, {
+  message: 'Shifts and breaks must be ordered, non-overlapping, and breaks must be inside their shift.',
+  path: ['shifts'],
 });
 
 const operatingHoursArraySchema = z.array(operatingHourSchema).max(7).refine(
