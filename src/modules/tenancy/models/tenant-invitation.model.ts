@@ -11,6 +11,7 @@ const schema = new Schema({
   tokenHash: { type: String, required: true, select: false },
   status: { type: String, enum: ['pending', 'processing', 'accepted', 'revoked', 'expired'], default: 'pending', required: true },
   expiresAt: { type: Date, required: true },
+  processingAt: { type: Date, default: null },
   acceptedAt: { type: Date, default: null },
   acceptedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   revokedAt: { type: Date, default: null },
