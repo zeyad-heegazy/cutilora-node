@@ -60,6 +60,12 @@ export const geoRepository = {
     }
     return models[resource].deleteOne({ _id: id });
   },
+  async validateCity(cityId?: string | null) {
+    if (!cityId) return;
+    if (!await City.exists({ _id: cityId })) {
+      throw Object.assign(new Error('City not found.'), { code: 'INVALID_GEO_HIERARCHY', status: 422 });
+    }
+  },
   async validateClinicLocation(location: { countryId?: string; governorateId?: string; cityId?: string; districtId?: string }) {
     const { countryId, governorateId, cityId, districtId } = location;
     const invalid = (message: string) => Object.assign(new Error(message), { code: 'INVALID_GEO_HIERARCHY', status: 422 });
