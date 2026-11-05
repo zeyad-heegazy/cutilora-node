@@ -36,7 +36,7 @@ vi.mock('../../src/modules/tenancy/models/clinic.model.js', () => ({
   Clinic: { exists: (...args: any[]) => mocks.clinicExists(...args) },
 }));
 
-import { tenantRolesService } from '../../src/modules/tenancy/services/tenant-roles.service.js';
+import { tenantRolesService, TENANT_ROLE_TEMPLATES } from '../../src/modules/tenancy/services/tenant-roles.service.js';
 
 function query(value: any) {
   const chain: any = { sort: () => chain, select: () => chain, lean: async () => value, then: (resolve: any, reject: any) => Promise.resolve(value).then(resolve, reject) };
@@ -92,6 +92,22 @@ describe('tenant custom role service', () => {
       permissions: [{ permission: 'branch.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-b' }],
     })).rejects.toMatchObject({ status: 400, code: 'PERMISSION_TARGET_INVALID' });
     expect(mocks.roleCreate).not.toHaveBeenCalled();
+  });
+
+  it('provides the requested configurable starter role templates', () => {
+    expect(TENANT_ROLE_TEMPLATES.map((template) => template.name)).toEqual(expect.arrayContaining([
+      'Tenant Admin', 'Organization Manager', 'Clinic Manager', 'Branch Manager', 'Finance Viewer', 'Finance Manager', 'Read-only Analyst',
+    ]));
+  });
+
+  it('clones a branch manager starter template with explicit branch targets', async () => {
+    await tenantRolesService.clone('tenant-a', 'owner-a', null, 'template:branch-manager', {
+      key: 'north-branch-manager', name: 'North Branch Manager', clinicId: 'clinic-a', branchIds: ['branch-a'],
+    });
+    expect(mocks.roleCreate).toHaveBeenCalledWith(expect.objectContaining({
+      scope: 'branch',
+      permissions: expect.arrayContaining([expect.objectContaining({ permission: 'branch.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' })]),
+    }));
   });
 
   it('rejects stale role edits instead of overwriting a newer permission version', async () => {
