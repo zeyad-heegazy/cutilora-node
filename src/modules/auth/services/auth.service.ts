@@ -57,6 +57,18 @@ export const authService = {
     let createdUserId: string | null = null;
     let createdMembershipId: string | null = null;
     try {
+      const tenantIsActive = await tenancyRepository.findActiveTenant(String(invitation.tenantId));
+      if (!tenantIsActive) throw new AuthError('TENANT_UNAVAILABLE', 'This tenant is not currently accepting invitations.', 409);
+      if (invitation.clinicId) {
+        const clinicIsActive = await tenancyRepository.findActiveClinic(String(invitation.clinicId), String(invitation.tenantId));
+        if (!clinicIsActive) throw new AuthError('INVITATION_SCOPE_UNAVAILABLE', 'The invited clinic is no longer active.', 409);
+      }
+      for (const branchId of invitation.branchIds ?? []) {
+        if (!invitation.clinicId || !await tenancyRepository.findActiveBranch(String(branchId), String(invitation.tenantId), String(invitation.clinicId))) {
+          throw new AuthError('INVITATION_SCOPE_UNAVAILABLE', 'One or more invited branches are no longer active.', 409);
+        }
+      }
+
       let user = await authRepository.findUserByEmail(String(invitation.email).toLowerCase());
       if (!user) {
         if (!input.name || !input.password) {
@@ -73,6 +85,11 @@ export const authService = {
       } else if (!user.isActive || user.platformRole === 'platform_admin') {
         throw new AuthError('ACCOUNT_NOT_ELIGIBLE', 'This account cannot accept tenant invitations.', 403);
       }
+
+      const existingMembership = await tenancyRepository.findExistingMembershipForInvitation(
+        String(user._id), String(invitation.tenantId), invitation.clinicId ? String(invitation.clinicId) : null,
+      );
+      if (existingMembership) throw new AuthError('MEMBERSHIP_ALREADY_EXISTS', 'This user already has a membership for the invited scope.', 409);
 
       const membership = await tenancyRepository.createTenantMembership({
         userId: String(user._id),
