@@ -37,6 +37,8 @@ tenantRouter.get('/clinics', requireTenantScope, requireTenantPermission('clinic
 tenantRouter.post('/clinics', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.createClinic);
 tenantRouter.post('/clinics/:clinicId/activate', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.activateClinic);
 tenantRouter.post('/clinics/:clinicId/deactivate', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.deactivateClinic);
+tenantRouter.get('/clinics/:clinicId/settings', requireTenantPermission('clinic.settings.read'), tenancyController.getClinicSettings);
+tenantRouter.patch('/clinics/:clinicId/settings', requireTenantPermission('clinic.settings.manage'), tenancyController.updateClinicSettings);
 tenantRouter.get('/clinics/:clinicId', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.getClinic);
 tenantRouter.patch('/clinics/:clinicId', requireTenantScope, requireTenantPermission('clinic.manage'), tenancyController.updateClinic);
 tenantRouter.get('/branches', tenancyController.listBranches);
