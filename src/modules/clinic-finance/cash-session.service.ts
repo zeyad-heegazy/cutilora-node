@@ -76,7 +76,7 @@ export const cashSessionService = {
   },
 
   async close(scope: Scope, sessionId: string, input: { countedBalanceMinor: number; varianceReason?: string }) {
-    const session = await ClinicCashSession.findOne({ _id: sessionId, ...scopeFilter(scope) });
+    const session = await ClinicCashSession.findOne({ _id: sessionId, ...scopeFilter(scope) }).select('+cashMutationLockExpiresAt');
     if (!session) throw { status: 404, code: 'OPEN_CASH_SESSION_NOT_FOUND', message: 'Cash session not found.' };
     if (session.status !== 'open') {
       if (['pending_review', 'approved'].includes(session.status) && String(session.closedBy) === scope.userId && session.countedBalanceMinor === input.countedBalanceMinor && session.varianceReason === (input.varianceReason ?? '')) return session;
@@ -88,7 +88,7 @@ export const cashSessionService = {
     if (varianceMinor !== 0 && !input.varianceReason?.trim()) throw { status: 400, code: 'CASH_VARIANCE_REASON_REQUIRED', message: 'A reason is required when counted cash differs from expected cash.' };
     const now = new Date();
     const updated = await ClinicCashSession.findOneAndUpdate(
-      { _id: sessionId, ...scopeFilter(scope), status: 'open', version: session.version },
+      { _id: sessionId, ...scopeFilter(scope), status: 'open', version: session.version, $or: [{ cashMutationLockExpiresAt: null }, { cashMutationLockExpiresAt: { $lte: new Date() } }, { cashMutationLockExpiresAt: { $exists: false } }] },
       { $set: { status: 'pending_review', expectedBalanceMinor, countedBalanceMinor: input.countedBalanceMinor, varianceMinor, varianceReason: input.varianceReason ?? '', closedAt: now, closedBy: scope.userId },
         $push: { events: { type: 'cash_session.closed', actorUserId: scope.userId, occurredAt: now, metadata: { expectedBalanceMinor, countedBalanceMinor: input.countedBalanceMinor, varianceMinor } } }, $inc: { version: 1 } },
       { new: true, runValidators: true },
