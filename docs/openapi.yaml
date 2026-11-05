@@ -91,6 +91,12 @@ paths:
     $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1invoices"
   /tenant/invoices/{invoiceId}:
     $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1invoices~1{invoiceId}"
+  /tenant/configuration:
+    $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration"
+  /tenant/configuration/preview-apply:
+    $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1preview-apply"
+  /tenant/configuration/apply:
+    $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1apply"
   /tenant/audit-logs:
     $ref: "./openapi/tenant/governance/audit-logs.yaml#/paths/~1tenant~1audit-logs"
   /tenant/profile:
