@@ -169,3 +169,15 @@ paths:
           schema: { type: string, enum: [day, month], default: day }
       responses:
         '200': { description: Currency-separated collection, expense, service-revenue and trend summaries }
+
+  /clinic/invoices/{invoiceId}/credit-notes:
+    parameters:
+      - in: path
+        name: invoiceId
+        required: true
+        schema: { type: string }
+    post:
+      tags: [Clinic Finance]
+      summary: Issue an idempotent credit note against an issued invoice
+      responses:
+        '201': { description: Credit note issued and invoice balance recalculated }
