@@ -409,3 +409,7 @@ export const updateTenantMembershipSchema = z.object({
 }).refine((value) => Object.keys(value).length > 0, {
   message: 'At least one membership field must be supplied.',
 });
+
+export const updateBranchSettingsSchema = z.object({
+  settings: z.record(z.unknown()).refine((settings) => Object.keys(settings).length > 0, 'At least one setting is required.'),
+});
