@@ -3,6 +3,7 @@ import {
   createBranchSchema,
   createClinicSchema,
   updateBranchSchema,
+  branchLifecycleReasonSchema,
 } from '../../src/modules/tenancy/validations/tenancy.validation.js';
 
 describe('tenancy request validation', () => {
@@ -29,15 +30,21 @@ describe('tenancy request validation', () => {
     }).success).toBe(false);
   });
 
-  it('accepts branch operating hours and lifecycle status updates', () => {
+  it('accepts branch operating hours but keeps lifecycle changes out of the general update schema', () => {
     const result = updateBranchSchema.parse({
       status: 'suspended',
       operatingHours: [
         { dayOfWeek: 0, isClosed: false, openTime: '09:00', closeTime: '17:00' },
       ],
     });
-    expect(result.status).toBe('suspended');
+    expect(result.status).toBeUndefined();
     expect(result.operatingHours).toHaveLength(1);
+  });
+
+  it('requires a reason for branch lifecycle transitions', () => {
+    expect(branchLifecycleReasonSchema.safeParse({ reason: 'Renovation' }).success).toBe(true);
+    expect(branchLifecycleReasonSchema.safeParse({ reason: ' ' }).success).toBe(false);
+    expect(branchLifecycleReasonSchema.safeParse({}).success).toBe(false);
   });
 
   it('rejects duplicate operating-hour days', () => {
