@@ -292,6 +292,27 @@ export const tenancyRepository = {
         : null,
     ]);
   },
+  listTenantMemberships(tenantId: string) {
+    return TenantMembership.find({ tenantId })
+      .populate('userId', 'name email isActive')
+      .populate('clinicId', 'name slug status')
+      .populate('branchIds', 'name slug status')
+      .sort({ createdAt: -1 })
+      .lean();
+  },
+  findTenantMembershipById(tenantId: string, membershipId: string) {
+    return TenantMembership.findOne({ _id: membershipId, tenantId });
+  },
+  countActiveTenantOwners(tenantId: string) {
+    return TenantMembership.countDocuments({ tenantId, scope: 'tenant', role: 'tenant_owner', status: 'active' });
+  },
+  updateTenantMembership(tenantId: string, membershipId: string, update: Record<string, unknown>) {
+    return TenantMembership.findOneAndUpdate(
+      { _id: membershipId, tenantId },
+      { $set: update },
+      { new: true, runValidators: true },
+    ).populate('userId', 'name email isActive').populate('clinicId', 'name slug').populate('branchIds', 'name slug');
+  },
   findMembership(userId: string, tenantId: string, clinicId: string | null) {
     return TenantMembership.findOne({
       userId,
