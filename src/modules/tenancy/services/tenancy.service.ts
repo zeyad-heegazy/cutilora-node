@@ -212,6 +212,19 @@ export const tenancyService = {
   async listCustomTenantRoles(tenantId: string, filters: { status?: string; scope?: string } = {}) {
     return tenancyRepository.listTenantRoles(tenantId, filters);
   },
+  async getCustomTenantRole(tenantId: string, roleId: string) {
+    const role = await tenancyRepository.findTenantRoleById(tenantId, roleId);
+    if (!role) return null;
+    return { ...role.toObject(), assignedMemberships: await tenancyRepository.countMembershipsUsingRole(tenantId, roleId) };
+  },
+  async cloneCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string, actorScope: string, input: { name: string; description?: string }) {
+    const source = await tenancyRepository.findActiveTenantRoleById(tenantId, roleId);
+    if (!source) return null;
+    return this.createCustomTenantRole(tenantId, actorUserId, actorRole, actorScope, {
+      name: input.name, description: input.description ?? source.description,
+      scope: source.scope, permissions: source.permissions ?? [],
+    });
+  },
   async createCustomTenantRole(tenantId: string, actorUserId: string, actorRole: string, actorScope: string, input: { name: string; description?: string; scope: 'tenant' | 'clinic' | 'branch'; permissions: string[] }) {
     if (actorScope !== 'tenant') throw { status: 403, code: 'TENANT_SCOPE_REQUIRED', message: 'Custom roles must be managed from tenant scope.' };
     if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
