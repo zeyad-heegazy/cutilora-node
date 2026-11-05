@@ -48,7 +48,7 @@ function decodeTenantDocument(input: string): { content: Buffer; mimeType: strin
     throw new Error('Document must be valid base64 or a supported base64 data URL.');
   }
   const content = Buffer.from(encoded, 'base64');
-  if (!content.length || content.length > 10 * 1024 * 1024) throw new Error('Document size must be between 1 byte and 10 MB.');
+  if (!content.length || content.length > 3 * 1024 * 1024) throw new Error('Document size must be between 1 byte and 3 MB.');
   let mimeType = '';
   let extension = '';
   if (content.subarray(0, 5).toString() === '%PDF-') { mimeType = 'application/pdf'; extension = 'pdf'; }
