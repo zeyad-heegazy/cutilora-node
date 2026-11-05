@@ -961,13 +961,48 @@ export const tenancyService = {
   async updateBranch(id: string, input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
     if (!current) return null;
+    const currentData = current.toObject?.() ?? current;
     const update: Record<string, unknown> = { ...input, ...(userId ? { updatedBy: userId } : {}) };
-    if ('cityId' in input) await geoService.validateCity(input.cityId ?? null);
-    else if (input.addressDetails?.cityId) update.cityId = input.addressDetails.cityId;
-    if (input.addressDetails) await geoService.validateClinicLocation(input.addressDetails);
-    if (input.cityId && input.addressDetails?.cityId && String(input.cityId) !== String(input.addressDetails.cityId)) throw { status: 400, code: 'BRANCH_CITY_MISMATCH', message: 'cityId and addressDetails.cityId must match.' };
+
+    // Nested branch fields are PATCH semantics: preserve values the caller did
+    // not send instead of replacing the entire Mongo subdocument.
+    for (const key of ['addressDetails', 'contact', 'contactPerson', 'settings']) {
+      if (input[key] && typeof input[key] === 'object' && !Array.isArray(input[key])) {
+        const existing = currentData[key]?.toObject?.() ?? currentData[key] ?? {};
+        update[key] = deepMerge(existing, input[key]);
+      }
+    }
+
+    const hasTopLevelCity = Object.prototype.hasOwnProperty.call(input, 'cityId');
+    const hasAddressCity = Object.prototype.hasOwnProperty.call(input.addressDetails ?? {}, 'cityId');
+    if (hasTopLevelCity && hasAddressCity) {
+      const topLevelCity = input.cityId == null ? null : String(input.cityId);
+      const addressCity = input.addressDetails.cityId == null ? null : String(input.addressDetails.cityId);
+      if (topLevelCity !== addressCity) {
+        throw { status: 400, code: 'BRANCH_CITY_MISMATCH', message: 'cityId and addressDetails.cityId must match.' };
+      }
+    }
+
+    const mergedAddress = update.addressDetails as Record<string, any> | undefined;
+    const resolvedCityId = hasTopLevelCity
+      ? (input.cityId ?? null)
+      : hasAddressCity
+        ? (input.addressDetails.cityId ?? null)
+        : (currentData.cityId ?? currentData.addressDetails?.cityId ?? null);
+    if (hasTopLevelCity || hasAddressCity) update.cityId = resolvedCityId;
+    if (hasTopLevelCity || hasAddressCity || input.addressDetails) {
+      const location = {
+        ...(currentData.addressDetails?.toObject?.() ?? currentData.addressDetails ?? {}),
+        ...(mergedAddress ?? {}),
+        cityId: resolvedCityId,
+      };
+      if (resolvedCityId) await geoService.validateCity(resolvedCityId);
+      else if (hasTopLevelCity || hasAddressCity) await geoService.validateCity(null);
+      await geoService.validateClinicLocation(location);
+    }
+
     if (typeof input.code === 'string' && await tenancyRepository.findBranchByCode(clinicId, input.code, id)) throw { status: 409, code: 'BRANCH_CODE_EXISTS', message: 'Branch code already exists in this clinic.' };
-    if (typeof input.slug === 'string' || (typeof input.name === 'string' && input.name !== current.name)) {
+    if (typeof input.slug === 'string' || (typeof input.name === 'string' && input.name !== currentData.name)) {
       const base = slugify(String(input.slug || input.name), 'branch');
       let candidate = base;
       let suffix = 2;
