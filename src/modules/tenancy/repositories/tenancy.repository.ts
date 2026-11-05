@@ -53,6 +53,9 @@ export const tenancyRepository = {
   createTenantDocument(data: Record<string, unknown>) {
     return TenantDocument.create(data);
   },
+  countExpiringTenantDocuments(tenantId: string, from: Date, to: Date) {
+    return TenantDocument.countDocuments({ tenantId, status: 'active', expiresAt: { $gte: from, $lte: to } });
+  },
   listTenantDocuments(tenantId: string) {
     return TenantDocument.find({ tenantId, status: 'active' }).sort({ createdAt: -1 }).lean();
   },
