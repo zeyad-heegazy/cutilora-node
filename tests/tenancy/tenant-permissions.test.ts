@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { getTenantRoleCatalog, getTenantRolePermissions, requireTenantPermission } from '../../src/modules/tenancy/middleware/tenant-permissions.js';
 
 function runPermission(role: string, permission: string, context: Record<string, unknown> = {}) {
-  const req = { tenantContext: { role, scope: 'tenant', clinicId: null, branchId: null, ...context } } as any;
+  const defaultScope = ['tenant_owner', 'tenant_admin', 'billing_admin'].includes(role) ? 'tenant' : ['clinic_admin', 'clinic_manager'].includes(role) ? 'clinic' : 'branch';
+  const req = { tenantContext: { role, scope: defaultScope, clinicId: defaultScope === 'tenant' ? null : 'clinic-a', branchId: defaultScope === 'branch' ? 'branch-a' : null, ...context } } as any;
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
   const next = vi.fn();
   requireTenantPermission(permission)(req, res, next);
