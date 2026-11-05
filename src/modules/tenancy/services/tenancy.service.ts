@@ -287,7 +287,7 @@ export const tenancyService = {
     if (actorRole !== 'tenant_owner' && role.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin cannot archive tenant-scoped roles.' };
     if (await tenancyRepository.countMembershipsUsingRole(tenantId, roleId) > 0) throw { status: 409, code: 'ROLE_IN_USE', message: 'Reassign all memberships using this role before archiving it.' };
     const archived = await tenancyRepository.archiveTenantRole(tenantId, roleId, actorUserId, {
-      version: role.version, action: 'archived', name: role.name, description: role.description ?? '',
+      version: role.version + 1, action: 'archived', name: role.name, description: role.description ?? '',
       scope: role.scope, permissions: role.permissions ?? [], changedBy: actorUserId, changedAt: new Date(),
     });
     if (archived) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.archived', targetType: 'tenant_role', targetId: roleId, metadata: { name: role.name } });
@@ -351,8 +351,8 @@ export const tenancyService = {
       customRoleId: input.role === 'custom' ? ((input.customRoleId ?? current.customRoleId) ? String(input.customRoleId ?? current.customRoleId) : null) : input.role ? null : (current.customRoleId ? String(current.customRoleId) : null),
       permissionOverrides: input.permissionOverrides
         ? {
-            allow: input.permissionOverrides.allow ?? current.permissionOverrides?.allow ?? [],
-            deny: input.permissionOverrides.deny ?? current.permissionOverrides?.deny ?? [],
+            allow: [...new Set(input.permissionOverrides.allow ?? current.permissionOverrides?.allow ?? [])],
+            deny: [...new Set(input.permissionOverrides.deny ?? current.permissionOverrides?.deny ?? [])],
           }
         : { allow: current.permissionOverrides?.allow ?? [], deny: current.permissionOverrides?.deny ?? [] },
       scope: input.scope ?? current.scope,
