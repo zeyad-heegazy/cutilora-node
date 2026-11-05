@@ -77,6 +77,12 @@ paths:
     $ref: "./openapi/tenant/dashboard/dashboard.yaml#/paths/~1tenant~1dashboard~1clinics"
   /tenant/dashboard/alerts:
     $ref: "./openapi/tenant/dashboard/dashboard.yaml#/paths/~1tenant~1dashboard~1alerts"
+  /tenant/documents:
+    $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents"
+  /tenant/documents/{documentId}:
+    $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}"
+  /tenant/documents/{documentId}/download:
+    $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1download"
   /tenant/profile:
     $ref: "./openapi/tenant/profile/profile.yaml#/paths/~1tenant~1profile"
   /tenant/preferences:
