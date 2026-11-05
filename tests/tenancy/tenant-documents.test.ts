@@ -98,4 +98,65 @@ describe('tenant document service', () => {
     await expect(tenancyService.getTenantDocument(tenantId, documentId)).resolves.toBeNull();
     expect(readPrivateTenantDocument).not.toHaveBeenCalled();
   });
+  it('replaces a document with a new version and archives the previous version', async () => {
+    vi.mocked(tenancyRepository.findTenantDocument).mockResolvedValue({
+      _id: documentId,
+      tenantId,
+      name: 'Registration.pdf',
+      category: 'registration',
+      version: 3,
+      expiresAt: new Date('2027-01-01T00:00:00.000Z'),
+    } as any);
+    vi.mocked(storePrivateTenantDocument).mockResolvedValue(tenantId + '/registration-v4.pdf');
+    vi.mocked(tenancyRepository.createTenantDocument).mockResolvedValue({
+      _id: '64b000000000000000000004',
+      version: 4,
+      category: 'registration',
+      storageKey: tenantId + '/registration-v4.pdf',
+    } as any);
+    vi.mocked(tenancyRepository.archiveTenantDocument).mockResolvedValue({ _id: documentId } as any);
+
+    const result = await tenancyService.replaceTenantDocument(tenantId, documentId, userId, {
+      fileBase64: pdfBase64,
+      expiresAt: null,
+    });
+
+    expect(tenancyRepository.createTenantDocument).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId,
+      uploadedBy: userId,
+      category: 'registration',
+      version: 4,
+      replacesDocumentId: documentId,
+      expiresAt: null,
+      storageKey: tenantId + '/registration-v4.pdf',
+    }));
+    expect(tenancyRepository.archiveTenantDocument).toHaveBeenCalledWith(tenantId, documentId, userId);
+    expect(result).toMatchObject({ version: 4, category: 'registration' });
+    expect(removePrivateTenantDocument).not.toHaveBeenCalled();
+  });
+
+  it('cleans up the replacement file if the original document can no longer be archived', async () => {
+    vi.mocked(tenancyRepository.findTenantDocument).mockResolvedValue({
+      _id: documentId,
+      tenantId,
+      name: 'Registration.pdf',
+      category: 'registration',
+      version: 1,
+    } as any);
+    vi.mocked(storePrivateTenantDocument).mockResolvedValue(tenantId + '/replacement.pdf');
+    vi.mocked(tenancyRepository.createTenantDocument).mockResolvedValue({
+      _id: '64b000000000000000000004',
+      version: 2,
+    } as any);
+    vi.mocked(tenancyRepository.archiveTenantDocument)
+      .mockResolvedValueOnce(null as any)
+      .mockResolvedValueOnce({ _id: '64b000000000000000000004' } as any);
+
+    await expect(tenancyService.replaceTenantDocument(tenantId, documentId, userId, {
+      fileBase64: pdfBase64,
+    })).rejects.toMatchObject({ code: 'DOCUMENT_REPLACEMENT_CONFLICT', status: 409 });
+
+    expect(removePrivateTenantDocument).toHaveBeenCalledWith(tenantId + '/replacement.pdf');
+  });
+
 });
