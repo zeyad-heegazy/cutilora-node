@@ -486,10 +486,20 @@ export const tenancyController = {
   },
   async getTenantPermissionCatalog(req: Request, res: Response) {
     const context = req.tenantContext!;
-    const permissions = context.role === 'tenant_owner'
+    const actorPermissions = getTenantRoleGrants(context.role, context).map((grant) => grant.permission);
+    const assignable = context.role === 'tenant_owner'
       ? TENANT_PERMISSION_CATALOG
-      : TENANT_PERMISSION_CATALOG.filter((permission) => getTenantRoleGrants(context.role, context).some((grant) => grant.permission === permission));
-    res.json({ success: true, data: { permissions, assignable: permissions } });
+      : TENANT_PERMISSION_CATALOG.filter((permission) => actorPermissions.includes(permission));
+    const grouped = assignable.reduce((groups: Record<string, string[]>, permission) => {
+      const [module] = permission.split('.');
+      (groups[module!] ??= []).push(permission);
+      return groups;
+    }, {});
+    const groups = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([module, permissions]) => ({
+      module,
+      permissions: permissions.map((key) => ({ key, action: key.split('.').slice(1).join('.') })),
+    }));
+    res.json({ success: true, data: { groups, permissions: TENANT_PERMISSION_CATALOG, assignable } });
   },
   async createTenantRole(req: Request, res: Response, next: NextFunction) {
     try {
