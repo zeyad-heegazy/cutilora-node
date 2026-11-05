@@ -196,7 +196,21 @@ export const tenancyRepository = {
         { $group: { _id: null, total: { $sum: 1 }, active: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } } } },
       ], as: 'branchStats' } },
       { $addFields: { branchStats: { $ifNull: [{ $arrayElemAt: ['$branchStats', 0] }, { total: 0, active: 0 }] } } },
-      { $project: { name: 1, slug: 1, code: 1, status: 1, clinicType: 1, updatedAt: 1, branchCount: '$branchStats.total', activeBranchCount: '$branchStats.active' } },
+      { $lookup: { from: 'tenantmemberships', let: { clinicId: '$_id', tenantId: '$tenantId' }, pipeline: [
+        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$tenantId'] }, { $eq: ['$clinicId', '$clinicId'] }, { $eq: ['$scope', 'clinic'] }, { $eq: ['$role', 'clinic_manager'] }, { $eq: ['$status', 'active'] }] } } },
+        { $sort: { createdAt: 1 } },
+        { $limit: 1 },
+        { $lookup: { from: 'users', localField: 'userId', foreignField: '_id', as: 'user' } },
+        { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } },
+        { $project: { _id: 0, name: '$user.name', email: '$user.email' } },
+      ], as: 'clinicManager' } },
+      { $lookup: { from: 'tenantauditevents', let: { clinicId: '$_id', clinicIdString: { $toString: '$_id' }, tenantId: '$tenantId' }, pipeline: [
+        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$tenantId'] }, { $or: [{ $eq: ['$clinicId', '$clinicId'] }, { $eq: ['$targetId', '$clinicIdString'] }] }] } } },
+        { $sort: { createdAt: -1 } },
+        { $limit: 1 },
+        { $project: { _id: 0, createdAt: 1, action: 1 } },
+      ], as: 'lastActivity' } },
+      { $project: { name: 1, slug: 1, code: 1, status: 1, clinicType: 1, updatedAt: 1, branchCount: '$branchStats.total', activeBranchCount: '$branchStats.active', manager: { $arrayElemAt: ['$clinicManager', 0] }, lastActivity: { $arrayElemAt: ['$lastActivity', 0] } } },
       { $sort: { name: 1 } },
     ]);
   },
