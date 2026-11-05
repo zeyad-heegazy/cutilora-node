@@ -14,6 +14,7 @@ const lineSchema = new Schema({
 }, { _id: true });
 
 const refundSchema = new Schema({
+  idempotencyKey: { type: String, required: true, trim: true, maxlength: 128 },
   amountMinor: { type: Number, required: true, min: 1 },
   reason: { type: String, required: true, trim: true, maxlength: 500 },
   refundedAt: { type: Date, required: true },
@@ -21,6 +22,7 @@ const refundSchema = new Schema({
 }, { timestamps: false });
 
 const paymentSchema = new Schema({
+  idempotencyKey: { type: String, required: true, trim: true, maxlength: 128 },
   method: { type: String, enum: ['cash', 'card', 'bank_transfer', 'online', 'wallet', 'other'], required: true },
   amountMinor: { type: Number, required: true, min: 1 },
   currency: { type: String, required: true, uppercase: true, minlength: 3, maxlength: 3 },
