@@ -204,6 +204,37 @@ export const tenancyService = {
     };
     return tenancyRepository.listTenantAuditEvents(filter, query.page, query.perPage);
   },
+  async replaceTenantDocument(tenantId: string, documentId: string, userId: string, input: Record<string, any>) {
+    const existing = await tenancyRepository.findTenantDocument(tenantId, documentId);
+    if (!existing) return null;
+    const decoded = decodeTenantDocument(input.fileBase64);
+    const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
+    let replacement;
+    try {
+      replacement = await tenancyRepository.createTenantDocument({
+        tenantId,
+        uploadedBy: userId,
+        category: existing.category,
+        name: String(input.name ?? existing.name).trim().split('/').join('_').split(String.fromCharCode(92)).join('_').replaceAll('"', '_').replaceAll(String.fromCharCode(10), '_').replaceAll(String.fromCharCode(13), '_'),
+        mimeType: decoded.mimeType,
+        sizeBytes: decoded.content.length,
+        storageKey,
+        expiresAt: input.expiresAt ?? existing.expiresAt ?? null,
+        version: (existing.version ?? 1) + 1,
+        replacesDocumentId: existing._id,
+      });
+    } catch (error) {
+      await removePrivateTenantDocument(storageKey);
+      throw error;
+    }
+    const archived = await tenancyRepository.archiveTenantDocument(tenantId, documentId, userId);
+    if (!archived) {
+      await tenancyRepository.archiveTenantDocument(tenantId, String(replacement._id), userId);
+      throw { status: 409, code: 'DOCUMENT_REPLACEMENT_CONFLICT', message: 'The original document changed while the replacement was being saved.' };
+    }
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.document.replaced', targetType: 'tenant_document', targetId: documentId, metadata: { replacementDocumentId: String(replacement._id), version: replacement.version } });
+    return replacement;
+  },
   async createTenantDocument(tenantId: string, userId: string, input: Record<string, any>) {
     const decoded = decodeTenantDocument(input.fileBase64);
     const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
