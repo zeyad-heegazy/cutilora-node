@@ -62,6 +62,24 @@ describe('tenant membership administration', () => {
     vi.mocked(tenancyRepository.releaseTenantEntitlementLock).mockResolvedValue({ modifiedCount: 1 } as any);
   });
 
+  it('filters activity events by both clinic and branch ownership', async () => {
+    const result = { items: [{ _id: 'event-1' }], pagination: { page: 1, perPage: 25, total: 1, pages: 1 } };
+    vi.mocked(tenancyRepository.listTenantAuditEvents).mockResolvedValue(result as any);
+
+    await expect(tenancyService.listTenantAuditEvents(tenantId, {
+      clinicId,
+      branchId,
+      page: 1,
+      perPage: 25,
+    })).resolves.toEqual(result);
+
+    expect(tenancyRepository.listTenantAuditEvents).toHaveBeenCalledWith(
+      { tenantId, clinicId, branchId },
+      1,
+      25,
+    );
+  });
+
   it('lists clinic members and branch-assigned members for a selected branch', async () => {
     const result = { items: [{ _id: membershipId }], pagination: { page: 1, perPage: 25, total: 1, pages: 1 } };
     vi.mocked(tenancyRepository.listTenantMemberships).mockResolvedValue(result as any);
