@@ -85,6 +85,16 @@ export const tenancyController = {
       res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
+  async getTenantUserDetails(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getTenantUserDetails(
+        req.tenantContext!.tenantId,
+        String(req.params.userId ?? ''),
+      );
+      if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_USER_NOT_FOUND', message: 'User not found in this tenant.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
   async listTenantMembershipHistory(req: Request, res: Response, next: NextFunction) {
     try {
       const page = Math.max(1, Number(req.query.page) || 1);
