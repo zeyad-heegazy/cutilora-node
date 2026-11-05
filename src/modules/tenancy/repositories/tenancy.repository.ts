@@ -23,7 +23,7 @@ export const tenancyRepository = {
       { tenantId, version: expectedVersion },
       {
         $set: { values, version: expectedVersion + 1 },
-        $push: { history: { version: expectedVersion + 1, values, changedBy, changedAt: new Date() } },
+        $push: { history: { $each: [{ version: expectedVersion + 1, values, changedBy, changedAt: new Date() }], $slice: -100 } },
       },
       { new: true, runValidators: true },
     );
