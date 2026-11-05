@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { tenantRolesService, TENANT_PERMISSION_CATALOG } from '../services/tenant-roles.service.js';
+import { tenantRolesService, TENANT_PERMISSION_CATALOG, TENANT_ROLE_TEMPLATES } from '../services/tenant-roles.service.js';
 import { getTenantRoleCatalog } from '../services/tenant-access.service.js';
 
 const grantSchema = z.object({
@@ -27,6 +27,8 @@ const cloneRoleSchema = z.object({
   key: z.string().trim().min(2).max(80),
   name: z.string().trim().min(2).max(120),
   description: z.string().trim().max(500).optional(),
+  clinicId: z.string().regex(/^[a-fA-F0-9]{24}$/).optional(),
+  branchIds: z.array(z.string().regex(/^[a-fA-F0-9]{24}$/)).max(50).optional(),
 });
 const assignRoleSchema = z.object({ roleId: z.string().regex(/^[a-fA-F0-9]{24}$/) });
 
@@ -44,7 +46,7 @@ export const tenantRolesController = {
     res.json({ success: true, data: TENANT_PERMISSION_CATALOG });
   },
   async list(req: Request, res: Response, next: NextFunction) {
-    try { res.json({ success: true, data: { templates: getTenantRoleCatalog(req.tenantContext!.role), customRoles: await tenantRolesService.list(req.tenantContext!.tenantId) } }); }
+    try { res.json({ success: true, data: { templates: getTenantRoleCatalog(req.tenantContext!.role), suggestedTemplates: TENANT_ROLE_TEMPLATES.map((template) => ({ id: `template:${template.key}`, ...template })), customRoles: await tenantRolesService.list(req.tenantContext!.tenantId) } }); }
     catch (error) { next(error); }
   },
   async get(req: Request, res: Response, next: NextFunction) {
