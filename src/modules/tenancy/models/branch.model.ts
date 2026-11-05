@@ -51,6 +51,8 @@ const schema = new Schema({
   closureReason: { type: String, trim: true, maxlength: 500, default: '' },
   temporarilyClosedAt: { type: Date, default: null },
   closedAt: { type: Date, default: null },
+  holidayMutationLockToken: { type: String, default: null, select: false },
+  holidayMutationLockExpiresAt: { type: Date, default: null, select: false },
   address: { type: String, default: '' },
   addressDetails: { type: addressDetailsSchema, default: () => ({}) },
   contact: { type: contactSchema, default: () => ({}) },
