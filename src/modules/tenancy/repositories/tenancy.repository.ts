@@ -203,7 +203,7 @@ export const tenancyRepository = {
       Branch.countDocuments(filter),
       Branch.countDocuments({ ...filter, status: 'active' }),
       TenantMembership.distinct('userId', { ...filter, status: 'active' }),
-      TenantMembership.countDocuments({ ...filter, status: 'invited' }),
+      TenantInvitation.countDocuments({ tenantId, status: { $in: ['pending', 'processing'] }, expiresAt: { $gt: new Date() } }),
     ]);
     return {
       clinics: { total: clinicCount, active: activeClinicCount, suspended: clinicCount - activeClinicCount },
