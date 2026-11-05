@@ -276,6 +276,18 @@ describe('tenant membership administration', () => {
     expect(result?.invitationToken).toHaveLength(43);
   });
 
+  it('returns a conflict when concurrent invitation creation hits the unique pending-invitation index', async () => {
+    vi.mocked(tenancyRepository.expirePendingTenantInvitations).mockResolvedValue({ modifiedCount: 0 } as any);
+    vi.mocked(tenancyRepository.findPendingTenantInvitation).mockResolvedValue(null as any);
+    vi.mocked(tenancyRepository.createTenantInvitation).mockRejectedValue({ code: 11000 });
+
+    await expect(tenancyService.createTenantInvitation(tenantId, actorId, 'tenant_owner', {
+      email: 'owner@example.com', role: 'billing_admin', scope: 'tenant',
+    })).rejects.toMatchObject({ status: 409, code: 'INVITATION_ALREADY_PENDING' });
+
+    expect(tenancyRepository.createTenantAuditEvent).not.toHaveBeenCalled();
+  });
+
   it('does not issue an invitation for a suspended clinic', async () => {
     vi.mocked(tenancyRepository.findActiveClinic).mockResolvedValue(null as any);
 
