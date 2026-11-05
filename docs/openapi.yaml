@@ -336,10 +336,7 @@ components:
         businessType: { type: string, enum: [single_clinic, clinic_group, medical_center] }
         description: { type: string }
         industry: { type: string }
-        status: { type: string, enum: [active, temporarily_closed, suspended, closed] }
-        closureReason: { type: string }
-        temporarilyClosedAt: { type: string, format: date-time, nullable: true }
-        closedAt: { type: string, format: date-time, nullable: true }
+        status: { type: string, enum: [active, suspended] }
         contact: { $ref: "#/components/schemas/BusinessContact" }
         address: { $ref: "#/components/schemas/BusinessAddress" }
         legal:
