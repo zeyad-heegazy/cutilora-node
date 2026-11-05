@@ -349,6 +349,7 @@ export const tenancyRepository = {
   createTenantMembership(data: Record<string, unknown>) { return TenantMembership.create(data); },
   deleteTenantMembershipById(id: string) { return TenantMembership.deleteOne({ _id: id }); },
   findTenantMembershipForUser(userId: string, tenantId: string) { return TenantMembership.findOne({ userId, tenantId, status: { $in: ['active', 'invited'] } }); },
+  findExistingMembershipForInvitation(userId: string, tenantId: string, clinicId: string | null) { return TenantMembership.findOne({ userId, tenantId, clinicId, status: { $in: ['active', 'invited'] } }); },
   listTenantMemberships(tenantId: string) {
     return TenantMembership.find({ tenantId })
       .populate('userId', 'name email isActive')
