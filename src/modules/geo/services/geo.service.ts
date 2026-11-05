@@ -38,6 +38,7 @@ function mapEntry(resource: GeoResource, doc: any): Record<string, unknown> {
 }
 
 export const geoService = {
+  validateCity(cityId?: string | null) { return geoRepository.validateCity(cityId); },
   validateClinicLocation(location: { countryId?: string; governorateId?: string; cityId?: string; districtId?: string }) {
     return geoRepository.validateClinicLocation(location);
   },
