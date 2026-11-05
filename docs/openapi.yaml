@@ -73,6 +73,8 @@ paths:
     $ref: "./openapi/tenant/geo/districts/districts.yaml#/paths/~1tenant~1geo~1districts"
   /tenant/dashboard/summary:
     $ref: "./openapi/tenant/dashboard/dashboard.yaml#/paths/~1tenant~1dashboard~1summary"
+  /tenant/dashboard/activity:
+    $ref: "./openapi/tenant/dashboard/dashboard.yaml#/paths/~1tenant~1dashboard~1activity"
   /tenant/dashboard/clinics:
     $ref: "./openapi/tenant/dashboard/dashboard.yaml#/paths/~1tenant~1dashboard~1clinics"
   /tenant/dashboard/alerts:
