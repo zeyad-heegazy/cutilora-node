@@ -89,7 +89,7 @@ export const clinicFinanceService = {
     const clinic = await assertClinic(scope);
     const { lines, totals } = calculateInvoiceLines(input.lines ?? []);
     const currency = (input.currency ?? clinic.preferences?.currency ?? 'EGP').toUpperCase();
-    const requestFingerprint = createHash('sha256').update(JSON.stringify({ customer: input.customer, lines: input.lines, currency, dueAt: input.dueAt ?? null, branchId: scope.branchId })).digest('hex');
+    const requestFingerprint = createHash('sha256').update(JSON.stringify({ customer: input.customer, lines: input.lines, currency: input.currency ?? null, dueAt: input.dueAt ?? null, branchId: scope.branchId })).digest('hex');
     const existing = await ClinicInvoice.findOne({ tenantId: scope.tenantId, clinicId: scope.clinicId, idempotencyKey: input.idempotencyKey }).select('+requestFingerprint');
     if (existing) {
       if (existing.requestFingerprint !== requestFingerprint) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different invoice details.' };
@@ -257,7 +257,7 @@ export const clinicFinanceService = {
   async createExpense(scope: Scope, input: any) {
     const clinic = await assertClinic(scope);
     const currency = (input.currency ?? clinic.preferences?.currency ?? 'EGP').toUpperCase();
-    const requestFingerprint = createHash('sha256').update(JSON.stringify({ description: input.description, category: input.category, supplier: input.supplier ?? {}, amountMinor: input.amountMinor, currency, dueAt: input.dueAt ?? null, incurredAt: input.incurredAt ?? null, branchId: scope.branchId })).digest('hex');
+    const requestFingerprint = createHash('sha256').update(JSON.stringify({ description: input.description, category: input.category, supplier: input.supplier ?? {}, amountMinor: input.amountMinor, currency: input.currency ?? null, dueAt: input.dueAt ?? null, incurredAt: input.incurredAt ?? null, branchId: scope.branchId })).digest('hex');
     const existing = await ClinicExpense.findOne({ tenantId: scope.tenantId, clinicId: scope.clinicId, idempotencyKey: input.idempotencyKey }).select('+requestFingerprint');
     if (existing) {
       if (existing.requestFingerprint !== requestFingerprint) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different expense details.' };
