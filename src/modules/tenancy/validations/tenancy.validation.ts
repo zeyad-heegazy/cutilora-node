@@ -327,3 +327,22 @@ export const tenantAuditQuerySchema = z.object({
   message: 'from must be before or equal to to.',
   path: ['to'],
 });
+
+const configurationValuesSchema = z.record(z.unknown()).refine((values) =>
+  !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides'].some((key) => key in values),
+  'Reserved configuration keys cannot be supplied.',
+);
+export const updateTenantConfigurationSchema = z.object({
+  values: configurationValuesSchema.refine((values) => Object.keys(values).length > 0, 'At least one configuration value is required.'),
+});
+const configurationApplyFields = {
+  applyTo: z.enum(['all', 'selected']),
+  clinicIds: z.array(z.string().regex(/^[a-f\\d]{24}$/i)).min(1).max(100).optional(),
+};
+export const previewTenantConfigurationApplySchema = z.object(configurationApplyFields).refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
+  message: 'clinicIds are required when applyTo=selected.',
+  path: ['clinicIds'],
+});
+export const applyTenantConfigurationSchema = previewTenantConfigurationApplySchema.extend({
+  confirm: z.boolean(),
+});
