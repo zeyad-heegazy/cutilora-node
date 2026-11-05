@@ -16,10 +16,10 @@ function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>
 const DEFAULT_CLINIC_PREFERENCES = { timezone: 'Africa/Cairo', locale: 'en', currency: 'EGP', dateFormat: 'YYYY-MM-DD', weekStartsOn: 6, supportedLanguages: ['en', 'ar'] };
 const DEFAULT_BOOKING_SETTINGS = { allowOnlineBooking: false, requireAppointmentConfirmation: true, defaultAppointmentDurationMinutes: 30, bufferMinutes: 0, cancellationWindowHours: 24 };
 
-function slugify(value: string): string {
+function slugify(value: string, fallback = 'clinic'): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
     .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
-  return slug || 'clinic';
+  return slug || fallback;
 }
 
 async function generateUniqueClinicSlug(tenantId: string, name: string, excludeId?: string): Promise<string> {
@@ -142,7 +142,7 @@ export const tenancyService = {
   async createBranch(input: Record<string, any>, tenantId: string, clinicId: string) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
     if (!clinic) return null;
-    const base = slugify(String(input.slug || input.name)) || 'branch';
+    const base = slugify(String(input.slug || input.name), 'branch');
     let slug = base;
     let suffix = 2;
     while (await tenancyRepository.findBranchBySlug(tenantId, clinicId, slug)) {
@@ -161,7 +161,7 @@ export const tenancyService = {
     if (!current) return null;
     const update: Record<string, unknown> = { ...input };
     if (typeof input.slug === 'string' || (typeof input.name === 'string' && input.name !== current.name)) {
-      const base = slugify(String(input.slug || input.name));
+      const base = slugify(String(input.slug || input.name), 'branch');
       let candidate = base;
       let suffix = 2;
       while (await tenancyRepository.findBranchBySlug(tenantId, clinicId, candidate, id)) {
