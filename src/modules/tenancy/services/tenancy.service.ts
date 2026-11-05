@@ -2,7 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
-import { getTenantRolePermissions } from './tenant-access.service.js';
+import { getTenantRolePermissions, TENANT_PERMISSION_CATALOG } from './tenant-access.service.js';
+import { hasPermission } from '../../../shared/authorization/permission.engine.js';
 import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
 import { readPrivateTenantDocument, removePrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
 import { logger } from '../../../shared/logger/logger.js';
@@ -207,6 +208,68 @@ export const tenancyService = {
     if (!updated) return null;
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.resent', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
     return { invitation: updated, invitationToken: token, acceptanceEndpoint: '/auth/invitations/accept', delivery: 'manual' };
+  },
+  async listCustomTenantRoles(tenantId: string, filters: { status?: string; scope?: string } = {}) {
+    return tenancyRepository.listTenantRoles(tenantId, filters);
+  },
+  async createCustomTenantRole(tenantId: string, actorUserId: string, actorRole: string, actorScope: string, input: { name: string; description?: string; scope: 'tenant' | 'clinic' | 'branch'; permissions: string[] }) {
+    if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
+    if (actorRole !== 'tenant_owner' && input.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin can create clinic or branch scoped roles only.' };
+    const invalid = input.permissions.filter((permission) => !TENANT_PERMISSION_CATALOG.includes(permission));
+    if (invalid.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more permissions are not in the tenant permission catalog.', details: { permissions: invalid } };
+    const actorPermissions = getTenantRolePermissions(actorRole);
+    if (!input.permissions.every((permission) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
+    const key = input.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
+    try {
+      const role = await tenancyRepository.createTenantRole({
+        tenantId, name: input.name.trim(), key, description: input.description ?? '',
+        scope: input.scope, permissions: [...new Set(input.permissions)].sort(),
+        version: 1, status: 'active', createdBy: actorUserId, updatedBy: actorUserId,
+      });
+      await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.created', targetType: 'tenant_role', targetId: String(role._id), metadata: { name: role.name, scope: role.scope, permissions: role.permissions } });
+      return role;
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'ROLE_NAME_ALREADY_EXISTS', message: 'A role with this name already exists in this tenant.' };
+      throw error;
+    }
+  },
+  async updateCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string, input: { name?: string; description?: string; permissions?: string[]; version: number }) {
+    if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
+    const current = await tenancyRepository.findTenantRoleById(tenantId, roleId);
+    if (!current || current.status !== 'active') return null;
+    if (actorRole !== 'tenant_owner' && current.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin cannot manage tenant-scoped roles.' };
+    const permissions = input.permissions ?? current.permissions;
+    const invalid = permissions.filter((permission) => !TENANT_PERMISSION_CATALOG.includes(permission));
+    if (invalid.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more permissions are not in the tenant permission catalog.', details: { permissions: invalid } };
+    const actorPermissions = getTenantRolePermissions(actorRole);
+    if (!permissions.every((permission) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
+    const update: Record<string, unknown> = { updatedBy: actorUserId, permissions: [...new Set(permissions)].sort() };
+    if (input.description !== undefined) update.description = input.description;
+    if (input.name !== undefined) {
+      const key = input.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
+      update.name = input.name.trim(); update.key = key;
+    }
+    try {
+      const updated = await tenancyRepository.updateTenantRole(tenantId, roleId, input.version, update);
+      if (!updated) throw { status: 409, code: 'ROLE_VERSION_CONFLICT', message: 'This role changed since it was loaded. Refresh and retry.' };
+      await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.updated', targetType: 'tenant_role', targetId: roleId, metadata: { version: updated.version, permissions: updated.permissions } });
+      return updated;
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'ROLE_NAME_ALREADY_EXISTS', message: 'A role with this name already exists in this tenant.' };
+      throw error;
+    }
+  },
+  async archiveCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string) {
+    if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
+    const role = await tenancyRepository.findTenantRoleById(tenantId, roleId);
+    if (!role || role.status !== 'active') return null;
+    if (actorRole !== 'tenant_owner' && role.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin cannot archive tenant-scoped roles.' };
+    if (await tenancyRepository.countMembershipsUsingRole(tenantId, roleId) > 0) throw { status: 409, code: 'ROLE_IN_USE', message: 'Reassign all memberships using this role before archiving it.' };
+    const archived = await tenancyRepository.archiveTenantRole(tenantId, roleId);
+    if (archived) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.archived', targetType: 'tenant_role', targetId: roleId, metadata: { name: role.name } });
+    return archived;
   },
   async getTenantUserEffectiveAccess(tenantId: string, userId: string) {
     if (!/^[a-f\d]{24}$/i.test(userId)) return null;
