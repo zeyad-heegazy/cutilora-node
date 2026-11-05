@@ -360,7 +360,17 @@ export const tenancyRepository = {
     return { items, pagination: { page: query.page, perPage: query.perPage, total, pages: Math.ceil(total / query.perPage) } };
   },
   updateTenantInvitation(tenantId: string, invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, tenantId }, { $set: update }, { new: true, runValidators: true }).select('-tokenHash'); },
-  claimTenantInvitation(tokenHash: string, now: Date) { return TenantInvitation.findOneAndUpdate({ tokenHash, status: 'pending', expiresAt: { $gt: now } }, { $set: { status: 'processing' } }, { new: true }).select('+tokenHash'); },
+  claimTenantInvitation(tokenHash: string, now: Date) {
+    const staleProcessingAt = new Date(now.getTime() - 10 * 60 * 1000);
+    return TenantInvitation.findOneAndUpdate({
+      tokenHash,
+      expiresAt: { $gt: now },
+      $or: [
+        { status: 'pending' },
+        { status: 'processing', $or: [{ processingAt: null }, { processingAt: { $lte: staleProcessingAt } }] },
+      ],
+    }, { $set: { status: 'processing', processingAt: now } }, { new: true }).select('+tokenHash');
+  },
   updateClaimedTenantInvitation(invitationId: string, update: Record<string, unknown>) { return TenantInvitation.findOneAndUpdate({ _id: invitationId, status: 'processing' }, { $set: update }, { new: true, runValidators: true }); },
   createTenantMembership(data: Record<string, unknown>) { return TenantMembership.create(data); },
   deleteTenantMembershipById(id: string) { return TenantMembership.deleteOne({ _id: id }); },
