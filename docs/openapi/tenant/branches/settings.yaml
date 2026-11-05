@@ -17,7 +17,7 @@ paths:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches/Settings"
       summary: Update branch-specific overrides
-      description: Merges supplied branch settings without changing organization defaults or clinic settings.
+      description: Merges supplied branch settings without changing organization defaults or clinic settings. Requires branch.settings.manage permission.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
