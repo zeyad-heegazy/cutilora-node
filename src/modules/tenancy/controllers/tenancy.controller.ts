@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -36,6 +36,13 @@ export const tenancyController = {
       const item = await tenancyService.updatePreferences(req.tenantContext!.tenantId, req.auth!.userId, input.preferences);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
       res.json({ success: true, data: item.preferences });
+    } catch (e) { next(e); }
+  },
+  async listTenantAuditEvents(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = tenantAuditQuerySchema.parse(req.query);
+      const result = await tenancyService.listTenantAuditEvents(req.tenantContext!.tenantId, query);
+      res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
   async getTenantSubscription(req: Request, res: Response, next: NextFunction) {
