@@ -150,10 +150,9 @@ export const clinicFinanceService = {
     if (!['issued', 'partially_paid'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
     const balanceDueMinor = current.totalMinor - (current.paidMinor - current.refundedMinor);
     if (input.amountMinor > balanceDueMinor) throw { status: 400, code: 'PAYMENT_EXCEEDS_BALANCE', message: 'Payment exceeds the outstanding invoice balance.' };
-    const cashSession = input.method === 'cash' ? await ClinicCashSession.findOne({ ...invoiceFilter(scope), status: 'open' }).select('_id') : null;
-    if (input.method === 'cash' && !cashSession) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording cash collections.' };
+    const cashSessionId = input.method === 'cash' ? await reserveCashSession(scope) : null;
     const payment = {
-      _id: new Types.ObjectId(), cashSessionId: cashSession?._id ?? null, idempotencyKey: input.idempotencyKey, method: input.method, amountMinor: input.amountMinor,
+      _id: new Types.ObjectId(), cashSessionId, idempotencyKey: input.idempotencyKey, method: input.method, amountMinor: input.amountMinor,
       currency: current.currency, reference: input.reference ?? '', receivedAt: input.method === 'cash' ? new Date() : (input.receivedAt ?? new Date()),
       recordedBy: scope.userId, refundedMinor: 0, refunds: [],
     };
