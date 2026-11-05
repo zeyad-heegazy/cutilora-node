@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRoleCatalog, getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
