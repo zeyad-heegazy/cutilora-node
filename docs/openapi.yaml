@@ -147,6 +147,16 @@ paths:
     $ref: "./openapi/tenant/clinics/lifecycle.yaml#/paths/~1tenant~1clinics~1{clinicId}~1deactivate"
   /tenant/clinics/{clinicId}:
     $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}"
+  /tenant/clinics/{clinicId}/documents:
+    $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}~1documents"
+  /tenant/clinics/{clinicId}/documents/{documentId}:
+    $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}~1documents~1{documentId}"
+  /tenant/clinics/{clinicId}/documents/{documentId}/replace:
+    $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}~1documents~1{documentId}~1replace"
+  /tenant/clinics/{clinicId}/documents/{documentId}/versions:
+    $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}~1documents~1{documentId}~1versions"
+  /tenant/clinics/{clinicId}/documents/{documentId}/download:
+    $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}~1documents~1{documentId}~1download"
   /tenant/branches:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches"
   /tenant/branches/{branchId}/settings:
