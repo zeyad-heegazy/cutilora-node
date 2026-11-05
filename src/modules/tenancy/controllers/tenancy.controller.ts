@@ -235,6 +235,16 @@ export const tenancyController = {
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
+  async getTenantDocumentVersionHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const versions = await tenancyService.getTenantDocumentVersionHistory(
+        req.tenantContext!.tenantId,
+        String(req.params.documentId ?? ''),
+      );
+      if (!versions) return res.status(404).json({ success: false, error: { code: 'DOCUMENT_NOT_FOUND', message: 'Document not found.' } });
+      res.json({ success: true, data: versions });
+    } catch (e) { next(e); }
+  },
   async getTenantDocument(req: Request, res: Response, next: NextFunction) {
     try {
       const item = await tenancyService.getTenantDocumentMetadata(req.tenantContext!.tenantId, String(req.params.documentId ?? ''));
