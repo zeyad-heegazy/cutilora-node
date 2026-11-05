@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../src/modules/auth/repositories/auth.repository.js', () => ({
+vi.mock('../src/modules/auth/repositories/auth.repository.js', () => ({
   authRepository: {
     findUserByEmail: vi.fn(),
     createUser: vi.fn(),
     deleteUserById: vi.fn(),
   },
 }));
-vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
+vi.mock('../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     claimTenantInvitation: vi.fn(),
     findActiveTenant: vi.fn(),
@@ -19,19 +19,19 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     deleteTenantMembershipById: vi.fn(),
   },
 }));
-vi.mock('../../src/modules/auth/services/auth.security.js', () => ({
+vi.mock('../src/modules/auth/services/auth.security.js', () => ({
   hashPassword: vi.fn().mockResolvedValue('hashed-password'),
   signAccessToken: vi.fn(),
   verifyPassword: vi.fn(),
   verifyAccessToken: vi.fn(),
 }));
-vi.mock('../../src/modules/auth/services/token-revocation.service.js', () => ({
+vi.mock('../src/modules/auth/services/token-revocation.service.js', () => ({
   tokenRevocationService: { revoke: vi.fn() },
 }));
 
-import { authService } from '../../src/modules/auth/services/auth.service.js';
-import { authRepository } from '../../src/modules/auth/repositories/auth.repository.js';
-import { tenancyRepository } from '../../src/modules/tenancy/repositories/tenancy.repository.js';
+import { authService } from '../src/modules/auth/services/auth.service.js';
+import { authRepository } from '../src/modules/auth/repositories/auth.repository.js';
+import { tenancyRepository } from '../src/modules/tenancy/repositories/tenancy.repository.js';
 
 const tenantId = '64b000000000000000000001';
 const userId = '64b000000000000000000002';
