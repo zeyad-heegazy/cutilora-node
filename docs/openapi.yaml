@@ -609,7 +609,10 @@ components:
         openingDate: { type: string, format: date-time, nullable: true }
         timezone: { type: string }
         operatingHours: { type: array, items: { $ref: "#/components/schemas/OperatingHoursDay" } }
-        status: { type: string, enum: [active, suspended] }
+        status: { type: string, enum: [active, temporarily_closed, suspended, closed] }
+        closureReason: { type: string }
+        temporarilyClosedAt: { type: string, format: date-time, nullable: true }
+        closedAt: { type: string, format: date-time, nullable: true }
     BranchUpdate:
       type: object
       minProperties: 1
