@@ -7,6 +7,8 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     listMembershipsForUser: vi.fn(),
     findTenantMembershipById: vi.fn(),
     countActiveTenantOwners: vi.fn(),
+    acquireTenantOwnerMutationLock: vi.fn(),
+    releaseTenantOwnerMutationLock: vi.fn(),
     findClinicById: vi.fn(),
     findActiveClinic: vi.fn(),
     findActiveBranch: vi.fn(),
@@ -43,7 +45,11 @@ const clinicId = '64b000000000000000000005';
 const branchId = '64b000000000000000000006';
 
 describe('tenant membership administration', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(tenancyRepository.acquireTenantOwnerMutationLock).mockResolvedValue({ _id: tenantId } as any);
+    vi.mocked(tenancyRepository.releaseTenantOwnerMutationLock).mockResolvedValue({ modifiedCount: 1 } as any);
+  });
 
   it('prevents demoting or suspending the last active Tenant Owner', async () => {
     vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
@@ -200,6 +206,21 @@ describe('tenant membership administration', () => {
   it('does not query MongoDB for malformed tenant user IDs', async () => {
     await expect(tenancyService.getTenantUserEffectiveAccess(tenantId, 'not-an-object-id')).resolves.toBeNull();
     expect(tenancyRepository.listMembershipsForUser).not.toHaveBeenCalled();
+  });
+
+  it('serializes concurrent last-owner demotions with a tenant-scoped lease', async () => {
+    vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
+      _id: membershipId, userId: targetId, role: 'tenant_owner', scope: 'tenant', status: 'active',
+      clinicId: null, branchIds: [],
+    } as any);
+    vi.mocked(tenancyRepository.acquireTenantOwnerMutationLock).mockResolvedValue(null as any);
+
+    await expect(tenancyService.updateTenantMembership(tenantId, membershipId, actorId, 'tenant_owner', {
+      status: 'suspended',
+    })).rejects.toMatchObject({ status: 409, code: 'OWNER_CHANGE_IN_PROGRESS' });
+
+    expect(tenancyRepository.countActiveTenantOwners).not.toHaveBeenCalled();
+    expect(tenancyRepository.updateTenantMembership).not.toHaveBeenCalled();
   });
 
 });
