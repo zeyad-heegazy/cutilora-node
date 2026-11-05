@@ -82,6 +82,21 @@ describe('tenant custom role service', () => {
     expect(mocks.auditCreate).toHaveBeenCalledWith(expect.objectContaining({ action: 'access.role.created', tenantId: 'tenant-a' }));
   });
 
+  it('returns a conflict when a tenant role key is already in use', async () => {
+    mocks.roleCreate.mockRejectedValue({ code: 11000 });
+    await expect(tenantRolesService.create('tenant-a', 'owner-a', null, {
+      key: 'finance-viewer', name: 'Finance Viewer', scope: 'tenant',
+      permissions: [{ permission: 'billing.read', scope: 'tenant' }],
+    })).rejects.toMatchObject({ status: 409, code: 'ROLE_KEY_CONFLICT' });
+  });
+
+  it('rejects normalized role keys longer than the persisted key limit', async () => {
+    await expect(tenantRolesService.create('tenant-a', 'owner-a', null, {
+      key: 'a'.repeat(81), name: 'Long Key Role', scope: 'tenant', permissions: [],
+    })).rejects.toMatchObject({ status: 400, code: 'ROLE_KEY_INVALID' });
+    expect(mocks.roleCreate).not.toHaveBeenCalled();
+  });
+
   it('rejects grants beyond a custom actor effective authority', async () => {
     mocks.membershipFindOne.mockReturnValue(query({ role: 'custom_role', roleId: 'role-actor', scope: 'tenant', clinicId: null }));
     mocks.roleFindOne.mockReturnValue(query({
