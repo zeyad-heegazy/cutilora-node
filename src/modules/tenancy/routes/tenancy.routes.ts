@@ -65,7 +65,7 @@ tenantRouter.get('/branches', requireTenantPermission('branch.read'), tenancyCon
 tenantRouter.post('/branches', requireTenantPermission('branch.manage'), tenancyController.createBranch);
 tenantRouter.post('/branches/:branchId/activate', requireTenantScope, requireTenantPermission('branch.lifecycle.manage'), tenancyController.activateBranch);
 tenantRouter.post('/branches/:branchId/deactivate', requireTenantScope, requireTenantPermission('branch.lifecycle.manage'), tenancyController.deactivateBranch);
-tenantRouter.get('/branches/:branchId/users', requireTenantPermission('branch.read'), tenancyController.listBranchUsers);
+tenantRouter.get('/branches/:branchId/users', requireTenantPermission('branch.members.read'), tenancyController.listBranchUsers);
 tenantRouter.get('/branches/:branchId/business-hours', requireTenantPermission('branch.read'), tenancyController.getBranchBusinessHours);
 tenantRouter.put('/branches/:branchId/business-hours', requireTenantPermission('branch.schedule.manage'), tenancyController.updateBranchBusinessHours);
 tenantRouter.get('/branches/:branchId/settings', requireTenantPermission('branch.read'), tenancyController.getBranchSettings);
