@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calculateInvoiceLines } from '../../src/modules/clinic-finance/clinic-finance.service.js';
+import { calculateInvoiceLines, getReceivableAgingBucket } from '../../src/modules/clinic-finance/clinic-finance.service.js';
 
 describe('clinic invoice calculations', () => {
   it('calculates discounts and tax using integer minor currency units', () => {
@@ -35,5 +35,21 @@ describe('clinic invoice calculations', () => {
     expect(result.lines[0].discountMinor).toBe(2999700000000000);
     expect(result.lines[0].taxMinor).toBe(1050052500000000);
     expect(Number.isSafeInteger(result.lines[0].totalMinor)).toBe(true);
+  });
+});
+
+describe('receivable aging buckets', () => {
+  it.each([
+    [-1, 'current'],
+    [0, 'current'],
+    [1, 'days1To30'],
+    [30, 'days1To30'],
+    [31, 'days31To60'],
+    [60, 'days31To60'],
+    [61, 'days61To90'],
+    [90, 'days61To90'],
+    [91, 'over90Days'],
+  ])('classifies %i overdue days', (days, bucket) => {
+    expect(getReceivableAgingBucket(days)).toBe(bucket);
   });
 });
