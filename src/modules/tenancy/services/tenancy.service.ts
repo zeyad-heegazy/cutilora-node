@@ -294,7 +294,11 @@ export const tenancyService = {
     const rows = await tenancyRepository.exportTenantAuditEvents(buildTenantAuditFilter(tenantId, query), limit + 1);
     const truncated = rows.length > limit;
     const columns = ['createdAt', 'actorUserId', 'action', 'targetType', 'targetId', 'clinicId', 'branchId', 'result', 'requestId'];
-    const escape = (value: unknown) => '"' + String(value ?? '').replaceAll('"', '""') + '"';
+    const escape = (value: unknown) => {
+      let text = String(value ?? '');
+      if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
+      return '"' + text.replaceAll('"', '""') + '"';
+    };
     const csv = [
       columns.join(','),
       ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(row[column])).join(',')),
