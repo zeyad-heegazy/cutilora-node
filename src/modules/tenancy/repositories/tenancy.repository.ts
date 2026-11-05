@@ -13,7 +13,7 @@ import { TenantConfiguration } from '../models/tenant-configuration.model.js';
 
 export const tenancyRepository = {
   findTenantConfiguration(tenantId: string) {
-    return TenantConfiguration.findOne({ tenantId }).lean();
+    return TenantConfiguration.findOne({ tenantId }).lean() as any;
   },
   createTenantConfiguration(data: Record<string, unknown>) {
     return TenantConfiguration.create(data);
