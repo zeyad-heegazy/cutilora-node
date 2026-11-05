@@ -33,6 +33,7 @@ tenantRouter.get('/catalog-templates', requireTenantScope, requireTenantPermissi
 tenantRouter.post('/catalog-templates', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.create);
 tenantRouter.get('/catalog-templates/:templateId', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.get);
 tenantRouter.patch('/catalog-templates/:templateId', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.update);
+tenantRouter.post('/catalog-templates/:templateId/rollback', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.rollback);
 tenantRouter.post('/catalog-templates/:templateId/archive', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.archive);
 tenantRouter.post('/catalog-templates/:templateId/publish', requireTenantScope, requireTenantPermission('configuration.manage'), tenantCatalogController.publish);
 tenantRouter.get('/configuration', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.getTenantConfiguration);
