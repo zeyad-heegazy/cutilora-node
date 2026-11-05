@@ -137,13 +137,19 @@ export const tenantRolesService = {
   },
   async create(tenantId: string, actorId: string, actorClinicId: string | null, input: any) {
     const key = normalizeKey(input.key || input.name);
-    if (!key) fail(400, 'ROLE_KEY_INVALID', 'A valid role key is required.');
+    if (!key || key.length > 80) fail(400, 'ROLE_KEY_INVALID', 'A valid role key of at most 80 characters is required.');
     if (['tenant-owner', 'tenant-admin', 'platform-admin'].includes(key)) fail(400, 'ROLE_KEY_RESERVED', 'This role key is reserved.');
     const grants = input.permissions as PermissionGrant[];
     for (const grant of grants) validateGrantShape(grant, input.scope);
     await validateGrantTargets(tenantId, grants);
     await assertActorCanGrant(tenantId, actorId, actorClinicId, grants);
-    const role = await TenantRole.create({ tenantId, key, name: input.name, description: input.description ?? '', scope: input.scope, permissions: grants, createdBy: actorId, updatedBy: actorId });
+    let role: any;
+    try {
+      role = await TenantRole.create({ tenantId, key, name: input.name, description: input.description ?? '', scope: input.scope, permissions: grants, createdBy: actorId, updatedBy: actorId });
+    } catch (error: any) {
+      if (error?.code === 11000) fail(409, 'ROLE_KEY_CONFLICT', 'A role with this key already exists in the tenant.');
+      throw error;
+    }
     await audit(tenantId, actorId, 'access.role.created', String(role._id), { key, scope: role.scope, version: role.version });
     return serialize(role.toObject());
   },
