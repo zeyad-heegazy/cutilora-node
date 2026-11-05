@@ -179,6 +179,10 @@ paths:
     $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1activate"
   /tenant/branches/{branchId}/deactivate:
     $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1deactivate"
+  /tenant/branches/{branchId}/temporary-close:
+    $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1temporary-close"
+  /tenant/branches/{branchId}/close:
+    $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1close"
   /tenant/branches/{branchId}:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches~1{branchId}"
   /platform/monitoring/view:
