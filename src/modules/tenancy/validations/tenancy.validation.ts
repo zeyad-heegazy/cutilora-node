@@ -268,8 +268,13 @@ export const createBranchSchema = z.object({
   openingDate: branchFields.openingDate,
 });
 
+const branchWeeklyOperatingHoursSchema = operatingHoursArraySchema.length(
+  7,
+  'A complete weekly schedule must include exactly one entry for every weekday.',
+);
+
 export const updateBranchOperatingHoursSchema = z.object({
-  operatingHours: operatingHoursArraySchema,
+  operatingHours: branchWeeklyOperatingHoursSchema,
 });
 
 export const updateBranchSchema = z.object({
