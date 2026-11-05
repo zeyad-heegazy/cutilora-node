@@ -712,6 +712,7 @@ export const tenancyService = {
       defaults: updatedSettings.organizationDefaults ?? {},
       overrides: updatedSettings.organizationOverrides ?? {},
       effectiveValues: deepMerge(updatedSettings.organizationDefaults ?? {}, updatedSettings.organizationOverrides ?? {}),
+      sources: getSettingSources([{ source: 'tenant_default', values: updatedSettings.organizationDefaults ?? {} }, { source: 'clinic_override', values: updatedSettings.organizationOverrides ?? {} }]),
       inheritedVersion: updatedSettings.organizationDefaultsVersion ?? 0,
       overrideKeys: Object.keys(updatedSettings.organizationOverrides ?? {}),
     };
@@ -759,6 +760,11 @@ export const tenancyService = {
       inheritedValues,
       overrides: branchOverrides,
       effectiveValues: deepMerge(inheritedValues, branchOverrides),
+      sources: getSettingSources([
+        { source: 'tenant_default', values: clinicSettings.organizationDefaults ?? {} },
+        { source: 'clinic_override', values: clinicSettings.organizationOverrides ?? {} },
+        { source: 'branch_override', values: branchOverrides },
+      ]),
       inheritedVersion: clinicSettings.organizationDefaultsVersion ?? 0,
       timezone: updated.timezone,
       operatingHours: updated.operatingHours ?? [],
