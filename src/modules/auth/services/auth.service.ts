@@ -93,7 +93,7 @@ export const authService = {
       if (existingMembership) {
         const sameScope = existingMembership.scope === invitation.scope
           && existingMembership.role === invitation.role
-          && (existingMembership.branchIds ?? []).map((id: unknown) => String(id)).join(',') === (invitation.branchIds ?? []).map((id: unknown) => String(id)).join(',');
+          && [...(existingMembership.branchIds ?? [])].map((id: unknown) => String(id)).sort().join(',') === [...(invitation.branchIds ?? [])].map((id: unknown) => String(id)).sort().join(',');
         if (!sameScope || existingMembership.status !== 'active') {
           throw new AuthError('MEMBERSHIP_ALREADY_EXISTS', 'This user already has a different membership for the invited scope.', 409);
         }
@@ -101,6 +101,23 @@ export const authService = {
           status: 'accepted', acceptedAt: new Date(), acceptedBy: String(user._id), processingAt: null,
         });
         if (!acceptedExisting) throw new AuthError('INVITATION_ACCEPTANCE_CONFLICT', 'The invitation could not be completed. Please try again.', 409);
+        try {
+          await tenancyRepository.createTenantAuditEvent({
+            tenantId: String(invitation.tenantId),
+            actorUserId: String(user._id),
+            action: 'membership.invitation.accepted',
+            targetType: 'tenant_membership',
+            targetId: String(existingMembership._id),
+            clinicId: invitation.clinicId ?? null,
+            metadata: { invitationId: String(invitation._id), role: invitation.role, scope: invitation.scope, alreadyMember: true },
+          });
+        } catch (auditError) {
+          logger.warn('Existing tenant membership linked to invitation but audit event could not be persisted.', {
+            tenantId: String(invitation.tenantId),
+            invitationId: String(invitation._id),
+            error: auditError instanceof Error ? auditError.message : String(auditError),
+          });
+        }
         return {
           user: { id: String(user._id), name: user.name, email: user.email },
           membership: { id: String(existingMembership._id), tenantId: String(invitation.tenantId), clinicId: invitation.clinicId ? String(invitation.clinicId) : null, branchIds: (invitation.branchIds ?? []).map((id: unknown) => String(id)), scope: invitation.scope, role: invitation.role, status: 'active' },
