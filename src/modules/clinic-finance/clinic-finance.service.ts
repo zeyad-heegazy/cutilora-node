@@ -39,7 +39,7 @@ function invoiceFilter(scope: Scope) {
 }
 
 function dateFilter(from?: Date, to?: Date) {
-  return from || to ? { $gte: from, ...(to ? { $lte: to } : {}) } : undefined;
+  return from || to ? { ...(from ? { $gte: from } : {}), ...(to ? { $lte: to } : {}) } : undefined;
 }
 
 export const clinicFinanceService = {
