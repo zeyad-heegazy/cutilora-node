@@ -1,0 +1,39 @@
+paths:
+  /tenant/branches/{branchId}/settings:
+    get:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches/Settings"
+      summary: Get branch settings
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Branch-specific settings, timezone and operating hours }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches/Settings"
+      summary: Update branch-specific settings
+      description: Merges supplied branch settings without changing organization defaults or clinic settings.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [settings]
+              properties:
+                settings: { type: object, minProperties: 1, additionalProperties: true }
+      responses:
+        "200": { description: Updated branch settings }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
