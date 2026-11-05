@@ -1,16 +1,16 @@
 import { Router } from 'express';
 import { authenticate } from '../../auth/middleware/authenticate.js';
-import { resolveTenantContext, requireTenantRoles } from '../middleware/tenant-context.js';
+import { resolveTenantContext, requireTenantRoles, requireTenantScope } from '../middleware/tenant-context.js';
 import { tenancyController } from '../controllers/tenancy.controller.js';
 
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
 tenantRouter.get('/context', tenancyController.context);
 tenantRouter.get('/geo/:resource', tenancyController.listGeo);
-tenantRouter.get('/clinics', requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.listClinics);
-tenantRouter.post('/clinics', requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.createClinic);
-tenantRouter.get('/clinics/:clinicId', requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.getClinic);
-tenantRouter.patch('/clinics/:clinicId', requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.updateClinic);
+tenantRouter.get('/clinics', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.listClinics);
+tenantRouter.post('/clinics', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.createClinic);
+tenantRouter.get('/clinics/:clinicId', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.getClinic);
+tenantRouter.patch('/clinics/:clinicId', requireTenantScope, requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.updateClinic);
 tenantRouter.get('/branches', tenancyController.listBranches);
 tenantRouter.post('/branches', requireTenantRoles('tenant_owner', 'tenant_admin', 'clinic_admin', 'clinic_manager'), tenancyController.createBranch);
 tenantRouter.get('/branches/:branchId', tenancyController.getBranch);
