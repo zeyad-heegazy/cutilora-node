@@ -254,7 +254,7 @@ export const tenancyService = {
     try {
       const updated = await tenancyRepository.updateTenantRole(tenantId, roleId, input.version, update);
       if (!updated) throw { status: 409, code: 'ROLE_VERSION_CONFLICT', message: 'This role changed since it was loaded. Refresh and retry.' };
-      await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.updated', targetType: 'tenant_role', targetId: roleId, metadata: { version: updated.version, permissions: updated.permissions } });
+      await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.updated', targetType: 'tenant_role', targetId: roleId, metadata: { previousVersion: current.version, version: updated.version, previousPermissions: current.permissions, permissions: updated.permissions } });
       return updated;
     } catch (error: any) {
       if (error?.code === 11000) throw { status: 409, code: 'ROLE_NAME_ALREADY_EXISTS', message: 'A role with this name already exists in this tenant.' };
@@ -314,7 +314,7 @@ export const tenancyService = {
     if (actorRole !== 'tenant_owner' && current.scope === 'tenant') throw { status: 403, code: 'MEMBERSHIP_MANAGEMENT_DENIED', message: 'Only the Tenant Owner can manage tenant-wide memberships.' };
     const next = {
       role: input.role ?? current.role,
-      customRoleId: input.role === 'custom' ? (input.customRoleId ?? current.customRoleId ? String(input.customRoleId ?? current.customRoleId) : null) : input.role ? null : (current.customRoleId ? String(current.customRoleId) : null),
+      customRoleId: input.role === 'custom' ? ((input.customRoleId ?? current.customRoleId) ? String(input.customRoleId ?? current.customRoleId) : null) : input.role ? null : (current.customRoleId ? String(current.customRoleId) : null),
       scope: input.scope ?? current.scope,
       clinicId: input.clinicId === undefined ? (current.clinicId ? String(current.clinicId) : null) : input.clinicId,
       branchIds: input.branchIds === undefined ? (current.branchIds ?? []).map((id: unknown) => String(id)) : input.branchIds,
@@ -383,7 +383,7 @@ export const tenancyService = {
     } else {
       updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
     }
-    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'membership.updated', targetType: 'tenant_membership', targetId: membershipId, clinicId: next.clinicId, metadata: { role: next.role, scope: next.scope, status: next.status } });
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'membership.updated', targetType: 'tenant_membership', targetId: membershipId, clinicId: next.clinicId, metadata: { previousRole: current.role, previousCustomRoleId: current.customRoleId ? String(current.customRoleId) : null, role: next.role, customRoleId: next.customRoleId, scope: next.scope, status: next.status } });
     return updated;
   },
   async getTenantConfiguration(tenantId: string) {
