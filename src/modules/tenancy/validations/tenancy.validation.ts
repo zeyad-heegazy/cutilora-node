@@ -205,7 +205,6 @@ export const updateTenantSchema = z
   });
 
 export const tenantStatusSchema = z.object({
-  status: z.enum(['active', 'suspended']),
 });
 
 export const createClinicSchema = z.object(clinicFields);
@@ -213,7 +212,7 @@ export const createClinicSchema = z.object(clinicFields);
 export const updateClinicSchema = z
   .object({
     name: clinicFields.name.optional(),
-    status: z.enum(['active', 'suspended']).optional(),
+    status: z.enum(['active', 'temporarily_closed', 'suspended', 'closed']).optional(),
     code: clinicFields.code,
     clinicType: clinicFields.clinicType,
     description: clinicFields.description,
@@ -299,11 +298,14 @@ export const updateBranchOperatingHoursSchema = z.object({
   operatingHours: branchWeeklyOperatingHoursSchema,
 });
 
+export const branchLifecycleReasonSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
+});
+
 export const updateBranchSchema = z.object({
   name: branchFields.name.optional(),
   code: branchFields.code,
   slug: branchFields.slug,
-  status: branchFields.status.optional(),
   address: branchFields.address,
   addressDetails: branchFields.addressDetails,
   contact: branchFields.contact,
@@ -465,7 +467,7 @@ export const clinicListQuerySchema = z.object({
 
 export const branchListQuerySchema = z.object({
   search: z.string().trim().min(1).max(100).optional(),
-  status: z.enum(['active', 'suspended']).optional(),
+  status: z.enum(['active', 'temporarily_closed', 'suspended', 'closed']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
 });
