@@ -29,7 +29,7 @@ paths:
     get:
       tags: [Tenant Organization]
       summary: Get tenant user details and memberships
-      description: Returns global identity details and memberships belonging only to the active tenant. Session data is not included.
+      description: Returns global identity details, memberships belonging only to the active tenant, and a limited summary of recent user sessions. Sensitive IP addresses and access tokens are never returned.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
@@ -57,6 +57,21 @@ paths:
         - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
       responses:
         "200": { description: Paginated tenant memberships and scoped user identities }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/users/{userId}/sessions/{sessionId}/revoke:
+    post:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Revoke one tenant user's active session
+      description: Revokes a selected active session for a user who has a membership in the active tenant. Session revocation is global to that user's account.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: userId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Session revoked }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/invitations:
     get:
