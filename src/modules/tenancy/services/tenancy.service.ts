@@ -382,7 +382,7 @@ export const tenancyService = {
       await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.document.uploaded', targetType: 'tenant_document', targetId: String(document._id), metadata: { category: input.category, mimeType: decoded.mimeType, sizeBytes: decoded.content.length } });
       return document;
     } catch (error) {
-      await removePrivateTenantDocument(storageKey);
+      await removePrivateTenantDocument(storageKey).catch(() => null);
       throw error;
     }
   },
