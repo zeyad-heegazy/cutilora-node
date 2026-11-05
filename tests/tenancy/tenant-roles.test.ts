@@ -96,6 +96,31 @@ describe('tenant custom role service', () => {
     expect(mocks.roleCreate).not.toHaveBeenCalled();
   });
 
+  it('does not let a custom branch role grant permissions outside the actor assigned branches', async () => {
+    mocks.membershipFindOne.mockReturnValue(query({
+      role: 'custom_role', roleId: 'role-actor', scope: 'branch', clinicId: 'clinic-a', branchIds: ['branch-b'],
+    }));
+    mocks.roleFindOne.mockReturnValue(query({
+      permissions: [{ permission: 'branch.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }],
+    }));
+    await expect(tenantRolesService.create('tenant-a', 'manager-a', 'clinic-a', {
+      key: 'branch-reader', name: 'Branch Reader', scope: 'branch',
+      permissions: [{ permission: 'branch.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }],
+    })).rejects.toMatchObject({ status: 403, code: 'GRANT_EXCEEDS_ACTOR_AUTHORITY' });
+    expect(mocks.roleCreate).not.toHaveBeenCalled();
+  });
+
+  it('expands built-in branch manager authority only to assigned branches', async () => {
+    mocks.membershipFindOne.mockReturnValue(query({
+      role: 'branch_manager', roleId: null, scope: 'branch', clinicId: 'clinic-a', branchIds: ['branch-a'],
+    }));
+    await expect(tenantRolesService.create('tenant-a', 'manager-a', 'clinic-a', {
+      key: 'other-branch-reader', name: 'Other Branch Reader', scope: 'branch',
+      permissions: [{ permission: 'branch.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-b' }],
+    })).rejects.toMatchObject({ status: 403, code: 'GRANT_EXCEEDS_ACTOR_AUTHORITY' });
+    expect(mocks.roleCreate).not.toHaveBeenCalled();
+  });
+
   it('rejects a branch grant whose target is not in the selected tenant and clinic', async () => {
     mocks.branchExists.mockResolvedValue(false);
     await expect(tenantRolesService.create('tenant-a', 'owner-a', null, {
