@@ -4,6 +4,8 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     createTenantAuditEvent: vi.fn().mockResolvedValue({}),
     findBranchById: vi.fn(),
+    acquireBranchHolidayMutationLock: vi.fn(),
+    releaseBranchHolidayMutationLock: vi.fn(),
     listBranchHolidays: vi.fn(),
     findOverlappingBranchHoliday: vi.fn(),
     createBranchHoliday: vi.fn(),
@@ -35,7 +37,11 @@ const branchId = '64b000000000000000000003';
 const userId = '64b000000000000000000004';
 
 describe('branch holiday service', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(tenancyRepository.acquireBranchHolidayMutationLock).mockResolvedValue({ _id: branchId } as any);
+    vi.mocked(tenancyRepository.releaseBranchHolidayMutationLock).mockResolvedValue({ acknowledged: true } as any);
+  });
 
   it('rejects impossible dates and invalid exceptional-hours combinations', () => {
     expect(createBranchHolidaySchema.safeParse({
