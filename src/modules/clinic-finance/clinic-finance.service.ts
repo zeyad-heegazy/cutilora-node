@@ -5,7 +5,7 @@ import { ClinicExpense } from './models/clinic-expense.model.js';
 import { ClinicCashSession } from './models/clinic-cash-session.model.js';
 
 type Scope = { tenantId: string; clinicId: string; branchId: string | null; userId: string };
-type InvoiceInput = { customer?: any; lines?: any[]; currency?: string };
+type InvoiceInput = { customer?: any; lines?: any[]; currency?: string; dueAt?: Date };
 
 function calculateBasisPoints(amountMinor: number, basisPoints: number): number {
   return Number((BigInt(amountMinor) * BigInt(basisPoints)) / 10000n);
@@ -53,7 +53,7 @@ export const clinicFinanceService = {
     const { lines, totals } = calculateInvoiceLines(input.lines ?? []);
     const currency = (input.currency ?? clinic.preferences?.currency ?? 'EGP').toUpperCase();
     return ClinicInvoice.create({
-      ...invoiceFilter(scope), customer: input.customer, lines, currency, ...totals,
+      ...invoiceFilter(scope), customer: input.customer, lines, currency, dueAt: input.dueAt ?? null, ...totals,
       paidMinor: 0, refundedMinor: 0, balanceDueMinor: totals.totalMinor,
       status: 'draft', createdBy: scope.userId, updatedBy: scope.userId,
       events: [{ type: 'invoice.created', actorUserId: scope.userId, occurredAt: new Date() }],
@@ -86,6 +86,7 @@ export const clinicFinanceService = {
     if (current.status !== 'draft') throw { status: 409, code: 'INVOICE_NOT_EDITABLE', message: 'Only draft invoices can be edited.' };
     const update: any = { updatedBy: scope.userId };
     if (input.customer) update.customer = input.customer;
+    if (input.dueAt) update.dueAt = input.dueAt;
     if (input.lines) {
       const result = calculateInvoiceLines(input.lines);
       update.lines = result.lines;
@@ -243,6 +244,133 @@ export const clinicFinanceService = {
     );
     if (!updated) throw { status: 409, code: 'EXPENSE_NOT_VOIDABLE', message: 'Only unpaid recorded expenses can be voided.' };
     return updated;
+  },
+
+
+  async receivables(scope: Scope, query: { asOf?: Date; branchId?: string }) {
+    const filter: any = { ...invoiceFilter(scope), status: { $in: ['issued', 'partially_paid'] }, balanceDueMinor: { $gt: 0 } };
+    if (query.branchId) {
+      if (scope.branchId && query.branchId !== scope.branchId) throw { status: 403, code: 'BRANCH_ACCESS_DENIED', message: 'You cannot access another branch.' };
+      filter.branchId = query.branchId;
+    }
+    const invoices = await ClinicInvoice.find(filter).select('currency balanceDueMinor dueAt issuedAt createdAt').lean() as any[];
+    const asOf = query.asOf ?? new Date();
+    const buckets = new Map<string, any>();
+    const getBucket = (currency: string) => {
+      if (!buckets.has(currency)) buckets.set(currency, { currency, currentMinor: 0, days1To30Minor: 0, days31To60Minor: 0, days61To90Minor: 0, over90DaysMinor: 0, invoiceCount: 0 });
+      return buckets.get(currency);
+    };
+    for (const invoice of invoices) {
+      const dueAt = invoice.dueAt ?? invoice.issuedAt ?? invoice.createdAt;
+      const overdueDays = Math.floor((asOf.getTime() - new Date(dueAt).getTime()) / 86400000);
+      const row = getBucket(invoice.currency);
+      row.invoiceCount += 1;
+      if (overdueDays <= 0) row.currentMinor += invoice.balanceDueMinor;
+      else if (overdueDays <= 30) row.days1To30Minor += invoice.balanceDueMinor;
+      else if (overdueDays <= 60) row.days31To60Minor += invoice.balanceDueMinor;
+      else if (overdueDays <= 90) row.days61To90Minor += invoice.balanceDueMinor;
+      else row.over90DaysMinor += invoice.balanceDueMinor;
+    }
+    return { asOf, currencies: [...buckets.values()].map((row) => ({ ...row, outstandingMinor: row.currentMinor + row.days1To30Minor + row.days31To60Minor + row.days61To90Minor + row.over90DaysMinor })) };
+  },
+
+  async reports(scope: Scope, query: { from: Date; to: Date; branchId?: string; groupBy: 'day' | 'month' }) {
+    const filter: any = { ...invoiceFilter(scope) };
+    if (query.branchId) {
+      if (scope.branchId && query.branchId !== scope.branchId) throw { status: 403, code: 'BRANCH_ACCESS_DENIED', message: 'You cannot access another branch.' };
+      filter.branchId = query.branchId;
+    }
+    const range = { $gte: query.from, $lte: query.to };
+    const [invoices, expenses, clinic] = await Promise.all([
+      ClinicInvoice.find({ ...filter, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }] }).select('currency totalMinor issuedAt createdAt lines payments').lean(),
+      ClinicExpense.find({ ...filter, $or: [{ incurredAt: range }, { paidAt: range }] }).select('currency amountMinor category status incurredAt paidAt').lean(),
+      Clinic.findOne({ _id: scope.clinicId, tenantId: scope.tenantId }).select('timezone').lean(),
+    ]);
+    const timezone = clinic?.timezone || 'Africa/Cairo';
+    const periodKey = (date: Date) => {
+      const parts = new Intl.DateTimeFormat('en-CA', query.groupBy === 'month'
+        ? { timeZone: timezone, year: 'numeric', month: '2-digit' }
+        : { timeZone: timezone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+      const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+      return query.groupBy === 'month' ? `${values.year}-${values.month}` : `${values.year}-${values.month}-${values.day}`;
+    };
+    const totals = new Map<string, any>();
+    const rowFor = (currency: string) => {
+      if (!totals.has(currency)) totals.set(currency, { currency, invoicedMinor: 0, collectedMinor: 0, refundedMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
+      return totals.get(currency);
+    };
+    const methods = new Map<string, any>();
+    const categories = new Map<string, any>();
+    const services = new Map<string, any>();
+    const trends = new Map<string, any>();
+    const trendFor = (currency: string, date: Date) => {
+      const key = periodKey(date);
+      const mapKey = `${currency}:${key}`;
+      if (!trends.has(mapKey)) trends.set(mapKey, { currency, period: key, invoicedMinor: 0, collectedMinor: 0, refundedMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
+      return trends.get(mapKey);
+    };
+    for (const invoice of invoices as any[]) {
+      const issuedAt = invoice.issuedAt ? new Date(invoice.issuedAt) : null;
+      if (issuedAt && issuedAt >= query.from && issuedAt <= query.to) {
+        rowFor(invoice.currency).invoicedMinor += invoice.totalMinor;
+        trendFor(invoice.currency, issuedAt).invoicedMinor += invoice.totalMinor;
+        for (const line of invoice.lines ?? []) {
+          const serviceReference = line.serviceReference || 'unclassified';
+          const key = `${invoice.currency}:${serviceReference}`;
+          if (!services.has(key)) services.set(key, { currency: invoice.currency, serviceReference, revenueMinor: 0, quantity: 0 });
+          services.get(key).revenueMinor += line.totalMinor;
+          services.get(key).quantity += line.quantity;
+        }
+      }
+      for (const payment of invoice.payments ?? []) {
+        const receivedAt = new Date(payment.receivedAt);
+        if (receivedAt >= query.from && receivedAt <= query.to) {
+          rowFor(invoice.currency).collectedMinor += payment.amountMinor;
+          trendFor(invoice.currency, receivedAt).collectedMinor += payment.amountMinor;
+          const key = `${invoice.currency}:${payment.method}`;
+          if (!methods.has(key)) methods.set(key, { currency: invoice.currency, method: payment.method, collectedMinor: 0, refundedMinor: 0 });
+          methods.get(key).collectedMinor += payment.amountMinor;
+        }
+        for (const refund of payment.refunds ?? []) {
+          const refundedAt = new Date(refund.refundedAt);
+          if (refundedAt >= query.from && refundedAt <= query.to) {
+            rowFor(invoice.currency).refundedMinor += refund.amountMinor;
+            trendFor(invoice.currency, refundedAt).refundedMinor += refund.amountMinor;
+            const key = `${invoice.currency}:${refund.method}`;
+            if (!methods.has(key)) methods.set(key, { currency: invoice.currency, method: refund.method, collectedMinor: 0, refundedMinor: 0 });
+            methods.get(key).refundedMinor += refund.amountMinor;
+          }
+        }
+      }
+    }
+    for (const expense of expenses as any[]) {
+      const incurredAt = new Date(expense.incurredAt);
+      if (incurredAt >= query.from && incurredAt <= query.to) {
+        rowFor(expense.currency).expensesMinor += expense.amountMinor;
+        const key = `${expense.currency}:${expense.category}`;
+        if (!categories.has(key)) categories.set(key, { currency: expense.currency, category: expense.category, incurredMinor: 0, paidMinor: 0 });
+        categories.get(key).incurredMinor += expense.amountMinor;
+        trendFor(expense.currency, incurredAt).expensesMinor += expense.amountMinor;
+      }
+      if (expense.status === 'paid' && expense.paidAt) {
+        const paidAt = new Date(expense.paidAt);
+        if (paidAt >= query.from && paidAt <= query.to) {
+          rowFor(expense.currency).paidExpensesMinor += expense.amountMinor;
+          const key = `${expense.currency}:${expense.category}`;
+          if (!categories.has(key)) categories.set(key, { currency: expense.currency, category: expense.category, incurredMinor: 0, paidMinor: 0 });
+          categories.get(key).paidMinor += expense.amountMinor;
+          trendFor(expense.currency, paidAt).paidExpensesMinor += expense.amountMinor;
+        }
+      }
+    }
+    return {
+      period: { from: query.from, to: query.to, groupBy: query.groupBy, timezone },
+      totalsByCurrency: [...totals.values()].map((row) => ({ ...row, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })),
+      collectionMethods: [...methods.values()],
+      expenseCategories: [...categories.values()],
+      serviceRevenue: [...services.values()],
+      trends: [...trends.values()].sort((a, b) => a.period.localeCompare(b.period) || a.currency.localeCompare(b.currency)),
+    };
   },
 
   async summary(scope: Scope, query: { from?: Date; to?: Date; branchId?: string }) {
