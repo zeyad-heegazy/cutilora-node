@@ -42,6 +42,9 @@ export const tenancyRepository = {
       { new: true, runValidators: true },
     );
   },
+  listPublishedTenantCatalogTemplates(tenantId: string) {
+    return TenantCatalogTemplate.find({ tenantId, status: 'published' }).select('_id key type version content publishedAt').lean();
+  },
   listTenantCatalogTemplates(tenantId: string, query: { type?: string; status?: string }) {
     return TenantCatalogTemplate.find({ tenantId, ...(query.type ? { type: query.type } : {}), ...(query.status ? { status: query.status } : {}) }).sort({ type: 1, name: 1 }).lean();
   },
