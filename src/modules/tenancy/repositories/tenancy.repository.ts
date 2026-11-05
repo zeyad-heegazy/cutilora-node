@@ -444,6 +444,18 @@ export const tenancyRepository = {
       .sort({ createdAt: 1 })
       .lean();
   },
+  async findTenantUserDetails(tenantId: string, userId: string) {
+    const [user, memberships] = await Promise.all([
+      User.findById(userId).select('name email isActive lastLoginAt createdAt').lean(),
+      TenantMembership.find({ tenantId, userId })
+        .populate('clinicId', 'name slug status')
+        .populate('branchIds', 'name slug status')
+        .sort({ createdAt: 1 })
+        .lean(),
+    ]);
+    if (!user || !memberships.length) return null;
+    return { ...user, memberships };
+  },
   findTenantMembershipById(tenantId: string, membershipId: string) {
     return TenantMembership.findOne({ _id: membershipId, tenantId });
   },
