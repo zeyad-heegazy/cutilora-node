@@ -5,7 +5,7 @@ const schema = new Schema({
   category: { type: String, enum: ['registration', 'tax', 'license', 'insurance', 'contract', 'other'], required: true },
   name: { type: String, required: true, trim: true, maxlength: 180 },
   mimeType: { type: String, required: true, enum: ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'] },
-  sizeBytes: { type: Number, required: true, min: 1, max: 10 * 1024 * 1024 },
+  sizeBytes: { type: Number, required: true, min: 1, max: 3 * 1024 * 1024 },
   storageKey: { type: String, required: true, select: false },
   expiresAt: { type: Date, default: null },
   status: { type: String, enum: ['active', 'archived'], default: 'active', required: true },
