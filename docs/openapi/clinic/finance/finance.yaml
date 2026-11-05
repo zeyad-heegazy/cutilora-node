@@ -4,25 +4,22 @@ paths:
       tags: [Clinic Finance]
       summary: Get financial summary grouped by currency
       parameters:
-        - $ref: '../../components.yaml#/components/parameters/TenantId'
-        - $ref: '../../components.yaml#/components/parameters/ClinicId'
-        - $ref: '../../components.yaml#/components/parameters/BranchId'
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - $ref: "../../../openapi.yaml#/components/parameters/BranchId"
       responses:
-        '200':
-          description: Currency-separated clinic financial summary
+        '200': { description: Currency-separated clinic financial summary }
   /clinic/invoices:
     get:
       tags: [Clinic Finance]
       summary: List clinic invoices
       responses:
-        '200':
-          description: Paginated clinic invoices
+        '200': { description: Paginated clinic invoices }
     post:
       tags: [Clinic Finance]
       summary: Create a draft clinic invoice
       responses:
-        '201':
-          description: Draft invoice created
+        '201': { description: Draft invoice created }
   /clinic/invoices/{invoiceId}:
     parameters:
       - in: path
@@ -49,13 +46,22 @@ paths:
   /clinic/invoices/{invoiceId}/payments:
     post:
       tags: [Clinic Finance]
-      summary: Record a full or partial patient payment
+      summary: Record a full or partial patient payment; an idempotencyKey is required
       responses:
         '201': { description: Payment recorded }
   /clinic/invoices/{invoiceId}/payments/{paymentId}/refunds:
+    parameters:
+      - in: path
+        name: invoiceId
+        required: true
+        schema: { type: string }
+      - in: path
+        name: paymentId
+        required: true
+        schema: { type: string }
     post:
       tags: [Clinic Finance]
-      summary: Refund all or part of an invoice payment
+      summary: Refund all or part of an invoice payment; an idempotencyKey is required
       responses:
         '200': { description: Refund recorded }
   /clinic/invoices/{invoiceId}/void:
