@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
-import { getTenantRolePermissions, TENANT_PERMISSION_CATALOG } from './tenant-access.service.js';
+import { getTenantRolePermissions, TENANT_PERMISSION_CATALOG, TENANT_ROLE_PERMISSIONS } from './tenant-access.service.js';
 import { hasPermission } from '../../../shared/authorization/permission.engine.js';
 import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
 import { readPrivateTenantDocument, removePrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
@@ -213,11 +213,13 @@ export const tenancyService = {
     return tenancyRepository.listTenantRoles(tenantId, filters);
   },
   async getCustomTenantRole(tenantId: string, roleId: string) {
+    if (!/^[a-f\\d]{24}$/i.test(roleId)) return null;
     const role = await tenancyRepository.findTenantRoleById(tenantId, roleId);
     if (!role) return null;
     return { ...role.toObject(), assignedMemberships: await tenancyRepository.countMembershipsUsingRole(tenantId, roleId) };
   },
   async cloneCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string, actorScope: string, input: { name: string; description?: string }) {
+    if (!/^[a-f\\d]{24}$/i.test(roleId)) return null;
     const source = await tenancyRepository.findActiveTenantRoleById(tenantId, roleId);
     if (!source) return null;
     return this.createCustomTenantRole(tenantId, actorUserId, actorRole, actorScope, {
@@ -235,6 +237,7 @@ export const tenancyService = {
     if (!input.permissions.every((permission) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
     const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
     if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
+    if (Object.keys(TENANT_ROLE_PERMISSIONS).includes(key.replace(/-/g, '_'))) throw { status: 409, code: 'ROLE_NAME_RESERVED', message: 'This name is reserved for a built-in role.' };
     try {
       const role = await tenancyRepository.createTenantRole({
         tenantId, name: input.name.trim(), key, description: input.description ?? '',
@@ -250,6 +253,7 @@ export const tenancyService = {
     }
   },
   async updateCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string, input: { name?: string; description?: string; permissions?: string[]; version: number }) {
+    if (!/^[a-f\\d]{24}$/i.test(roleId)) return null;
     if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
     const current = await tenancyRepository.findTenantRoleById(tenantId, roleId);
     if (!current || current.status !== 'active') return null;
@@ -264,6 +268,7 @@ export const tenancyService = {
     if (input.name !== undefined) {
       const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
       if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
+      if (Object.keys(TENANT_ROLE_PERMISSIONS).includes(key.replace(/-/g, '_'))) throw { status: 409, code: 'ROLE_NAME_RESERVED', message: 'This name is reserved for a built-in role.' };
       update.name = input.name.trim(); update.key = key;
     }
     try {
@@ -281,6 +286,7 @@ export const tenancyService = {
     }
   },
   async archiveCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string) {
+    if (!/^[a-f\\d]{24}$/i.test(roleId)) return null;
     if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
     const role = await tenancyRepository.findTenantRoleById(tenantId, roleId);
     if (!role || role.status !== 'active') return null;
