@@ -97,6 +97,7 @@ describe('tenant branch partial updates', () => {
           addressLine1: '20 New Street',
           addressLine2: 'Suite 4',
           building: 'Building A',
+          cityId: null,
         },
         contact: {
           email: 'new@example.com',
