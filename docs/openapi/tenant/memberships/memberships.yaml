@@ -146,6 +146,18 @@ paths:
       responses:
         "200": { description: Canonical tenant permission catalog }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/access/me:
+    get:
+      tags: [Tenant Access Control]
+      x-apidog-folder: "Tenant/Access Control"
+      summary: Get current user's effective tenant access
+      description: Returns active-context permissions and grant origins. Tenant grants inherit into clinic and branch contexts; clinic grants inherit into branches; direct membership grants and denials are distinguished.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Effective access for the authenticated membership and selected context }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/users/{userId}/effective-access:
     get:
       tags: [Tenant Memberships]
