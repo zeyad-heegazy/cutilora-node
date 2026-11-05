@@ -9,8 +9,37 @@ import { User } from '../../auth/models/user.model.js';
 import { TenantDocument } from '../models/tenant-document.model.js';
 import { BranchHoliday } from '../models/branch-holiday.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
+import { TenantConfiguration } from '../models/tenant-configuration.model.js';
 
 export const tenancyRepository = {
+  findTenantConfiguration(tenantId: string) {
+    return TenantConfiguration.findOne({ tenantId }).lean();
+  },
+  createTenantConfiguration(data: Record<string, unknown>) {
+    return TenantConfiguration.create(data);
+  },
+  updateTenantConfiguration(tenantId: string, expectedVersion: number, values: Record<string, unknown>, changedBy: string) {
+    return TenantConfiguration.findOneAndUpdate(
+      { tenantId, version: expectedVersion },
+      {
+        $set: { values, version: expectedVersion + 1 },
+        $push: { history: { version: expectedVersion + 1, values, changedBy, changedAt: new Date() } },
+      },
+      { new: true, runValidators: true },
+    );
+  },
+  listClinicsForConfiguration(tenantId: string, clinicIds?: string[]) {
+    return Clinic.find({ tenantId, ...(clinicIds ? { _id: { $in: clinicIds } } : {}) })
+      .select('name status settings')
+      .lean();
+  },
+  applyTenantConfigurationToClinic(tenantId: string, clinicId: string, values: Record<string, unknown>, version: number) {
+    return Clinic.findOneAndUpdate(
+      { _id: clinicId, tenantId },
+      { $set: { 'settings.organizationDefaults': values, 'settings.organizationDefaultsVersion': version } },
+      { new: true, runValidators: true },
+    );
+  },
   createTenantAuditEvent(data: Record<string, unknown>) {
     return TenantAuditEvent.create(data);
   },
