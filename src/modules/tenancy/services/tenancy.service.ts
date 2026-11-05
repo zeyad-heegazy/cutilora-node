@@ -370,8 +370,9 @@ export const tenancyService = {
     ].join('\r\n');
     return { csv, truncated, exported: Math.min(rows.length, limit) };
   },
-  async replaceTenantDocument(tenantId: string, documentId: string, userId: string, input: Record<string, any>) {
-    const existing = await tenancyRepository.findTenantDocument(tenantId, documentId);
+  async replaceTenantDocument(tenantId: string, documentId: string, userId: string, input: Record<string, any>, clinicId: string | null = null) {
+    if (clinicId && !await tenancyRepository.findClinicById(clinicId, tenantId)) return null;
+    const existing = await tenancyRepository.findTenantDocument(tenantId, documentId, clinicId);
     if (!existing) return null;
     const decoded = decodeTenantDocument(input.fileBase64);
     const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
@@ -379,6 +380,7 @@ export const tenancyService = {
     try {
       replacement = await tenancyRepository.createTenantDocument({
         tenantId,
+        clinicId,
         uploadedBy: userId,
         category: existing.category,
         name: String(input.name ?? existing.name).trim().split('/').join('_').split(String.fromCharCode(92)).join('_').replaceAll('"', '_').replaceAll(String.fromCharCode(10), '_').replaceAll(String.fromCharCode(13), '_'),
@@ -393,21 +395,23 @@ export const tenancyService = {
       await removePrivateTenantDocument(storageKey).catch(() => null);
       throw error;
     }
-    const archived = await tenancyRepository.archiveTenantDocument(tenantId, documentId, userId);
+    const archived = await tenancyRepository.archiveTenantDocument(tenantId, documentId, userId, clinicId);
     if (!archived) {
-      await tenancyRepository.archiveTenantDocument(tenantId, String(replacement._id), userId).catch(() => null);
+      await tenancyRepository.archiveTenantDocument(tenantId, String(replacement._id), userId, clinicId).catch(() => null);
       await removePrivateTenantDocument(storageKey).catch(() => null);
       throw { status: 409, code: 'DOCUMENT_REPLACEMENT_CONFLICT', message: 'The original document changed while the replacement was being saved.' };
     }
-    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.document.replaced', targetType: 'tenant_document', targetId: documentId, metadata: { replacementDocumentId: String(replacement._id), version: replacement.version } });
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: clinicId ? 'clinic.document.replaced' : 'organization.document.replaced', targetType: 'tenant_document', targetId: documentId, clinicId, metadata: { replacementDocumentId: String(replacement._id), version: replacement.version } });
     return replacement;
   },
-  async createTenantDocument(tenantId: string, userId: string, input: Record<string, any>) {
+  async createTenantDocument(tenantId: string, userId: string, input: Record<string, any>, clinicId: string | null = null) {
+    if (clinicId && !await tenancyRepository.findClinicById(clinicId, tenantId)) return null;
     const decoded = decodeTenantDocument(input.fileBase64);
     const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
     try {
       const document = await tenancyRepository.createTenantDocument({
         tenantId,
+        clinicId,
         uploadedBy: userId,
         category: input.category,
         name: String(input.name).trim().split('/').join('_').split(String.fromCharCode(92)).join('_').replaceAll('"', '_').replaceAll(String.fromCharCode(10), '_').replaceAll(String.fromCharCode(13), '_'),
@@ -416,31 +420,31 @@ export const tenancyService = {
         storageKey,
         expiresAt: input.expiresAt ?? null,
       });
-      await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.document.uploaded', targetType: 'tenant_document', targetId: String(document._id), metadata: { category: input.category, mimeType: decoded.mimeType, sizeBytes: decoded.content.length } });
+      await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: clinicId ? 'clinic.document.uploaded' : 'organization.document.uploaded', targetType: 'tenant_document', targetId: String(document._id), clinicId, metadata: { category: input.category, mimeType: decoded.mimeType, sizeBytes: decoded.content.length } });
       return document;
     } catch (error) {
       await removePrivateTenantDocument(storageKey).catch(() => null);
       throw error;
     }
   },
-  listTenantDocuments(tenantId: string) {
-    return tenancyRepository.listTenantDocuments(tenantId);
+  listTenantDocuments(tenantId: string, clinicId: string | null = null) {
+    return tenancyRepository.listTenantDocuments(tenantId, clinicId);
   },
-  async getTenantDocument(tenantId: string, documentId: string) {
-    const document = await tenancyRepository.findTenantDocument(tenantId, documentId);
+  async getTenantDocument(tenantId: string, documentId: string, clinicId: string | null = null) {
+    const document = await tenancyRepository.findTenantDocument(tenantId, documentId, clinicId);
     if (!document) return null;
     const content = await readPrivateTenantDocument(document.storageKey);
     return { document, content };
   },
-  getTenantDocumentVersionHistory(tenantId: string, documentId: string) {
-    return tenancyRepository.listTenantDocumentVersions(tenantId, documentId);
+  getTenantDocumentVersionHistory(tenantId: string, documentId: string, clinicId: string | null = null) {
+    return tenancyRepository.listTenantDocumentVersions(tenantId, documentId, clinicId);
   },
-  getTenantDocumentMetadata(tenantId: string, documentId: string) {
-    return tenancyRepository.findTenantDocumentMetadata(tenantId, documentId);
+  getTenantDocumentMetadata(tenantId: string, documentId: string, clinicId: string | null = null) {
+    return tenancyRepository.findTenantDocumentMetadata(tenantId, documentId, clinicId);
   },
-  archiveTenantDocument(tenantId: string, documentId: string, userId: string) {
-    return tenancyRepository.archiveTenantDocument(tenantId, documentId, userId).then(async (item) => {
-      if (item) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'organization.document.archived', targetType: 'tenant_document', targetId: documentId });
+  archiveTenantDocument(tenantId: string, documentId: string, userId: string, clinicId: string | null = null) {
+    return tenancyRepository.archiveTenantDocument(tenantId, documentId, userId, clinicId).then(async (item) => {
+      if (item) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: clinicId ? 'clinic.document.archived' : 'organization.document.archived', targetType: 'tenant_document', targetId: documentId, clinicId });
       return item;
     });
   },
