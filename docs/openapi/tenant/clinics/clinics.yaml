@@ -271,3 +271,32 @@ components:
         uploadedBy: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+
+  /tenant/clinics/{clinicId}/users:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics"
+      summary: List users assigned to a clinic
+      description: Returns clinic-scoped and branch-scoped memberships within this clinic. Branch-scoped users cannot list the clinic-wide user directory. Requires clinic.members.read.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, invited, suspended] } }
+        - { name: role, in: query, schema: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Clinic assigned users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+                  pagination: { type: object, additionalProperties: true }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
