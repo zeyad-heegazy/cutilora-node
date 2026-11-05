@@ -99,3 +99,175 @@ paths:
                   data: { $ref: "../../../openapi.yaml#/components/schemas/Clinic" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
+  /tenant/clinics/{clinicId}/documents:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: List clinic documents
+      description: Lists active private documents belonging only to the selected clinic. Requires clinic.documents.read.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Clinic documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: "#/components/schemas/ClinicDocument" } }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    post:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Upload a clinic document
+      description: Stores a private PDF, JPEG, PNG or WebP document scoped to the clinic. Maximum file size is 3 MB. Requires clinic.documents.manage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category, fileBase64]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 180 }
+                category: { type: string, enum: [registration, tax, license, insurance, contract, other] }
+                fileBase64: { type: string, description: Base64 content or supported data URL }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "201":
+          description: Clinic document uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/ClinicDocument" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/clinics/{clinicId}/documents/{documentId}:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Get clinic document metadata
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Clinic document metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/ClinicDocument" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    delete:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Archive a clinic document
+      description: Archives the active version without deleting its file history. Requires clinic.documents.manage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Clinic document archived }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/clinics/{clinicId}/documents/{documentId}/replace:
+    put:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Replace a clinic document
+      description: Creates a new immutable version and archives the previous active version. Requires clinic.documents.manage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileBase64]
+              properties:
+                name: { type: string, maxLength: 180 }
+                fileBase64: { type: string }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "200": { description: Clinic document replaced }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { description: Concurrent document replacement conflict }
+  /tenant/clinics/{clinicId}/documents/{documentId}/versions:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: List clinic document versions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Clinic document version history }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/clinics/{clinicId}/documents/{documentId}/download:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Download a private clinic document
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Original private document bytes
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+components:
+  schemas:
+    ClinicDocument:
+      type: object
+      properties:
+        _id: { type: string }
+        tenantId: { type: string }
+        clinicId: { type: string }
+        category: { type: string, enum: [registration, tax, license, insurance, contract, other] }
+        name: { type: string }
+        mimeType: { type: string, enum: [application/pdf, image/jpeg, image/png, image/webp] }
+        sizeBytes: { type: integer }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer }
+        status: { type: string, enum: [active, archived] }
+        uploadedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
