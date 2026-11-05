@@ -710,7 +710,19 @@ export const tenancyService = {
       }
     }
     } catch (error) {
-      await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+      const cleanup = await Promise.allSettled([
+        removeBrandingImage(newLogoUrl),
+        removeBrandingImage(newCoverUrl),
+      ]);
+      cleanup.forEach((result) => {
+        if (result.status === 'rejected') {
+          logger.warn('Failed to clean up a partially stored clinic branding update', {
+            tenantId,
+            clinicId: id,
+            error: result.reason instanceof Error ? result.reason.message : 'unknown',
+          });
+        }
+      });
       throw error;
     }
     let updated: Awaited<ReturnType<typeof tenancyRepository.updateClinic>>;
@@ -732,12 +744,53 @@ export const tenancyService = {
       if (typeof input.name === 'string') update.slug = await generateUniqueClinicSlug(tenantId, input.name, id);
       updated = await tenancyRepository.updateClinic(id, tenantId, update);
     } catch (error) {
-      await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]);
+      const cleanup = await Promise.allSettled([
+        removeBrandingImage(newLogoUrl),
+        removeBrandingImage(newCoverUrl),
+      ]);
+      cleanup.forEach((result) => {
+        if (result.status === 'rejected') {
+          logger.warn('Failed to clean up an uncommitted clinic branding image', {
+            tenantId,
+            clinicId: id,
+            error: result.reason instanceof Error ? result.reason.message : 'unknown',
+          });
+        }
+      });
       throw error;
     }
-    if (!updated) { await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]); return null; }
-    if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingImage(oldLogoUrl);
-    if (newCoverUrl && oldCoverUrl && oldCoverUrl !== newCoverUrl) await removeBrandingImage(oldCoverUrl);
+    if (!updated) {
+      const cleanup = await Promise.allSettled([
+        removeBrandingImage(newLogoUrl),
+        removeBrandingImage(newCoverUrl),
+      ]);
+      cleanup.forEach((result) => {
+        if (result.status === 'rejected') {
+          logger.warn('Failed to clean up an uncommitted clinic branding image', {
+            tenantId,
+            clinicId: id,
+            error: result.reason instanceof Error ? result.reason.message : 'unknown',
+          });
+        }
+      });
+      return null;
+    }
+
+    const replacedFiles = [
+      newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl ? oldLogoUrl : '',
+      newCoverUrl && oldCoverUrl && oldCoverUrl !== newCoverUrl ? oldCoverUrl : '',
+    ].filter(Boolean);
+    const oldFileCleanup = await Promise.allSettled(replacedFiles.map((url) => removeBrandingImage(url)));
+    oldFileCleanup.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        logger.warn('Failed to remove a replaced clinic branding image', {
+          tenantId,
+          clinicId: id,
+          imageUrl: replacedFiles[index],
+          error: result.reason instanceof Error ? result.reason.message : 'unknown',
+        });
+      }
+    });
     if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: input.status ? 'clinic.status.changed' : 'clinic.updated', targetType: 'clinic', targetId: id, clinicId: id, metadata: { changedFields: Object.keys(input), ...(input.status ? { status: input.status } : {}) } });
     return updated;
   },
