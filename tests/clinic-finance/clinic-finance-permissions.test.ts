@@ -19,7 +19,7 @@ describe('clinic finance permissions', () => {
     expect(TENANT_PERMISSION_CATALOG).toEqual(expect.arrayContaining([
       'finance.read', 'finance.invoices.read', 'finance.invoices.manage',
       'finance.payments.manage', 'finance.refunds.manage',
-      'finance.expenses.read', 'finance.expenses.manage',
+      'finance.expenses.read', 'finance.expenses.manage', 'finance.credit-notes.manage',
     ]));
   });
 });
