@@ -26,8 +26,8 @@ This document tracks backend scope for Trello cards TEN-00 through TEN-12. It do
 - Branch schedules are evaluated in the branch's IANA timezone.
 - Tenant custom roles reuse `src/shared/authorization/permission.engine.ts`; tenant grants are stored under a tenant ID and cannot be read or assigned across tenants.
 - Custom permission checks resolve the actual clinic/branch resource in the request path, not only the caller's context headers. Branch grants require an exact clinic + branch match.
-- Custom role changes use optimistic version checks and are audited. Deactivation is blocked while active memberships still reference the role.
-- Custom role assignment cannot exceed the actor's effective grants, change the actor's own membership, or demote the last active Tenant Owner. Weekly replacement requires exactly seven weekday entries; split shifts must not overlap, and breaks must fit inside their shift.
+- Custom role changes use optimistic version checks and are audited. Deactivation is blocked while any membership, including suspended memberships, still references the role. Role-management authority is intersected with the actor's clinic and assigned-branch scope.
+- Custom role assignment cannot exceed the actor's effective grants, change the actor's own membership, or demote the last active Tenant Owner. Built-in branch managers can grant only on explicitly assigned branches. Weekly replacement requires exactly seven weekday entries; split shifts must not overlap, and breaks must fit inside their shift.
 - Platform and Tenant adapters use the same shared permission evaluator; role catalogs and domain-specific grants remain isolated. Platform and Tenant routes must declare explicit permission keys.
 - Clinic and branch access is checked against membership scope and tenant ownership. Clinic documents are separately scoped by tenantId and clinicId; tenant-level document queries exclude clinic-owned files.
 - Invitation tokens are stored as hashes, are single-use and expire. Acceptance has a processing lease so stale claims can be retried safely.
