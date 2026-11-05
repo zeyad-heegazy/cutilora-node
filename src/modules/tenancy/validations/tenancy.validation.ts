@@ -350,3 +350,13 @@ export const applyTenantConfigurationSchema = tenantConfigurationApplyBaseSchema
   message: 'clinicIds are required when applyTo=selected.',
   path: ['clinicIds'],
 });
+
+export const updateTenantMembershipSchema = z.object({
+  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
+  scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
+  clinicId: z.string().regex(/^[a-f\\d]{24}$/i).nullable().optional(),
+  branchIds: z.array(z.string().regex(/^[a-f\\d]{24}$/i)).max(50).optional(),
+  status: z.enum(['active', 'suspended']).optional(),
+}).refine((value) => Object.keys(value).length > 0, {
+  message: 'At least one membership field must be supplied.',
+});
