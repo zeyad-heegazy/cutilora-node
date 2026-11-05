@@ -29,3 +29,56 @@ paths:
         "200": { description: Branch suspended }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
+  /tenant/branches/{branchId}/temporary-close:
+    post:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches"
+      summary: Temporarily close a branch
+      description: Moves an active branch to temporarily_closed. Reactivate with POST /activate. This is a manual lifecycle state; no automatic reopening is scheduled. Requires branch.lifecycle.manage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        "200": { description: Branch temporarily closed }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
+  /tenant/branches/{branchId}/close:
+    post:
+      tags: [Branches]
+      x-apidog-folder: "Tenant/Branches"
+      summary: Permanently close a branch
+      description: Moves a branch to closed. This is terminal and cannot be reactivated. Existing records are retained; the branch is never hard-deleted. Requires branch.lifecycle.manage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - { name: branchId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        "200": { description: Branch permanently closed }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
