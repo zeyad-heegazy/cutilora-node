@@ -49,7 +49,7 @@ describe('clinic and branch configuration overrides', () => {
       defaults: { appointment: { duration: 30, buffer: 5 } },
       overrides: { appointment: { duration: 45 } },
       effectiveValues: { appointment: { duration: 45, buffer: 5 } },
-      sources: { appointment: 'clinic_override' },
+      sources: { 'appointment.duration': 'clinic_override', 'appointment.buffer': 'tenant_default' },
     });
   });
 
@@ -104,7 +104,7 @@ describe('clinic and branch configuration overrides', () => {
       inheritedValues: { appointment: { duration: 30, buffer: 10 } },
       overrides: { appointment: { duration: 75 } },
       effectiveValues: { appointment: { duration: 75, buffer: 10 } },
-      sources: { appointment: 'branch_override' },
+      sources: { 'appointment.duration': 'branch_override', 'appointment.buffer': 'clinic_override' },
     });
   });
 });
