@@ -497,7 +497,7 @@ export const createTenantInvitationSchema = z.object({
 export const tenantUserListQuerySchema = z.object({
   search: z.string().trim().min(1).max(100).optional(),
   status: z.enum(['active', 'invited', 'suspended']).optional(),
-  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
+  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist', 'custom']).optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
   clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
