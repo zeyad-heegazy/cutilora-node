@@ -6,8 +6,25 @@ import { Subscription } from '../models/subscription.model.js';
 import { SubscriptionPayment } from '../models/subscription-payment.model.js';
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { User } from '../../auth/models/user.model.js';
+import { TenantDocument } from '../models/tenant-document.model.js';
 
 export const tenancyRepository = {
+  createTenantDocument(data: Record<string, unknown>) {
+    return TenantDocument.create(data);
+  },
+  listTenantDocuments(tenantId: string) {
+    return TenantDocument.find({ tenantId, status: 'active' }).sort({ createdAt: -1 }).lean();
+  },
+  findTenantDocument(tenantId: string, documentId: string) {
+    return TenantDocument.findOne({ _id: documentId, tenantId, status: 'active' }).select('+storageKey');
+  },
+  archiveTenantDocument(tenantId: string, documentId: string, userId: string) {
+    return TenantDocument.findOneAndUpdate(
+      { _id: documentId, tenantId, status: 'active' },
+      { $set: { status: 'archived', archivedAt: new Date(), archivedBy: userId } },
+      { new: true, runValidators: true },
+    );
+  },
   listTenants() {
     return Tenant.find().sort({ createdAt: 1 });
   },
