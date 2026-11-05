@@ -510,12 +510,12 @@ export const clinicFinanceService = {
     }
     const invoiceDate = dateFilter(query.from, query.to);
     const [invoices, expenses] = await Promise.all([
-      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'] }, ...(invoiceDate ? { issuedAt: invoiceDate } : {}) }).select('currency totalMinor paidMinor refundedMinor creditedMinor balanceDueMinor status').lean(),
+      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'] }, ...(invoiceDate ? { issuedAt: invoiceDate } : {}) }).select('currency totalMinor paidMinor refundedMinor creditedMinor creditBalanceMinor balanceDueMinor status').lean(),
       ClinicExpense.find({ ...filter, status: { $in: ['recorded', 'paid'] }, ...(invoiceDate ? { incurredAt: invoiceDate } : {}) }).select('currency amountMinor status').lean(),
     ]);
     const byCurrency = new Map<string, any>();
     const bucket = (currency: string) => {
-      if (!byCurrency.has(currency)) byCurrency.set(currency, { currency, invoicedMinor: 0, creditedMinor: 0, collectedMinor: 0, refundedMinor: 0, outstandingMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
+      if (!byCurrency.has(currency)) byCurrency.set(currency, { currency, invoicedMinor: 0, creditedMinor: 0, collectedMinor: 0, refundedMinor: 0, outstandingMinor: 0, creditBalanceMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
       return byCurrency.get(currency);
     };
     for (const invoice of invoices) {
@@ -525,12 +525,13 @@ export const clinicFinanceService = {
       row.collectedMinor += invoice.paidMinor;
       row.refundedMinor += invoice.refundedMinor;
       row.outstandingMinor += invoice.balanceDueMinor;
+      row.creditBalanceMinor += invoice.creditBalanceMinor ?? 0;
     }
     for (const expense of expenses) {
       const row = bucket(expense.currency);
       row.expensesMinor += expense.amountMinor;
       if (expense.status === 'paid') row.paidExpensesMinor += expense.amountMinor;
     }
-    return { currencies: [...byCurrency.values()].map((row) => ({ ...row, netInvoicedMinor: row.invoicedMinor - row.creditedMinor, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })), period: { from: query.from ?? null, to: query.to ?? null } };
+    return { currencies: [...byCurrency.values()].map((row) => ({ ...row, netInvoicedMinor: row.invoicedMinor - row.creditedMinor, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashBasisOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })), period: { from: query.from ?? null, to: query.to ?? null } };
   },
 };
