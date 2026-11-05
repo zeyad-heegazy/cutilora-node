@@ -55,16 +55,16 @@ export const tenancyRepository = {
     return { items, pagination: { page, perPage, total, pages: Math.ceil(total / perPage) } };
   },
   async listTenantMembershipHistory(tenantId: string, membershipId: string, page: number, perPage: number) {
-    const acceptance = await TenantAuditEvent.findOne({
+    const acceptances = await TenantAuditEvent.find({
       tenantId, targetType: 'tenant_membership', targetId: membershipId,
       action: 'membership.invitation.accepted',
-    }).select('metadata.invitationId').lean() as any;
-    const invitationId = acceptance?.metadata?.invitationId;
+    }).select('metadata.invitationId').lean() as any[];
+    const invitationIds = [...new Set(acceptances.map((event) => event.metadata?.invitationId).filter(Boolean).map(String))];
     const filter: Record<string, unknown> = {
       tenantId,
       $or: [
         { targetType: 'tenant_membership', targetId: membershipId },
-        ...(invitationId ? [{ targetType: 'tenant_invitation', targetId: String(invitationId) }] : []),
+        ...(invitationIds.length ? [{ targetType: 'tenant_invitation', targetId: { $in: invitationIds } }] : []),
       ],
     };
     const [items, total] = await Promise.all([
