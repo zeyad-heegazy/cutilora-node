@@ -386,7 +386,7 @@ export const tenancyService = {
   getContext(context: { tenantId: string; clinicId: string | null; branchId: string | null }) {
     return tenancyRepository.getTenantContext(context.tenantId, context.clinicId, context.branchId);
   },
-  listClinics(tenantId: string) { return tenancyRepository.listClinics(tenantId); },
+  listClinics(tenantId: string, query: { search?: string; status?: string; page: number; perPage: number }) { return tenancyRepository.listClinics(tenantId, query); },
   getClinic(id: string, tenantId: string) { return tenancyRepository.findClinicById(id, tenantId); },
   listGeo(resource: GeoResource, query: { page: number; per_page: number; search?: string; country_id?: string; governorate_id?: string; city_id?: string }) {
     return geoService.listForClinic(resource, query);
