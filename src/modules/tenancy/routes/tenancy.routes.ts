@@ -13,3 +13,5 @@ tenantRouter.get('/clinics/:clinicId', requireTenantRoles('tenant_owner', 'tenan
 tenantRouter.patch('/clinics/:clinicId', requireTenantRoles('tenant_owner', 'tenant_admin'), tenancyController.updateClinic);
 tenantRouter.get('/branches', tenancyController.listBranches);
 tenantRouter.post('/branches', requireTenantRoles('tenant_owner', 'tenant_admin', 'clinic_admin', 'clinic_manager'), tenancyController.createBranch);
+tenantRouter.get('/branches/:branchId', tenancyController.getBranch);
+tenantRouter.patch('/branches/:branchId', requireTenantRoles('tenant_owner', 'tenant_admin', 'clinic_admin', 'clinic_manager', 'branch_manager'), tenancyController.updateBranch);
