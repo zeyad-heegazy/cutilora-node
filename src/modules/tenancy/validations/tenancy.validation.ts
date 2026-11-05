@@ -459,7 +459,7 @@ export const tenantUserListQuerySchema = z.object({
 
 export const tenantInvitationListQuerySchema = z.object({
   search: z.string().trim().min(1).max(100).optional(),
-  status: z.enum(['pending', 'expired', 'accepted', 'revoked']).optional(),
+  status: z.enum(['pending', 'processing', 'expired', 'accepted', 'revoked']).optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
 });
