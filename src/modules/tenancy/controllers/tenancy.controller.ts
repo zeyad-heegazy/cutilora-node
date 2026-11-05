@@ -560,10 +560,22 @@ export const tenancyController = {
   async listBranches(req: Request, res: Response, next: NextFunction) {
     try {
       const context = req.tenantContext!;
-      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
       const query = branchListQuerySchema.parse(req.query);
-      const result = await tenancyService.listBranches(context.tenantId, context.clinicId, context.branchId, query);
-      res.json({ success: true, data: result.items, pagination: result.pagination });
+
+      if (context.scope === 'tenant') {
+        const result = await tenancyService.listBranches(context.tenantId, query.clinicId ?? null, null, query);
+        if (!result) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found in this tenant.' } });
+        return res.json({ success: true, data: result.items, pagination: result.pagination });
+      }
+
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      if (query.clinicId && query.clinicId !== context.clinicId) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      }
+
+      const branchId = context.scope === 'branch' ? context.branchId : null;
+      const result = await tenancyService.listBranches(context.tenantId, context.clinicId, branchId, query);
+      res.json({ success: true, data: result!.items, pagination: result!.pagination });
     } catch (e) { next(e); }
   },
   async listBranchActivity(req: Request, res: Response, next: NextFunction) {
