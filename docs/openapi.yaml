@@ -107,6 +107,18 @@ paths:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1invitations~1{invitationId}~1resend"
   /tenant/roles:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles"
+  /tenant/roles/{roleId}:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}"
+  /tenant/roles/{roleId}/clone:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1clone"
+  /tenant/roles/{roleId}/deactivate:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1deactivate"
+  /tenant/memberships/{membershipId}/role:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1memberships~1{membershipId}~1role"
+  /tenant/access/me:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1access~1me"
+  /tenant/permissions/catalog:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1permissions~1catalog"
   /tenant/users/{userId}/effective-access:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users~1{userId}~1effective-access"
   /tenant/users/{userId}:
