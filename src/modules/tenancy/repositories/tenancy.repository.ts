@@ -90,6 +90,35 @@ export const tenancyRepository = {
   deleteTenantSubscriptionPayments(tenantId: string) {
     return SubscriptionPayment.deleteMany({ tenantId });
   },
+  async getDashboardCounts(tenantId: string) {
+    const filter = { tenantId };
+    const [clinicCount, activeClinicCount, branchCount, activeBranchCount, activeMemberIds, pendingInvitationCount] = await Promise.all([
+      Clinic.countDocuments(filter),
+      Clinic.countDocuments({ ...filter, status: 'active' }),
+      Branch.countDocuments(filter),
+      Branch.countDocuments({ ...filter, status: 'active' }),
+      TenantMembership.distinct('userId', { ...filter, status: 'active' }),
+      TenantMembership.countDocuments({ ...filter, status: 'invited' }),
+    ]);
+    return {
+      clinics: { total: clinicCount, active: activeClinicCount, suspended: clinicCount - activeClinicCount },
+      branches: { total: branchCount, active: activeBranchCount, suspended: branchCount - activeBranchCount },
+      activeMembers: activeMemberIds.length,
+      pendingInvitations: pendingInvitationCount,
+    };
+  },
+  async listDashboardClinics(tenantId: string) {
+    return Clinic.aggregate([
+      { $match: { tenantId: new (await import('mongoose')).Types.ObjectId(tenantId) } },
+      { $lookup: { from: 'branches', let: { clinicId: '$_id', tenantId: '$tenantId' }, pipeline: [
+        { $match: { $expr: { $and: [{ $eq: ['$clinicId', '$clinicId'] }, { $eq: ['$tenantId', '$tenantId'] }] } } },
+        { $group: { _id: null, total: { $sum: 1 }, active: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } } } },
+      ], as: 'branchStats' } },
+      { $addFields: { branchStats: { $ifNull: [{ $arrayElemAt: ['$branchStats', 0] }, { total: 0, active: 0 }] } } },
+      { $project: { name: 1, slug: 1, code: 1, status: 1, clinicType: 1, updatedAt: 1, branchCount: '$branchStats.total', activeBranchCount: '$branchStats.active' } },
+      { $sort: { name: 1 } },
+    ]);
+  },
   listClinics(tenantId: string) {
     return Clinic.find({ tenantId }).sort({ name: 1 });
   },
