@@ -68,6 +68,16 @@ export const tenancyController = {
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
+  async getTenantUserEffectiveAccess(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getTenantUserEffectiveAccess(
+        req.tenantContext!.tenantId,
+        String(req.params.userId ?? ''),
+      );
+      if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_USER_NOT_FOUND', message: 'User has no membership in this tenant.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
   async listTenantUsers(req: Request, res: Response, next: NextFunction) {
     try {
       const query = tenantUserListQuerySchema.parse(req.query);
