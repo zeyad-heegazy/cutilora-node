@@ -41,7 +41,7 @@ paths:
                 name: { type: string, minLength: 2, maxLength: 120 }
                 description: { type: string, maxLength: 500 }
                 scope: { type: string, enum: [tenant, clinic, branch] }
-                permissions: { type: array, maxItems: 200, items: { $ref: "#/components/schemas/TenantPermissionGrant" } }
+                permissions: { type: array, maxItems: 200, items: { type: object, required: [permission, scope], properties: { permission: { type: string }, scope: { type: string, enum: [tenant, clinic, branch] }, clinicId: { type: string, nullable: true }, branchId: { type: string, nullable: true } } } }
       responses:
         "200": { description: Updated role and incremented version }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
