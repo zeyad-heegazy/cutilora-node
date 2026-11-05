@@ -1,0 +1,121 @@
+paths:
+  /tenant/finance/overview:
+    get:
+      tags: [Tenant Finance]
+      summary: Get consolidated clinic financial overview
+      description: Aggregates clinic invoices, posted payments, refunds and expenses owned by this tenant. Results are grouped by currency; no cross-currency conversion is performed. This is separate from Cutilora subscription billing.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: currency, in: query, schema: { type: string, pattern: "^[A-Za-z]{3}$" } }
+      responses:
+        "200": { description: Totals by currency, outstanding receivables, and clinic comparisons }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/finance/entries:
+    get:
+      tags: [Tenant Finance]
+      summary: List clinic financial source entries
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Paginated clinic finance source records }
+  /tenant/finance/invoices:
+    post:
+      tags: [Tenant Finance]
+      summary: Create clinic patient invoice
+      description: Creates a clinic finance source invoice. Does not create a Cutilora subscription invoice.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "../../../openapi.yaml#/components/parameters/TenantId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clinicId, currency, lineItems]
+              properties:
+                clinicId: { type: string }
+                branchId: { type: string }
+                patientId: { type: string }
+                invoiceNumber: { type: string }
+                currency: { type: string, example: EGP }
+                status: { type: string, enum: [draft, issued] }
+                lineItems: { type: array, minItems: 1, items: { type: object, required: [description, quantity, unitPrice], properties: { description: { type: string }, quantity: { type: number, exclusiveMinimum: 0 }, unitPrice: { type: number, minimum: 0 } } } }
+      responses:
+        "201": { description: Invoice created }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/finance/payments:
+    post:
+      tags: [Tenant Finance]
+      summary: Record a payment against a clinic invoice
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "../../../openapi.yaml#/components/parameters/TenantId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoiceId, amount, currency]
+              properties:
+                invoiceId: { type: string }
+                amount: { type: number, exclusiveMinimum: 0 }
+                currency: { type: string }
+                method: { type: string }
+                idempotencyKey: { type: string }
+      responses:
+        "201": { description: Payment recorded }
+        "409": { description: Payment exceeds remaining invoice balance or currency differs }
+  /tenant/finance/refunds:
+    post:
+      tags: [Tenant Finance]
+      summary: Record a refund against a posted payment
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "../../../openapi.yaml#/components/parameters/TenantId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [paymentId, amount]
+              properties:
+                paymentId: { type: string }
+                amount: { type: number, exclusiveMinimum: 0 }
+      responses:
+        "201": { description: Refund recorded }
+        "409": { description: Refund exceeds remaining refundable amount }
+  /tenant/finance/expenses:
+    post:
+      tags: [Tenant Finance]
+      summary: Record a clinic expense
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "../../../openapi.yaml#/components/parameters/TenantId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clinicId, amount, currency, category]
+              properties:
+                clinicId: { type: string }
+                branchId: { type: string }
+                amount: { type: number, exclusiveMinimum: 0 }
+                currency: { type: string }
+                category: { type: string }
+                description: { type: string }
+      responses:
+        "201": { description: Expense recorded }
