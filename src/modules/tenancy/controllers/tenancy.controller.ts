@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { createBranchSchema, createClinicSchema, updateClinicSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -48,12 +48,41 @@ export const tenancyController = {
       res.json({ success: true, data: await tenancyService.listBranches(context.tenantId, context.clinicId, context.branchId) });
     } catch (e) { next(e); }
   },
+  async getBranch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) {
+        return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      }
+      const item = await tenancyService.getBranch(branchId, context.tenantId, context.clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
   async createBranch(req: Request, res: Response, next: NextFunction) {
     try {
       const context = req.tenantContext!;
       if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
       const input = createBranchSchema.parse(req.body);
-      res.status(201).json({ success: true, data: await tenancyService.createBranch(input, context.tenantId, context.clinicId) });
+      const item = await tenancyService.createBranch(input, context.tenantId, context.clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'CLINIC_NOT_FOUND', message: 'Clinic not found.' } });
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async updateBranch(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      if (!context.clinicId) return res.status(400).json({ success: false, error: { code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' } });
+      const branchId = String(req.params.branchId ?? '');
+      if (context.scope === 'branch' && context.branchId !== branchId) {
+        return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch.' } });
+      }
+      const input = updateBranchSchema.parse(req.body);
+      const item = await tenancyService.updateBranch(branchId, input, context.tenantId, context.clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Branch not found.' } });
+      res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
 };
