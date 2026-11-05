@@ -112,9 +112,9 @@ export const tenancyService = {
       delivery: 'manual',
     };
   },
-  async listTenantInvitations(tenantId: string) {
-    const items = await tenancyRepository.listTenantInvitations(tenantId);
-    return items.map((item: any) => ({ ...item, status: item.status === 'pending' && new Date(item.expiresAt).getTime() <= Date.now() ? 'expired' : item.status }));
+  async listTenantInvitations(tenantId: string, query: { search?: string; status?: string; page: number; perPage: number }) {
+    const result = await tenancyRepository.listTenantInvitations(tenantId, query);
+    return { ...result, items: result.items.map((item: any) => ({ ...item, status: item.status === 'pending' && new Date(item.expiresAt).getTime() <= Date.now() ? 'expired' : item.status })) };
   },
   async revokeTenantInvitation(tenantId: string, invitationId: string, userId: string) {
     const invitation = await tenancyRepository.findTenantInvitationById(tenantId, invitationId);
