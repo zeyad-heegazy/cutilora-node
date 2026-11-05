@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createExpenseSchema, createInvoiceSchema, recordPaymentSchema, refundPaymentSchema, reportQuerySchema, summaryQuerySchema } from '../../src/modules/clinic-finance/clinic-finance.validation.js';
+import { createCreditNoteSchema, createExpenseSchema, createInvoiceSchema, recordPaymentSchema, refundPaymentSchema, reportQuerySchema, summaryQuerySchema } from '../../src/modules/clinic-finance/clinic-finance.validation.js';
 
 describe('clinic finance request validation', () => {
   it('requires customer snapshots and bounded integer invoice lines', () => {
@@ -14,6 +14,11 @@ describe('clinic finance request validation', () => {
       customer: { displayName: 'Patient' },
       lines: [{ description: 'Treatment', quantity: 1.5, unitPriceMinor: 12500 }],
     }).success).toBe(false);
+  });
+
+  it('requires an idempotency key, amount and reason for credit notes', () => {
+    expect(createCreditNoteSchema.safeParse({ amountMinor: 100, reason: 'Adjustment', idempotencyKey: 'credit-123' }).success).toBe(true);
+    expect(createCreditNoteSchema.safeParse({ amountMinor: 0, reason: 'Adjustment', idempotencyKey: 'credit-123' }).success).toBe(false);
   });
 
   it('requires an idempotency key for expense creation', () => {
