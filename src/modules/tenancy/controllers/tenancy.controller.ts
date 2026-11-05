@@ -295,6 +295,97 @@ export const tenancyController = {
       res.json({ success: true, data: { id: String(item._id), status: item.status, archivedAt: item.archivedAt } });
     } catch (e) { next(e); }
   },
+  async listClinicDocuments(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'branch' || (context.scope === 'clinic' && context.clinicId !== clinicId)) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      }
+      const clinic = await tenancyService.getClinic(clinicId, context.tenantId);
+      if (!clinic) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
+      res.json({ success: true, data: await tenancyService.listTenantDocuments(context.tenantId, clinicId) });
+    } catch (e) { next(e); }
+  },
+  async createClinicDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'branch' || (context.scope === 'clinic' && context.clinicId !== clinicId)) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      }
+      const input = createTenantDocumentSchema.parse(req.body);
+      const item = await tenancyService.createTenantDocument(context.tenantId, req.auth!.userId, input, clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async replaceClinicDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'branch' || (context.scope === 'clinic' && context.clinicId !== clinicId)) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      }
+      const input = replaceTenantDocumentSchema.parse(req.body);
+      const item = await tenancyService.replaceTenantDocument(context.tenantId, String(req.params.documentId ?? ''), req.auth!.userId, input, clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic document not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async getClinicDocumentVersions(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'branch' || (context.scope === 'clinic' && context.clinicId !== clinicId)) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      }
+      const versions = await tenancyService.getTenantDocumentVersionHistory(context.tenantId, String(req.params.documentId ?? ''), clinicId);
+      if (!versions) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic document not found.' } });
+      res.json({ success: true, data: versions });
+    } catch (e) { next(e); }
+  },
+  async getClinicDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'branch' || (context.scope === 'clinic' && context.clinicId !== clinicId)) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      }
+      const item = await tenancyService.getTenantDocumentMetadata(context.tenantId, String(req.params.documentId ?? ''), clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic document not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async downloadClinicDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'branch' || (context.scope === 'clinic' && context.clinicId !== clinicId)) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      }
+      const result = await tenancyService.getTenantDocument(context.tenantId, String(req.params.documentId ?? ''), clinicId);
+      if (!result) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic document not found.' } });
+      const safeName = String(result.document.name).replace(/[^a-zA-Z0-9._-]/g, '_');
+      res.setHeader('Content-Type', result.document.mimeType);
+      res.setHeader('Content-Length', result.content.length);
+      res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.send(result.content);
+    } catch (e) { next(e); }
+  },
+  async archiveClinicDocument(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'branch' || (context.scope === 'clinic' && context.clinicId !== clinicId)) {
+        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      }
+      const item = await tenancyService.archiveTenantDocument(context.tenantId, String(req.params.documentId ?? ''), req.auth!.userId, clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic document not found.' } });
+      res.json({ success: true, data: { id: String(item._id), status: item.status, archivedAt: item.archivedAt } });
+    } catch (e) { next(e); }
+  },
   async listGeo(req: Request, res: Response, next: NextFunction) {
     try {
       const resource = geoResourceSchema.parse(req.params.resource);
