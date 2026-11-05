@@ -22,7 +22,7 @@ const updateRoleSchema = z.object({
   description: z.string().trim().max(500).optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
   permissions: z.array(grantSchema).max(200).optional(),
-}).refine((value) => Object.keys(value).length > 0, 'At least one role field must be provided.');
+}).refine((value) => Object.keys(value).some((key) => key !== 'expectedVersion'), 'At least one role field must be provided.');
 const cloneRoleSchema = z.object({
   key: z.string().trim().min(2).max(80),
   name: z.string().trim().min(2).max(120),
