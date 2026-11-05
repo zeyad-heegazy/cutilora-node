@@ -122,6 +122,24 @@ export const tenancyRepository = {
   createBranch(data: Record<string, unknown>) {
     return Branch.create(data);
   },
+  findBranchBySlug(tenantId: string, clinicId: string, slug: string, excludeId?: string) {
+    return Branch.findOne({
+      tenantId,
+      clinicId,
+      slug,
+      ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+    }).select('_id');
+  },
+  findBranchById(id: string, tenantId: string, clinicId: string) {
+    return Branch.findOne({ _id: id, tenantId, clinicId });
+  },
+  updateBranch(id: string, tenantId: string, clinicId: string, data: Record<string, unknown>) {
+    return Branch.findOneAndUpdate(
+      { _id: id, tenantId, clinicId },
+      { $set: data },
+      { new: true, runValidators: true },
+    );
+  },
   getTenantContext(
     tenantId: string,
     clinicId: string | null,
