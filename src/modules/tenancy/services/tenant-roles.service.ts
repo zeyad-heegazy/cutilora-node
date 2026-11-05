@@ -4,6 +4,7 @@ import { TenantMembership } from '../models/tenant-membership.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { Branch } from '../models/branch.model.js';
 import { getTenantRolePermissions } from './tenant-access.service.js';
+import { tenancyRepository } from '../repositories/tenancy.repository.js';
 import { hasScopedPermission, type PermissionGrant } from '../../../shared/authorization/permission.engine.js';
 
 export const TENANT_PERMISSION_CATALOG = [
@@ -156,6 +157,7 @@ export const tenantRolesService = {
     const membership = await TenantMembership.findOne({ _id: membershipId, tenantId, status: { $in: ['active', 'invited'] } });
     if (!membership) return null;
     if (String(membership.userId) === actorId) fail(403, 'SELF_ROLE_ESCALATION', 'You cannot change your own role assignment.');
+    if (actorRole !== 'tenant_owner' && membership.scope === 'tenant') fail(403, 'TENANT_OWNER_REQUIRED', 'Only the Tenant Owner can change tenant-wide role assignments.');
     const role = await TenantRole.findOne({ _id: roleId, tenantId, status: 'active' }).lean() as any;
     if (!role) fail(404, 'ROLE_NOT_FOUND', 'Active custom role not found.');
     if (role.scope !== membership.scope) fail(400, 'ROLE_SCOPE_MISMATCH', 'The custom role scope must match the membership scope.');
@@ -167,10 +169,22 @@ export const tenantRolesService = {
     }
     await assertActorCanGrant(tenantId, actorId, null, role.permissions as PermissionGrant[]);
     const oldRole = membership.role;
-    membership.role = 'custom_role';
-    membership.roleId = role._id;
-    membership.updatedBy = actorId as any;
-    await membership.save();
+    const demotingLastOwnerCandidate = membership.scope === 'tenant' && membership.role === 'tenant_owner' && membership.status === 'active';
+    let ownerLock = false;
+    if (demotingLastOwnerCandidate) {
+      const acquired = await tenancyRepository.acquireTenantOwnerMutationLock(tenantId, new Date(), 30_000);
+      if (!acquired) fail(409, 'OWNER_CHANGE_IN_PROGRESS', 'Another Tenant Owner change is in progress. Retry shortly.');
+      ownerLock = true;
+    }
+    try {
+      if (demotingLastOwnerCandidate && await tenancyRepository.countActiveTenantOwners(tenantId) <= 1) fail(409, 'LAST_TENANT_OWNER_REQUIRED', 'The last active Tenant Owner cannot be demoted.');
+      membership.role = 'custom_role';
+      membership.roleId = role._id;
+      membership.updatedBy = actorId as any;
+      await membership.save();
+    } finally {
+      if (ownerLock) await tenancyRepository.releaseTenantOwnerMutationLock(tenantId).catch(() => null);
+    }
     await audit(tenantId, actorId, 'access.role.assigned', membershipId, { oldRole, roleId, roleKey: role.key, scope: role.scope, roleVersion: role.version });
     return { membershipId, userId: String(membership.userId), role: 'custom_role', roleId, roleName: role.name, scope: membership.scope, clinicId: membership.clinicId ? String(membership.clinicId) : null, branchIds: (membership.branchIds ?? []).map(String) };
   },
