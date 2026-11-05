@@ -136,7 +136,39 @@ export const tenancyService = {
   listBranches(tenantId: string, clinicId: string, branchId: string | null) {
     return tenancyRepository.listBranches({ tenantId, clinicId, ...(branchId ? { _id: branchId } : {}) });
   },
-  createBranch(input: Record<string, unknown>, tenantId: string, clinicId: string) {
-    return tenancyRepository.createBranch({ ...input, tenantId, clinicId });
+  getBranch(id: string, tenantId: string, clinicId: string) {
+    return tenancyRepository.findBranchById(id, tenantId, clinicId);
+  },
+  async createBranch(input: Record<string, any>, tenantId: string, clinicId: string) {
+    const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
+    if (!clinic) return null;
+    const base = slugify(String(input.slug || input.name)) || 'branch';
+    let slug = base;
+    let suffix = 2;
+    while (await tenancyRepository.findBranchBySlug(tenantId, clinicId, slug)) {
+      slug = `${base}-${suffix++}`;
+    }
+    return tenancyRepository.createBranch({
+      ...input,
+      slug,
+      timezone: input.timezone || clinic.timezone || clinic.preferences?.timezone || 'Africa/Cairo',
+      tenantId,
+      clinicId,
+    });
+  },
+  async updateBranch(id: string, input: Record<string, any>, tenantId: string, clinicId: string) {
+    const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
+    if (!current) return null;
+    const update: Record<string, unknown> = { ...input };
+    if (typeof input.slug === 'string' || (typeof input.name === 'string' && input.name !== current.name)) {
+      const base = slugify(String(input.slug || input.name));
+      let candidate = base;
+      let suffix = 2;
+      while (await tenancyRepository.findBranchBySlug(tenantId, clinicId, candidate, id)) {
+        candidate = `${base}-${suffix++}`;
+      }
+      update.slug = candidate;
+    }
+    return tenancyRepository.updateBranch(id, tenantId, clinicId, update);
   },
 };
