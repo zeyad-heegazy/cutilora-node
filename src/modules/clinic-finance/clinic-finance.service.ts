@@ -205,7 +205,7 @@ export const clinicFinanceService = {
     }
     const refundable = payment.amountMinor - payment.refundedMinor;
     if (input.amountMinor > refundable) throw { status: 400, code: 'REFUND_EXCEEDS_PAYMENT', message: 'Refund exceeds the remaining refundable payment amount.' };
-    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope, current.currency) : null;
     const cashSessionId = cashReservation?.sessionId ?? null;
     const now = new Date();
     const nextRefunded = current.refundedMinor + input.amountMinor;
@@ -270,7 +270,7 @@ export const clinicFinanceService = {
     if (!current) throw { status: 404, code: 'EXPENSE_NOT_FOUND', message: 'Expense not found.' };
     if (current.status === 'paid' && current.paymentIdempotencyKey === input.idempotencyKey && current.paymentMethod === input.method) return current;
     if (current.status !== 'recorded') throw { status: 409, code: 'EXPENSE_NOT_PAYABLE', message: 'Expense is not awaiting payment.' };
-    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope, current.currency) : null;
     const cashSessionId = cashReservation?.sessionId ?? null;
     try {
       const updated = await ClinicExpense.findOneAndUpdate(
