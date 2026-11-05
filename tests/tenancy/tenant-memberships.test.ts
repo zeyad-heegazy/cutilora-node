@@ -7,6 +7,11 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     findTenantMembershipById: vi.fn(),
     countActiveTenantOwners: vi.fn(),
     findClinicById: vi.fn(),
+    findActiveClinic: vi.fn(),
+    findActiveBranch: vi.fn(),
+    expirePendingTenantInvitations: vi.fn(),
+    findPendingTenantInvitation: vi.fn(),
+    createTenantInvitation: vi.fn(),
     findBranchById: vi.fn(),
     updateTenantMembership: vi.fn(),
     createTenantAuditEvent: vi.fn().mockResolvedValue({}),
@@ -139,6 +144,43 @@ describe('tenant membership administration', () => {
       search: 'clinic@example.com', status: 'pending', page: 1, perPage: 10,
     });
     expect(result.pagination.total).toBe(1);
+  });
+
+  it('creates a scoped invitation only for an active clinic and active branches', async () => {
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    vi.mocked(tenancyRepository.findActiveClinic).mockResolvedValue({ _id: clinicId } as any);
+    vi.mocked(tenancyRepository.expirePendingTenantInvitations).mockResolvedValue({ modifiedCount: 0 } as any);
+    vi.mocked(tenancyRepository.findPendingTenantInvitation).mockResolvedValue(null as any);
+    vi.mocked(tenancyRepository.createTenantInvitation).mockResolvedValue({
+      _id: '64b000000000000000000007',
+      email: 'manager@example.com',
+      role: 'clinic_manager',
+      scope: 'clinic',
+      clinicId,
+      branchIds: [],
+      status: 'pending',
+      expiresAt,
+    } as any);
+
+    const result = await tenancyService.createTenantInvitation(tenantId, actorId, 'tenant_owner', {
+      email: 'manager@example.com', role: 'clinic_manager', scope: 'clinic', clinicId, expiresInDays: 7,
+    });
+
+    expect(tenancyRepository.findActiveClinic).toHaveBeenCalledWith(clinicId, tenantId);
+    expect(tenancyRepository.createTenantInvitation).toHaveBeenCalledWith(expect.objectContaining({
+      tenantId, email: 'manager@example.com', clinicId, role: 'clinic_manager', scope: 'clinic', status: 'pending',
+    }));
+    expect(result?.invitationToken).toHaveLength(43);
+  });
+
+  it('does not issue an invitation for a suspended clinic', async () => {
+    vi.mocked(tenancyRepository.findActiveClinic).mockResolvedValue(null as any);
+
+    await expect(tenancyService.createTenantInvitation(tenantId, actorId, 'tenant_owner', {
+      email: 'manager@example.com', role: 'clinic_manager', scope: 'clinic', clinicId,
+    })).resolves.toBeNull();
+
+    expect(tenancyRepository.createTenantInvitation).not.toHaveBeenCalled();
   });
 
 });
