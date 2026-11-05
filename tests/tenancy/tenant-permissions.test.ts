@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { membershipFindOne, roleFindOne } = vi.hoisted(() => ({ membershipFindOne: vi.fn(), roleFindOne: vi.fn() }));
+const { membershipFindOne, roleFindOne, branchFindOne } = vi.hoisted(() => ({ membershipFindOne: vi.fn(), roleFindOne: vi.fn(), branchFindOne: vi.fn() }));
 vi.mock('../../src/modules/tenancy/models/tenant-membership.model.js', () => ({
   TenantMembership: { findOne: (...args: any[]) => membershipFindOne(...args) },
 }));
 vi.mock('../../src/modules/tenancy/models/tenant-role.model.js', () => ({
   TenantRole: { findOne: (...args: any[]) => roleFindOne(...args) },
+}));
+vi.mock('../../src/modules/tenancy/models/branch.model.js', () => ({
+  Branch: { findOne: (...args: any[]) => branchFindOne(...args) },
 }));
 
 import { getTenantRoleCatalog, getTenantRolePermissions, requireTenantPermission } from '../../src/modules/tenancy/middleware/tenant-permissions.js';
@@ -16,10 +19,11 @@ function query(value: any) {
 }
 async function run(role: string, permission: string, options: { roleId?: string; clinicId?: string | null; branchId?: string | null; membershipScope?: string; membershipClinicId?: string | null; resourceClinicId?: string } = {}) {
   membershipFindOne.mockReturnValue(query({ role, roleId: options.roleId ?? null, scope: options.membershipScope ?? 'tenant', clinicId: options.membershipClinicId ?? null }));
+  branchFindOne.mockReturnValue(query({ clinicId: 'clinic-a' }));
   roleFindOne.mockReturnValue(query(options.roleId ? {
     permissions: [{ permission: 'branch.holidays.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }],
   } : null));
-  const req = { auth: { userId: 'user-a' }, params: options.resourceClinicId ? { clinicId: options.resourceClinicId } : {}, tenantContext: { tenantId: 'tenant-a', clinicId: options.clinicId ?? null, branchId: options.branchId ?? null, role } } as any;
+  const req = { auth: { userId: 'user-a' }, params: options.resourceClinicId ? { clinicId: options.resourceClinicId } : {}, query: {}, tenantContext: { tenantId: 'tenant-a', clinicId: options.clinicId ?? null, branchId: options.branchId ?? null, role } } as any;
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
   const next = vi.fn();
   await requireTenantPermission(permission)(req, res, next);
@@ -80,7 +84,7 @@ describe('tenant permission matrix and scoped custom roles', () => {
   it('denies a custom role without an active role record', async () => {
     membershipFindOne.mockReturnValue(query({ role: 'custom_role', roleId: 'role-a', scope: 'branch', clinicId: 'clinic-a' }));
     roleFindOne.mockReturnValue(query(null));
-    const req = { auth: { userId: 'user-a' }, tenantContext: { tenantId: 'tenant-a', clinicId: 'clinic-a', branchId: 'branch-a' } } as any;
+    const req = { auth: { userId: 'user-a' }, params: {}, query: {}, tenantContext: { tenantId: 'tenant-a', clinicId: 'clinic-a', branchId: 'branch-a' } } as any;
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
     const next = vi.fn();
     await requireTenantPermission('branch.read')(req, res, next);
