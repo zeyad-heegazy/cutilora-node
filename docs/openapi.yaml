@@ -97,6 +97,12 @@ paths:
     $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1invoices"
   /tenant/invoices/{invoiceId}:
     $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1invoices~1{invoiceId}"
+  /tenant/invitations:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1invitations"
+  /tenant/invitations/{invitationId}/revoke:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1invitations~1{invitationId}~1revoke"
+  /tenant/invitations/{invitationId}/resend:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1invitations~1{invitationId}~1resend"
   /tenant/users:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users"
   /tenant/memberships/{membershipId}:
