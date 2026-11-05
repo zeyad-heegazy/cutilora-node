@@ -702,12 +702,25 @@ export const tenancyService = {
     const slug = await generateUniqueClinicSlug(tenantId, name);
     const address = { ...(input.address ?? {}), ...location };
     const { logoBase64, coverImageBase64, ...branding } = input.branding ?? {};
-    const configuration = await tenancyRepository.findTenantConfiguration(tenantId);
+    const [configuration, publishedTemplates] = await Promise.all([
+      tenancyRepository.findTenantConfiguration(tenantId),
+      tenancyRepository.listPublishedTenantCatalogTemplates(tenantId),
+    ]);
     const providedSettings = { ...(input.settings ?? {}) };
+    // Inherited values are always derived from tenant-owned records, never client input.
     delete providedSettings.organizationDefaults;
     delete providedSettings.organizationDefaultsVersion;
     delete providedSettings.organizationOverrides;
-    const settings = deepMerge({ organizationDefaults: configuration?.values ?? {}, organizationDefaultsVersion: configuration?.version ?? 0 }, providedSettings);
+    delete providedSettings.organizationTemplates;
+    const organizationTemplates = Object.fromEntries(publishedTemplates.map((template: any) => [
+      template.key,
+      { templateId: String(template._id), type: template.type, version: template.version, content: template.content, appliedAt: new Date() },
+    ]));
+    const settings = deepMerge({
+      organizationDefaults: configuration?.values ?? {},
+      organizationDefaultsVersion: configuration?.version ?? 0,
+      organizationTemplates,
+    }, providedSettings);
     const clinic = await withTenantEntitlementLock(tenantId, async () => {
       const counts = await tenancyRepository.getDashboardCounts(tenantId);
       await assertTenantLimit(tenantId, 'maxClinics', counts.clinics.total + 1);
