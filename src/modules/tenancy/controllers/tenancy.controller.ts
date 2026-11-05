@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -215,6 +215,29 @@ export const tenancyController = {
   },
   async listClinics(req: Request, res: Response, next: NextFunction) {
     try { res.json({ success: true, data: await tenancyService.listClinics(req.tenantContext!.tenantId) }); } catch (e) { next(e); }
+  },
+  async getClinicSettings(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'clinic' && context.clinicId !== clinicId) return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      if (context.scope === 'branch') return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'Branch-scoped users cannot manage clinic settings.' } });
+      const item = await tenancyService.getClinicSettings(context.tenantId, clinicId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async updateClinicSettings(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const clinicId = String(req.params.clinicId ?? '');
+      if (context.scope === 'clinic' && context.clinicId !== clinicId) return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic.' } });
+      if (context.scope === 'branch') return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'Branch-scoped users cannot manage clinic settings.' } });
+      const { overrides } = updateClinicSettingsSchema.parse(req.body);
+      const item = await tenancyService.updateClinicSettings(context.tenantId, clinicId, req.auth!.userId, overrides);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Clinic not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
   },
   async getClinic(req: Request, res: Response, next: NextFunction) {
     try {
