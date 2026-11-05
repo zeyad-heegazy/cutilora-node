@@ -443,7 +443,7 @@ export const applyTenantConfigurationSchema = tenantConfigurationApplyBaseSchema
 
 export const updateTenantMembershipSchema = z.object({
   role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist', 'custom']).optional(),
-  customRoleId: z.string().regex(/^[a-f\\d]{24}$/i).nullable().optional(),
+  customRoleId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
   clinicId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
   branchIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).max(50).optional(),
