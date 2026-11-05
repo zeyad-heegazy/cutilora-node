@@ -4,6 +4,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     listTenantMemberships: vi.fn(),
     listTenantInvitations: vi.fn(),
+    listMembershipsForUser: vi.fn(),
     findTenantMembershipById: vi.fn(),
     countActiveTenantOwners: vi.fn(),
     findClinicById: vi.fn(),
@@ -181,6 +182,24 @@ describe('tenant membership administration', () => {
     })).resolves.toBeNull();
 
     expect(tenancyRepository.createTenantInvitation).not.toHaveBeenCalled();
+  });
+
+  it('previews only effective memberships belonging to the requested tenant user', async () => {
+    vi.mocked(tenancyRepository.listMembershipsForUser).mockResolvedValue([
+      { _id: membershipId, status: 'active', role: 'clinic_manager', scope: 'clinic', clinicId: { _id: clinicId, name: 'Clinic' }, branchIds: [] },
+      { _id: '64b000000000000000000008', status: 'suspended', role: 'branch_manager', scope: 'branch', clinicId, branchIds: [branchId] },
+    ] as any);
+
+    const result = await tenancyService.getTenantUserEffectiveAccess(tenantId, targetId);
+
+    expect(result?.memberships[0]?.permissions).toContain('clinic.settings.manage');
+    expect(result?.memberships[1]?.permissions).toEqual([]);
+    expect(tenancyRepository.listMembershipsForUser).toHaveBeenCalledWith(tenantId, targetId);
+  });
+
+  it('does not query MongoDB for malformed tenant user IDs', async () => {
+    await expect(tenancyService.getTenantUserEffectiveAccess(tenantId, 'not-an-object-id')).resolves.toBeNull();
+    expect(tenancyRepository.listMembershipsForUser).not.toHaveBeenCalled();
   });
 
 });
