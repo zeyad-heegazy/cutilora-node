@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRoleCatalog, getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema } from '../validations/tenancy.validation.js';
+import { TENANT_PERMISSION_CATALOG } from '../services/tenant-access.service.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema, createTenantRoleSchema, updateTenantRoleSchema, tenantRoleListQuerySchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -429,8 +430,41 @@ export const tenancyController = {
       res.json({ success: true, ...await tenancyService.listGeo(resource, query) });
     } catch (e) { next(e); }
   },
-  async listTenantRoles(req: Request, res: Response) {
-    res.json({ success: true, data: getTenantRoleCatalog(req.tenantContext!.role) });
+  async listTenantRoles(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = tenantRoleListQuerySchema.parse(req.query);
+      const context = req.tenantContext!;
+      const customRoles = await tenancyService.listCustomTenantRoles(context.tenantId, query);
+      res.json({ success: true, data: { builtIn: getTenantRoleCatalog(context.role), custom: customRoles } });
+    } catch (e) { next(e); }
+  },
+  async getTenantPermissionCatalog(req: Request, res: Response) {
+    res.json({ success: true, data: TENANT_PERMISSION_CATALOG });
+  },
+  async createTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = createTenantRoleSchema.parse(req.body);
+      const context = req.tenantContext!;
+      const item = await tenancyService.createCustomTenantRole(context.tenantId, req.auth!.userId, context.role, context.scope, input);
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async updateTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = updateTenantRoleSchema.parse(req.body);
+      const context = req.tenantContext!;
+      const item = await tenancyService.updateCustomTenantRole(context.tenantId, String(req.params.roleId ?? ''), req.auth!.userId, context.role, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'ROLE_NOT_FOUND', message: 'Active custom role not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async archiveTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const item = await tenancyService.archiveCustomTenantRole(context.tenantId, String(req.params.roleId ?? ''), req.auth!.userId, context.role);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'ROLE_NOT_FOUND', message: 'Active custom role not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
   },
   async getPermissions(req: Request, res: Response) {
     const context = req.tenantContext!;
