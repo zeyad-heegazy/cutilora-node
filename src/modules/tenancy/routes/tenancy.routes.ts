@@ -67,9 +67,9 @@ tenantRouter.post('/branches/:branchId/activate', requireTenantScope, requireTen
 tenantRouter.post('/branches/:branchId/deactivate', requireTenantScope, requireTenantPermission('branch.lifecycle.manage'), tenancyController.deactivateBranch);
 tenantRouter.get('/branches/:branchId/users', requireTenantPermission('branch.read'), tenancyController.listBranchUsers);
 tenantRouter.get('/branches/:branchId/business-hours', requireTenantPermission('branch.read'), tenancyController.getBranchBusinessHours);
-tenantRouter.put('/branches/:branchId/business-hours', requireTenantPermission('branch.update'), tenancyController.updateBranchBusinessHours);
+tenantRouter.put('/branches/:branchId/business-hours', requireTenantPermission('branch.schedule.manage'), tenancyController.updateBranchBusinessHours);
 tenantRouter.get('/branches/:branchId/settings', requireTenantPermission('branch.read'), tenancyController.getBranchSettings);
-tenantRouter.patch('/branches/:branchId/settings', requireTenantPermission('branch.update'), tenancyController.updateBranchSettings);
+tenantRouter.patch('/branches/:branchId/settings', requireTenantPermission('branch.settings.manage'), tenancyController.updateBranchSettings);
 tenantRouter.get('/branches/:branchId/holidays', requireTenantPermission('branch.holidays.read'), tenancyController.listBranchHolidays);
 tenantRouter.post('/branches/:branchId/holidays', requireTenantPermission('branch.holidays.manage'), tenancyController.createBranchHoliday);
 tenantRouter.delete('/branches/:branchId/holidays/:holidayId', requireTenantPermission('branch.holidays.manage'), tenancyController.cancelBranchHoliday);
