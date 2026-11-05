@@ -22,6 +22,8 @@ const schema = new Schema({
   dueAt: { type: Date, default: null },
   incurredAt: { type: Date, required: true },
   status: { type: String, enum: ['recorded', 'paid', 'void'], default: 'recorded', required: true },
+  cashSessionId: { type: Schema.Types.ObjectId, ref: 'ClinicCashSession', default: null },
+  paymentIdempotencyKey: { type: String, trim: true, maxlength: 128, default: null },
   paymentMethod: { type: String, enum: ['cash', 'card', 'bank_transfer', 'online', 'wallet', 'other'], default: null },
   paidAt: { type: Date, default: null },
   voidedAt: { type: Date, default: null },
