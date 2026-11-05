@@ -238,6 +238,10 @@ paths:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1cash-sessions~1{sessionId}~1close"
   /clinic/cash-sessions/{sessionId}/approve:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1cash-sessions~1{sessionId}~1approve"
+  /clinic/finance/receivables:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1receivables"
+  /clinic/finance/reports:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1reports"
   /platform/monitoring/view:
     $ref: "./openapi/platform/monitoring/view/view.yaml#/paths/~1platform~1monitoring~1view"
   /platform/monitoring/logs:
