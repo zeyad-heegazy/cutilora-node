@@ -43,7 +43,7 @@ function locationFrom(input: Record<string, any>) {
 
 function decodeTenantDocument(input: string): { content: Buffer; mimeType: string; extension: string } {
   const match = input.match(/^data:(application\/pdf|image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]+={0,2})$/);
-  const encoded = match ? match[2] : input;
+  const encoded = match ? (match[2] ?? '') : input;
   if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) || encoded.length % 4 !== 0) {
     throw new Error('Document must be valid base64 or a supported base64 data URL.');
   }
