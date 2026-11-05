@@ -2,7 +2,7 @@ import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
 import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
-import { readPrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
+import { readPrivateTenantDocument, removePrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
 
 function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>): Record<string, any> {
   const result = { ...defaults };
@@ -76,7 +76,6 @@ export const tenancyService = {
         expiresAt: input.expiresAt ?? null,
       });
     } catch (error) {
-      const { removePrivateTenantDocument } = await import('../../../shared/storage/private-tenant-document.storage.js');
       await removePrivateTenantDocument(storageKey);
       throw error;
     }
