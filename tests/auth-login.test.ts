@@ -72,6 +72,14 @@ describe('regular user login', () => {
     expect(sessions[0]).not.toHaveProperty('ipAddress');
   });
 
+  it('revokes only the requested active user session', async () => {
+    vi.mocked(authRepository.revokeUserSession).mockResolvedValue({ sessionId: 'session-1' } as any);
+
+    await userSessionService.revoke('user-1', 'session-1');
+
+    expect(authRepository.revokeUserSession).toHaveBeenCalledWith('user-1', 'session-1', expect.any(Date));
+  });
+
   it('does not update last login for invalid credentials', async () => {
     vi.mocked(authRepository.findUserByEmail).mockResolvedValue(null as any);
 
