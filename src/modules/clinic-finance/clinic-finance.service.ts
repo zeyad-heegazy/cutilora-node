@@ -404,7 +404,7 @@ export const clinicFinanceService = {
     }
     const range = { $gte: query.from, $lte: query.to };
     const [invoices, expenses, clinic] = await Promise.all([
-      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'] }, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }] }).select('currency totalMinor creditedMinor creditNotes issuedAt createdAt lines payments').lean(),
+      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'] }, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }, { 'creditNotes.issuedAt': range }] }).select('currency totalMinor creditedMinor creditNotes issuedAt createdAt lines payments').lean(),
       ClinicExpense.find({ ...filter, status: { $in: ['recorded', 'paid'] }, $or: [{ incurredAt: range }, { paidAt: range }] }).select('currency amountMinor category status incurredAt paidAt').lean(),
       Clinic.findOne({ _id: scope.clinicId, tenantId: scope.tenantId }).select('timezone').lean(),
     ]);
@@ -418,7 +418,7 @@ export const clinicFinanceService = {
     };
     const totals = new Map<string, any>();
     const rowFor = (currency: string) => {
-      if (!totals.has(currency)) totals.set(currency, { currency, invoicedMinor: 0, collectedMinor: 0, refundedMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
+      if (!totals.has(currency)) totals.set(currency, { currency, invoicedMinor: 0, creditedMinor: 0, collectedMinor: 0, refundedMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
       return totals.get(currency);
     };
     const methods = new Map<string, any>();
