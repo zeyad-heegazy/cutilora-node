@@ -522,6 +522,40 @@ export const tenancyService = {
   getBranch(id: string, tenantId: string, clinicId: string) {
     return tenancyRepository.findBranchById(id, tenantId, clinicId);
   },
+  async getClinicSettings(tenantId: string, clinicId: string) {
+    const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
+    if (!clinic) return null;
+    const settings = clinic.settings?.toObject?.() ?? clinic.settings ?? {};
+    const defaults = settings.organizationDefaults ?? {};
+    const overrides = settings.organizationOverrides ?? {};
+    return {
+      defaults,
+      overrides,
+      effectiveValues: deepMerge(defaults, overrides),
+      inheritedVersion: settings.organizationDefaultsVersion ?? 0,
+      overrideKeys: Object.keys(overrides),
+    };
+  },
+  async updateClinicSettings(tenantId: string, clinicId: string, userId: string, overrides: Record<string, any>) {
+    const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
+    if (!clinic) return null;
+    const settings = clinic.settings?.toObject?.() ?? clinic.settings ?? {};
+    const mergedOverrides = deepMerge(settings.organizationOverrides ?? {}, overrides);
+    const updated = await tenancyRepository.updateClinic(clinicId, tenantId, {
+      settings: { ...settings, organizationOverrides: mergedOverrides },
+      updatedBy: userId,
+    });
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'clinic.settings.overridden', targetType: 'clinic', targetId: clinicId, clinicId, metadata: { changedKeys: Object.keys(overrides) } });
+    const updatedSettings = updated?.settings?.toObject?.() ?? updated?.settings ?? {};
+    if (!updated) return null;
+    return {
+      defaults: updatedSettings.organizationDefaults ?? {},
+      overrides: updatedSettings.organizationOverrides ?? {},
+      effectiveValues: deepMerge(updatedSettings.organizationDefaults ?? {}, updatedSettings.organizationOverrides ?? {}),
+      inheritedVersion: updatedSettings.organizationDefaultsVersion ?? 0,
+      overrideKeys: Object.keys(updatedSettings.organizationOverrides ?? {}),
+    };
+  },
   async getBranchSettings(tenantId: string, clinicId: string, branchId: string) {
     const branch = await tenancyRepository.findBranchById(branchId, tenantId, clinicId);
     if (!branch) return null;
