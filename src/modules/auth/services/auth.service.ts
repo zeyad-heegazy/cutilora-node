@@ -52,6 +52,7 @@ export const authService = {
     return {
       access_token: signAccessToken(user.id, 'user', sessionId),
       token_type: 'Bearer',
+      session: { id: sessionId, expiresAt },
       user: { id: user.id, name: user.name, email: user.email },
       memberships: memberships
         .filter((m: any) => m.tenantId)
