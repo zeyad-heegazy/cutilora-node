@@ -316,11 +316,11 @@ export const createBranchHolidaySchema = z.object({
 export const tenantAuditQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
-  actorId: z.string().regex(/^[a-f\\d]{24}$/i).optional(),
+  actorId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   action: z.string().trim().min(2).max(120).optional(),
   targetType: z.string().trim().min(2).max(80).optional(),
-  clinicId: z.string().regex(/^[a-f\\d]{24}$/i).optional(),
-  branchId: z.string().regex(/^[a-f\\d]{24}$/i).optional(),
+  clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
 }).refine((query) => !query.from || !query.to || query.from <= query.to, {
