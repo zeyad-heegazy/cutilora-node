@@ -1,0 +1,89 @@
+paths:
+  /clinic/finance/summary:
+    get:
+      tags: [Clinic Finance]
+      summary: Get financial summary grouped by currency
+      parameters:
+        - $ref: '../../components.yaml#/components/parameters/TenantId'
+        - $ref: '../../components.yaml#/components/parameters/ClinicId'
+        - $ref: '../../components.yaml#/components/parameters/BranchId'
+      responses:
+        '200':
+          description: Currency-separated clinic financial summary
+  /clinic/invoices:
+    get:
+      tags: [Clinic Finance]
+      summary: List clinic invoices
+      responses:
+        '200':
+          description: Paginated clinic invoices
+    post:
+      tags: [Clinic Finance]
+      summary: Create a draft clinic invoice
+      responses:
+        '201':
+          description: Draft invoice created
+  /clinic/invoices/{invoiceId}:
+    parameters:
+      - in: path
+        name: invoiceId
+        required: true
+        schema: { type: string }
+    get:
+      tags: [Clinic Finance]
+      summary: Get a clinic invoice
+      responses:
+        '200': { description: Invoice }
+        '404': { description: Invoice not found }
+    patch:
+      tags: [Clinic Finance]
+      summary: Update a draft invoice
+      responses:
+        '200': { description: Updated invoice }
+  /clinic/invoices/{invoiceId}/issue:
+    post:
+      tags: [Clinic Finance]
+      summary: Issue a draft invoice and allocate its number
+      responses:
+        '200': { description: Issued invoice }
+  /clinic/invoices/{invoiceId}/payments:
+    post:
+      tags: [Clinic Finance]
+      summary: Record a full or partial patient payment
+      responses:
+        '201': { description: Payment recorded }
+  /clinic/invoices/{invoiceId}/payments/{paymentId}/refunds:
+    post:
+      tags: [Clinic Finance]
+      summary: Refund all or part of an invoice payment
+      responses:
+        '200': { description: Refund recorded }
+  /clinic/invoices/{invoiceId}/void:
+    post:
+      tags: [Clinic Finance]
+      summary: Void an unpaid invoice
+      responses:
+        '200': { description: Invoice voided }
+  /clinic/expenses:
+    get:
+      tags: [Clinic Finance]
+      summary: List clinic expenses
+      responses:
+        '200': { description: Paginated expenses }
+    post:
+      tags: [Clinic Finance]
+      summary: Record a clinic expense
+      responses:
+        '201': { description: Expense recorded }
+  /clinic/expenses/{expenseId}/pay:
+    post:
+      tags: [Clinic Finance]
+      summary: Mark a recorded expense as paid
+      responses:
+        '200': { description: Expense paid }
+  /clinic/expenses/{expenseId}/void:
+    post:
+      tags: [Clinic Finance]
+      summary: Void an unpaid expense
+      responses:
+        '200': { description: Expense voided }

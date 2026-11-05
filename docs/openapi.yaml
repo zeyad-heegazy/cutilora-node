@@ -19,6 +19,7 @@ tags:
   - name: Tenant Context
   - name: Clinics
   - name: Branches
+  - name: Clinic Finance
   - name: Clinic - Geo
 paths:
   /health:
@@ -207,6 +208,26 @@ paths:
     $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1close"
   /tenant/branches/{branchId}:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches~1{branchId}"
+  /clinic/finance/summary:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1summary"
+  /clinic/invoices:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices"
+  /clinic/invoices/{invoiceId}:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}"
+  /clinic/invoices/{invoiceId}/issue:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}~1issue"
+  /clinic/invoices/{invoiceId}/payments:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}~1payments"
+  /clinic/invoices/{invoiceId}/payments/{paymentId}/refunds:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}~1payments~1{paymentId}~1refunds"
+  /clinic/invoices/{invoiceId}/void:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1invoices~1{invoiceId}~1void"
+  /clinic/expenses:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1expenses"
+  /clinic/expenses/{expenseId}/pay:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1expenses~1{expenseId}~1pay"
+  /clinic/expenses/{expenseId}/void:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1expenses~1{expenseId}~1void"
   /platform/monitoring/view:
     $ref: "./openapi/platform/monitoring/view/view.yaml#/paths/~1platform~1monitoring~1view"
   /platform/monitoring/logs:
