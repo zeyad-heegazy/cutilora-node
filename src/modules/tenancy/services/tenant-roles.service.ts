@@ -36,7 +36,7 @@ const builtInScopes: Record<string, 'tenant' | 'clinic' | 'branch'> = {
 };
 
 function objectId(value: string) { return Types.ObjectId.isValid(value) && /^[0-9a-f]{24}$/i.test(value); }
-function normalizeKey(value: string) { return value.trim().toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
+function normalizeKey(value: string) { return value.trim().toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, ''); }
   return value.trim().toLowerCase().normalize('NFKD').replace(/[\\u0300-\\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
 }
 function fail(status: number, code: string, message: string): never { throw { status, code, message }; }
