@@ -128,7 +128,7 @@ describe('tenant membership administration', () => {
     } as any);
 
     const result = await tenancyService.listTenantMemberships(tenantId, {
-      search: 'manager', status: 'active', role: 'clinic_manager', scope: 'clinic', clinicId, page: 2, perPage: 10,
+      search: 'manager', status: 'active', role: 'clinic_manager', scope: 'clinic', clinicId, lastLoginFrom: new Date('2026-01-01T00:00:00.000Z'), lastLoginTo: new Date('2026-11-05T00:00:00.000Z'), page: 2, perPage: 10,
     });
 
     expect(tenancyRepository.listTenantMemberships).toHaveBeenCalledWith(tenantId, {
