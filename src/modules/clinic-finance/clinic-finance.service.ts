@@ -12,6 +12,17 @@ function calculateBasisPoints(amountMinor: number, basisPoints: number): number 
   return Number((BigInt(amountMinor) * BigInt(basisPoints)) / 10000n);
 }
 
+export function calculateInvoiceSettlement(totalMinor: number, creditedMinor: number, paidMinor: number, refundedMinor: number) {
+  const adjustedTotalMinor = totalMinor - creditedMinor;
+  const netPaidMinor = paidMinor - refundedMinor;
+  const balanceDueMinor = Math.max(0, adjustedTotalMinor - netPaidMinor);
+  const creditBalanceMinor = Math.max(0, netPaidMinor - adjustedTotalMinor);
+  const status = balanceDueMinor === 0
+    ? (adjustedTotalMinor === 0 && netPaidMinor === 0 ? 'credited' : 'paid')
+    : (creditedMinor > 0 && netPaidMinor === 0 ? 'partially_credited' : (netPaidMinor > 0 ? 'partially_paid' : 'issued'));
+  return { balanceDueMinor, creditBalanceMinor, status };
+}
+
 export function calculateInvoiceLines(lines: any[]) {
   const calculated = lines.map((line) => {
     const subtotalMinor = line.quantity * line.unitPriceMinor;
@@ -183,8 +194,8 @@ export const clinicFinanceService = {
       if (priorPayment.amountMinor !== input.amountMinor || priorPayment.method !== input.method || priorPayment.reference !== (input.reference ?? '')) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different payment details.' };
       return current;
     }
-    if (!['issued', 'partially_paid'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
-    const balanceDueMinor = current.totalMinor - (current.paidMinor - current.refundedMinor);
+    if (!['issued', 'partially_paid', 'partially_credited'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
+    const balanceDueMinor = current.balanceDueMinor;
     if (input.amountMinor > balanceDueMinor) throw { status: 400, code: 'PAYMENT_EXCEEDS_BALANCE', message: 'Payment exceeds the outstanding invoice balance.' };
     const cashReservation = input.method === 'cash' ? await reserveCashSession(scope, current.currency) : null;
     const cashSessionId = cashReservation?.sessionId ?? null;
@@ -194,12 +205,12 @@ export const clinicFinanceService = {
       recordedBy: scope.userId, refundedMinor: 0, refunds: [],
     };
     const nextPaid = current.paidMinor + input.amountMinor;
-    const nextStatus = nextPaid - current.refundedMinor >= current.totalMinor ? 'paid' : 'partially_paid';
+    const settlement = calculateInvoiceSettlement(current.totalMinor, current.creditedMinor ?? 0, nextPaid, current.refundedMinor);
     try {
       const updated = await ClinicInvoice.findOneAndUpdate(
         { _id: invoiceId, ...invoiceFilter(scope), version: current.version, status: current.status, balanceDueMinor: { $gte: input.amountMinor } },
         { $push: { payments: payment, events: { type: 'payment.recorded', actorUserId: scope.userId, occurredAt: new Date(), metadata: { paymentId: payment._id, amountMinor: input.amountMinor, method: input.method } } },
-          $set: { paidMinor: nextPaid, balanceDueMinor: current.totalMinor - (nextPaid - current.refundedMinor), status: nextStatus, updatedBy: scope.userId }, $inc: { version: 1 } },
+          $set: { paidMinor: nextPaid, balanceDueMinor: settlement.balanceDueMinor, creditBalanceMinor: settlement.creditBalanceMinor, status: settlement.status, updatedBy: scope.userId }, $inc: { version: 1 } },
         { new: true, runValidators: true },
       );
       if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Invoice changed while recording payment. Reload and retry.' };
@@ -225,15 +236,14 @@ export const clinicFinanceService = {
     const cashSessionId = cashReservation?.sessionId ?? null;
     const now = new Date();
     const nextRefunded = current.refundedMinor + input.amountMinor;
-    const nextBalance = current.totalMinor - (current.paidMinor - nextRefunded);
-    const nextStatus = current.paidMinor - nextRefunded <= 0 ? 'issued' : (nextBalance === 0 ? 'paid' : 'partially_paid');
+    const settlement = calculateInvoiceSettlement(current.totalMinor, current.creditedMinor ?? 0, current.paidMinor, nextRefunded);
     try {
       const updated = await ClinicInvoice.findOneAndUpdate(
         { _id: invoiceId, ...invoiceFilter(scope), version: current.version, 'payments._id': payment._id, 'payments.refundedMinor': payment.refundedMinor },
         { $inc: { 'payments.$.refundedMinor': input.amountMinor, refundedMinor: input.amountMinor, version: 1 },
           $push: { 'payments.$.refunds': { idempotencyKey: input.idempotencyKey, method: input.method, cashSessionId, amountMinor: input.amountMinor, reason: input.reason, refundedAt: now, recordedBy: scope.userId },
             events: { type: 'payment.refunded', actorUserId: scope.userId, occurredAt: now, metadata: { paymentId, amountMinor: input.amountMinor, reason: input.reason } } },
-          $set: { balanceDueMinor: nextBalance, status: nextStatus, updatedBy: scope.userId } },
+          $set: { balanceDueMinor: settlement.balanceDueMinor, creditBalanceMinor: settlement.creditBalanceMinor, status: settlement.status, updatedBy: scope.userId } },
         { new: true, runValidators: true },
       );
       if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Payment changed while recording refund. Reload and retry.' };
@@ -241,6 +251,36 @@ export const clinicFinanceService = {
     } finally {
       if (cashReservation) await releaseCashSession(scope, cashReservation);
     }
+  },
+
+
+  async issueCreditNote(scope: Scope, invoiceId: string, input: { idempotencyKey: string; amountMinor: number; reason: string }) {
+    const current = await ClinicInvoice.findOne({ _id: invoiceId, ...invoiceFilter(scope) });
+    if (!current) return null;
+    const prior = current.creditNotes.find((note: any) => note.idempotencyKey === input.idempotencyKey);
+    if (prior) {
+      if (prior.amountMinor !== input.amountMinor || prior.reason !== input.reason) throw { status: 409, code: 'IDEMPOTENCY_KEY_REUSED', message: 'Idempotency key was already used with different credit note details.' };
+      return current;
+    }
+    if (!['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_CREDITABLE', message: 'Only issued invoices can receive credit notes.' };
+    const availableMinor = current.totalMinor - (current.creditedMinor ?? 0);
+    if (input.amountMinor > availableMinor) throw { status: 400, code: 'CREDIT_EXCEEDS_INVOICE', message: 'Credit note exceeds the remaining invoice value.' };
+    const now = new Date();
+    const creditedMinor = (current.creditedMinor ?? 0) + input.amountMinor;
+    const settlement = calculateInvoiceSettlement(current.totalMinor, creditedMinor, current.paidMinor, current.refundedMinor);
+    const noteNumber = `CN-${current.invoiceNumber}-${String(current.creditNotes.length + 1).padStart(3, '0')}`;
+    const updated = await ClinicInvoice.findOneAndUpdate(
+      { _id: invoiceId, ...invoiceFilter(scope), version: current.version, creditedMinor: current.creditedMinor ?? 0 },
+      { $inc: { creditedMinor: input.amountMinor, version: 1 },
+        $set: { balanceDueMinor: settlement.balanceDueMinor, creditBalanceMinor: settlement.creditBalanceMinor, status: settlement.status, updatedBy: scope.userId },
+        $push: {
+          creditNotes: { idempotencyKey: input.idempotencyKey, noteNumber, amountMinor: input.amountMinor, reason: input.reason, issuedAt: now, recordedBy: scope.userId },
+          events: { type: 'invoice.credit_note_issued', actorUserId: scope.userId, occurredAt: now, metadata: { noteNumber, amountMinor: input.amountMinor, reason: input.reason } },
+        } },
+      { new: true, runValidators: true },
+    );
+    if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Invoice changed while issuing credit note. Reload and retry.' };
+    return updated;
   },
 
   async voidInvoice(scope: Scope, invoiceId: string, reason: string) {
@@ -329,7 +369,7 @@ export const clinicFinanceService = {
 
 
   async receivables(scope: Scope, query: { asOf?: Date; branchId?: string }) {
-    const filter: any = { ...invoiceFilter(scope), status: { $in: ['issued', 'partially_paid'] }, balanceDueMinor: { $gt: 0 } };
+    const filter: any = { ...invoiceFilter(scope), status: { $in: ['issued', 'partially_paid', 'partially_credited'] }, balanceDueMinor: { $gt: 0 } };
     if (query.branchId) {
       if (scope.branchId && query.branchId !== scope.branchId) throw { status: 403, code: 'BRANCH_ACCESS_DENIED', message: 'You cannot access another branch.' };
       filter.branchId = query.branchId;
@@ -364,7 +404,7 @@ export const clinicFinanceService = {
     }
     const range = { $gte: query.from, $lte: query.to };
     const [invoices, expenses, clinic] = await Promise.all([
-      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'paid'] }, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }] }).select('currency totalMinor issuedAt createdAt lines payments').lean(),
+      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'partially_credited', 'paid', 'credited'] }, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }] }).select('currency totalMinor issuedAt createdAt lines payments').lean(),
       ClinicExpense.find({ ...filter, status: { $in: ['recorded', 'paid'] }, $or: [{ incurredAt: range }, { paidAt: range }] }).select('currency amountMinor category status incurredAt paidAt').lean(),
       Clinic.findOne({ _id: scope.clinicId, tenantId: scope.tenantId }).select('timezone').lean(),
     ]);
@@ -447,7 +487,7 @@ export const clinicFinanceService = {
     }
     return {
       period: { from: query.from, to: query.to, groupBy: query.groupBy, timezone },
-      totalsByCurrency: [...totals.values()].map((row) => ({ ...row, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashBasisOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })),
+      totalsByCurrency: [...totals.values()].map((row) => ({ ...row, netInvoicedMinor: row.invoicedMinor - row.creditedMinor, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashBasisOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })),
       collectionMethods: [...methods.values()],
       expenseCategories: [...categories.values()],
       serviceRevenue: [...services.values()],
@@ -463,17 +503,18 @@ export const clinicFinanceService = {
     }
     const invoiceDate = dateFilter(query.from, query.to);
     const [invoices, expenses] = await Promise.all([
-      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'paid'] }, ...(invoiceDate ? { issuedAt: invoiceDate } : {}) }).select('currency totalMinor paidMinor refundedMinor balanceDueMinor status').lean(),
+      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'paid'] }, ...(invoiceDate ? { issuedAt: invoiceDate } : {}) }).select('currency totalMinor paidMinor refundedMinor creditedMinor balanceDueMinor status').lean(),
       ClinicExpense.find({ ...filter, status: { $in: ['recorded', 'paid'] }, ...(invoiceDate ? { incurredAt: invoiceDate } : {}) }).select('currency amountMinor status').lean(),
     ]);
     const byCurrency = new Map<string, any>();
     const bucket = (currency: string) => {
-      if (!byCurrency.has(currency)) byCurrency.set(currency, { currency, invoicedMinor: 0, collectedMinor: 0, refundedMinor: 0, outstandingMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
+      if (!byCurrency.has(currency)) byCurrency.set(currency, { currency, invoicedMinor: 0, creditedMinor: 0, collectedMinor: 0, refundedMinor: 0, outstandingMinor: 0, expensesMinor: 0, paidExpensesMinor: 0 });
       return byCurrency.get(currency);
     };
     for (const invoice of invoices) {
       const row = bucket(invoice.currency);
       row.invoicedMinor += invoice.totalMinor;
+      row.creditedMinor = (row.creditedMinor ?? 0) + (invoice.creditedMinor ?? 0);
       row.collectedMinor += invoice.paidMinor;
       row.refundedMinor += invoice.refundedMinor;
       row.outstandingMinor += invoice.balanceDueMinor;
