@@ -44,21 +44,22 @@ function invoiceFilter(scope: Scope) {
   };
 }
 
-async function reserveCashSession(scope: Scope): Promise<{ sessionId: any; token: string }> {
+async function reserveCashSession(scope: Scope, currency: string): Promise<{ sessionId: any; token: string }> {
   const token = randomBytes(24).toString('hex');
   const now = new Date();
   const session = await ClinicCashSession.findOneAndUpdate(
-    { ...invoiceFilter(scope), status: 'open', $or: [
+    { ...invoiceFilter(scope), status: 'open', currency, $or: [
       { cashMutationLockExpiresAt: null },
       { cashMutationLockExpiresAt: { $lte: now } },
       { cashMutationLockExpiresAt: { $exists: false } },
     ] },
     { $set: { cashMutationLockToken: token, cashMutationLockExpiresAt: new Date(now.getTime() + 5 * 60 * 1000) }, $inc: { version: 1 } },
-    { new: true, projection: { _id: 1 } },
+    { new: true, projection: { _id: 1, currency: 1 } },
   );
   if (!session) {
-    const open = await ClinicCashSession.exists({ ...invoiceFilter(scope), status: 'open' });
+    const open = await ClinicCashSession.findOne({ ...invoiceFilter(scope), status: 'open' }).select('currency +cashMutationLockExpiresAt');
     if (!open) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording a cash transaction.' };
+    if (open.currency !== currency) throw { status: 409, code: 'CASH_SESSION_CURRENCY_MISMATCH', message: 'Cash transaction currency must match the active cash session currency.' };
     throw { status: 409, code: 'CASH_SESSION_BUSY', message: 'Another cash transaction is being recorded. Retry shortly.' };
   }
   return { sessionId: session._id, token };
@@ -169,7 +170,7 @@ export const clinicFinanceService = {
     if (!['issued', 'partially_paid'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
     const balanceDueMinor = current.totalMinor - (current.paidMinor - current.refundedMinor);
     if (input.amountMinor > balanceDueMinor) throw { status: 400, code: 'PAYMENT_EXCEEDS_BALANCE', message: 'Payment exceeds the outstanding invoice balance.' };
-    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope, current.currency) : null;
     const cashSessionId = cashReservation?.sessionId ?? null;
     const payment = {
       _id: new Types.ObjectId(), cashSessionId, idempotencyKey: input.idempotencyKey, method: input.method, amountMinor: input.amountMinor,
@@ -331,8 +332,8 @@ export const clinicFinanceService = {
     }
     const range = { $gte: query.from, $lte: query.to };
     const [invoices, expenses, clinic] = await Promise.all([
-      ClinicInvoice.find({ ...filter, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }] }).select('currency totalMinor issuedAt createdAt lines payments').lean(),
-      ClinicExpense.find({ ...filter, $or: [{ incurredAt: range }, { paidAt: range }] }).select('currency amountMinor category status incurredAt paidAt').lean(),
+      ClinicInvoice.find({ ...filter, status: { $in: ['issued', 'partially_paid', 'paid'] }, $or: [{ issuedAt: range }, { 'payments.receivedAt': range }, { 'payments.refunds.refundedAt': range }] }).select('currency totalMinor issuedAt createdAt lines payments').lean(),
+      ClinicExpense.find({ ...filter, status: { $in: ['recorded', 'paid'] }, $or: [{ incurredAt: range }, { paidAt: range }] }).select('currency amountMinor category status incurredAt paidAt').lean(),
       Clinic.findOne({ _id: scope.clinicId, tenantId: scope.tenantId }).select('timezone').lean(),
     ]);
     const timezone = (clinic as any)?.timezone || 'Africa/Cairo';
@@ -414,7 +415,7 @@ export const clinicFinanceService = {
     }
     return {
       period: { from: query.from, to: query.to, groupBy: query.groupBy, timezone },
-      totalsByCurrency: [...totals.values()].map((row) => ({ ...row, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })),
+      totalsByCurrency: [...totals.values()].map((row) => ({ ...row, netCollectionsMinor: row.collectedMinor - row.refundedMinor, cashBasisOperatingResultMinor: row.collectedMinor - row.refundedMinor - row.paidExpensesMinor })),
       collectionMethods: [...methods.values()],
       expenseCategories: [...categories.values()],
       serviceRevenue: [...services.values()],
