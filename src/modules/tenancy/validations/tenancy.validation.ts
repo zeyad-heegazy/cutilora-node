@@ -308,9 +308,12 @@ export const createBranchHolidaySchema = z.object({
 }).refine((data) => data.startDate <= data.endDate, {
   message: 'endDate must be on or after startDate.',
   path: ['endDate'],
-}).refine((data) => data.type !== 'modified_hours' || (!data.isAllDay && Boolean(data.startTime && data.endTime && data.startTime < data.endTime)), {
-  message: 'Modified hours require isAllDay=false and a valid startTime before endTime.',
+}).refine((data) => data.isAllDay || Boolean(data.startTime && data.endTime && data.startTime < data.endTime), {
+  message: 'Partial-day closures require a valid startTime before endTime.',
   path: ['startTime'],
+}).refine((data) => data.type !== 'modified_hours' || !data.isAllDay, {
+  message: 'Modified hours must set isAllDay=false.',
+  path: ['isAllDay'],
 });
 
 export const tenantAuditQuerySchema = z.object({
