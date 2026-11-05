@@ -421,7 +421,7 @@ export const tenancyService = {
       await Promise.all([removeBrandingImage(logoUrl), removeBrandingImage(coverUrl), tenancyRepository.deleteClinic(String(clinic._id), tenantId)]);
       throw error;
     }
-    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'clinic.created', targetType: 'clinic', targetId: String(clinic._id), metadata: { name: clinic.name } });
+    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'clinic.created', targetType: 'clinic', targetId: String(clinic._id), clinicId: String(clinic._id), metadata: { name: clinic.name } });
     return clinic;
   },
   async updateClinic(id: string, input: Record<string, any>, tenantId: string, userId?: string) {
@@ -480,7 +480,7 @@ export const tenancyService = {
     if (!updated) { await Promise.all([removeBrandingImage(newLogoUrl), removeBrandingImage(newCoverUrl)]); return null; }
     if (newLogoUrl && oldLogoUrl && oldLogoUrl !== newLogoUrl) await removeBrandingImage(oldLogoUrl);
     if (newCoverUrl && oldCoverUrl && oldCoverUrl !== newCoverUrl) await removeBrandingImage(oldCoverUrl);
-    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: input.status ? 'clinic.status.changed' : 'clinic.updated', targetType: 'clinic', targetId: id, metadata: { changedFields: Object.keys(input), ...(input.status ? { status: input.status } : {}) } });
+    if (userId) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: input.status ? 'clinic.status.changed' : 'clinic.updated', targetType: 'clinic', targetId: id, clinicId: id, metadata: { changedFields: Object.keys(input), ...(input.status ? { status: input.status } : {}) } });
     return updated;
   },
   async listBranchHolidays(tenantId: string, clinicId: string, branchId: string) {
