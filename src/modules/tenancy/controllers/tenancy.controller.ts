@@ -468,7 +468,7 @@ export const tenancyController = {
   },
   async getPermissions(req: Request, res: Response) {
     const context = req.tenantContext!;
-    res.json({ success: true, data: { role: context.role, scope: context.scope, permissions: getTenantRolePermissions(context.role) } });
+    res.json({ success: true, data: { role: context.role, scope: context.scope, permissions: context.customPermissions ?? getTenantRolePermissions(context.role), customRoleId: context.customRoleId ?? null } });
   },
   async context(req: Request, res: Response, next: NextFunction) {
     try {
