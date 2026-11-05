@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createInvoiceSchema, recordPaymentSchema, refundPaymentSchema, summaryQuerySchema } from '../../src/modules/clinic-finance/clinic-finance.validation.js';
+import { createInvoiceSchema, recordPaymentSchema, refundPaymentSchema, reportQuerySchema, summaryQuerySchema } from '../../src/modules/clinic-finance/clinic-finance.validation.js';
 
 describe('clinic finance request validation', () => {
   it('requires customer snapshots and bounded integer invoice lines', () => {
@@ -23,6 +23,11 @@ describe('clinic finance request validation', () => {
   it('requires refund method, reason and idempotency key', () => {
     expect(refundPaymentSchema.safeParse({ idempotencyKey: 'refund-123', amountMinor: 50, reason: 'Correction' }).success).toBe(false);
     expect(refundPaymentSchema.safeParse({ idempotencyKey: 'refund-123', amountMinor: 50, reason: 'Correction', method: 'cash' }).success).toBe(true);
+  });
+
+  it('limits financial reports to a maximum 366-day range', () => {
+    expect(reportQuerySchema.safeParse({ from: '2025-01-01', to: '2026-12-31' }).success).toBe(false);
+    expect(reportQuerySchema.safeParse({ from: '2026-01-01', to: '2026-12-31' }).success).toBe(true);
   });
 
   it('rejects inverted report date ranges', () => {
