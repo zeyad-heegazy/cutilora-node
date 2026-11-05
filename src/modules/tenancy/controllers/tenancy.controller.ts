@@ -133,6 +133,7 @@ export const tenancyController = {
         tenancyService.getDashboardCounts(tenantId),
         tenancyService.listDashboardClinics(tenantId),
         tenancyService.getSubscriptionOverview(tenantId),
+        tenancyService.countExpiringTenantDocuments(tenantId, now, expiryLimit),
       ]);
       const alerts = [];
       if (counts.pendingInvitations > 0) alerts.push({ code: 'PENDING_INVITATIONS', severity: 'info', count: counts.pendingInvitations });
