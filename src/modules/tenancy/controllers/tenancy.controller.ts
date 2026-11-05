@@ -102,6 +102,7 @@ export const tenancyController = {
         tenancyService.getProfile(tenantId),
         tenancyService.getDashboardCounts(tenantId),
         tenancyService.getSubscriptionOverview(tenantId),
+        tenancyService.countExpiringTenantDocuments(tenantId, now, expiryLimit),
       ]);
       if (!tenant) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant not found.' } });
       res.json({ success: true, data: {
@@ -112,6 +113,12 @@ export const tenancyController = {
       } });
     } catch (e) { next(e); }
   },
+  async dashboardActivity(req: Request, res: Response, next: NextFunction) {
+    try {
+      const result = await tenancyService.listTenantAuditEvents(req.tenantContext!.tenantId, { page: 1, perPage: 10 });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (e) { next(e); }
+  },
   async dashboardClinics(req: Request, res: Response, next: NextFunction) {
     try {
       res.json({ success: true, data: await tenancyService.listDashboardClinics(req.tenantContext!.tenantId) });
@@ -120,7 +127,9 @@ export const tenancyController = {
   async dashboardAlerts(req: Request, res: Response, next: NextFunction) {
     try {
       const tenantId = req.tenantContext!.tenantId;
-      const [counts, clinics, subscription] = await Promise.all([
+      const now = new Date();
+      const expiryLimit = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      const [counts, clinics, subscription, expiringDocuments] = await Promise.all([
         tenancyService.getDashboardCounts(tenantId),
         tenancyService.listDashboardClinics(tenantId),
         tenancyService.getSubscriptionOverview(tenantId),
@@ -130,6 +139,7 @@ export const tenancyController = {
       if (counts.clinics.suspended > 0) alerts.push({ code: 'SUSPENDED_CLINICS', severity: 'warning', count: counts.clinics.suspended });
       if (subscription?.status === 'past_due') alerts.push({ code: 'SUBSCRIPTION_PAST_DUE', severity: 'critical' });
       if (clinics.some((clinic: any) => clinic.status === 'suspended')) alerts.push({ code: 'CLINIC_ACCESS_RESTRICTED', severity: 'warning' });
+      if (expiringDocuments > 0) alerts.push({ code: 'ORGANIZATION_DOCUMENTS_EXPIRING', severity: 'warning', count: expiringDocuments });
       res.json({ success: true, data: { items: alerts, generatedAt: new Date().toISOString() } });
     } catch (e) { next(e); }
   },
