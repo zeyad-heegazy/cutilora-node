@@ -34,3 +34,41 @@ export function requireTenantPermission(permission: string) {
     next();
   };
 }
+
+const TENANT_ROLE_SCOPES: Record<string, readonly string[]> = {
+  tenant_owner: ['tenant'],
+  tenant_admin: ['tenant'],
+  billing_admin: ['tenant'],
+  clinic_admin: ['clinic'],
+  clinic_manager: ['clinic'],
+  branch_manager: ['branch'],
+  staff: ['clinic', 'branch'],
+  provider: ['clinic', 'branch'],
+  receptionist: ['clinic', 'branch'],
+};
+
+const TENANT_ROLE_LABELS: Record<string, string> = {
+  tenant_owner: 'Tenant Owner',
+  tenant_admin: 'Tenant Admin',
+  billing_admin: 'Billing Admin',
+  clinic_admin: 'Clinic Admin',
+  clinic_manager: 'Clinic Manager',
+  branch_manager: 'Branch Manager',
+  staff: 'Staff',
+  provider: 'Provider',
+  receptionist: 'Receptionist',
+};
+
+export function getTenantRoleCatalog(actorRole: string) {
+  const grantableByOwner = ['tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'];
+  const grantableByAdmin = ['billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'];
+  const grantable = actorRole === 'tenant_owner' ? grantableByOwner : actorRole === 'tenant_admin' ? grantableByAdmin : [];
+  return Object.entries(TENANT_ROLE_PERMISSIONS).map(([role, permissions]) => ({
+    role,
+    label: TENANT_ROLE_LABELS[role] ?? role,
+    scopes: [...(TENANT_ROLE_SCOPES[role] ?? [])],
+    permissions: permissions.includes('*') ? ['*'] : [...permissions],
+    assignableByCurrentUser: grantable.includes(role),
+    customizable: false,
+  }));
+}
