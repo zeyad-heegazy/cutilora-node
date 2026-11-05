@@ -14,7 +14,7 @@ export const TENANT_PERMISSION_CATALOG = [
   { module: 'users', actions: ['memberships.manage'] },
   { module: 'settings', actions: ['organization.manage', 'configuration.manage'] },
   { module: 'documents', actions: ['documents.manage'] },
-  { module: 'finance', actions: ['billing.read'] },
+  { module: 'finance', actions: ['billing.read', 'finance.read', 'finance.manage'] },
   { module: 'reports', actions: ['dashboard.read', 'audit.read', 'audit.export'] },
   { module: 'integrations', actions: [] },
 ] as const;
@@ -25,8 +25,8 @@ export const TENANT_ROLE_TEMPLATES = [
   { key: 'organization-manager', name: 'Organization Manager', scope: 'tenant', permissions: ['organization.manage', 'dashboard.read', 'clinic.manage', 'clinic.settings.read', 'clinic.settings.manage', 'branch.manage', 'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.lifecycle.manage', 'branch.read', 'branch.holidays.read', 'branch.holidays.manage', 'documents.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'branch.members.read', 'branch.activity.read', 'configuration.manage', 'memberships.manage', 'audit.read'], description: 'Manages tenant organization structure and users without billing access.' },
   { key: 'clinic-manager', name: 'Clinic Manager', scope: 'clinic', permissions: getTenantRolePermissions('clinic_manager'), description: 'Manages one selected clinic and its branches.' },
   { key: 'branch-manager', name: 'Branch Manager', scope: 'branch', permissions: getTenantRolePermissions('branch_manager'), description: 'Manages only the explicitly selected branches.' },
-  { key: 'finance-viewer', name: 'Finance Viewer', scope: 'tenant', permissions: ['billing.read'], description: 'Read-only access to existing subscription and invoice APIs.' },
-  { key: 'finance-manager', name: 'Finance Manager', scope: 'tenant', permissions: ['billing.read'], description: 'Current billing APIs are read-only; management grants will be added with the Finance domain.' },
+  { key: 'finance-viewer', name: 'Finance Viewer', scope: 'tenant', permissions: ['billing.read', 'finance.read'], description: 'Read-only access to tenant subscription billing and consolidated clinic finance reports.' },
+  { key: 'finance-manager', name: 'Finance Manager', scope: 'tenant', permissions: ['billing.read', 'finance.read', 'finance.manage'], description: 'Manages clinic financial source records and views consolidated clinic finance reports.' },
   { key: 'read-only-analyst', name: 'Read-only Analyst', scope: 'tenant', permissions: ['dashboard.read', 'audit.read', 'clinic.members.read', 'clinic.activity.read', 'branch.read', 'branch.members.read', 'branch.activity.read'], description: 'Read-only operational visibility without mutation or membership-management permissions.' },
 ] as const;
 
