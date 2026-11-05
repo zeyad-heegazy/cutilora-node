@@ -26,6 +26,7 @@ vi.mock('../../src/shared/storage/private-tenant-document.storage.js', () => ({
 
 import { tenancyService } from '../../src/modules/tenancy/services/tenancy.service.js';
 import { tenancyRepository } from '../../src/modules/tenancy/repositories/tenancy.repository.js';
+import { createBranchHolidaySchema } from '../../src/modules/tenancy/validations/tenancy.validation.js';
 
 const tenantId = '64b000000000000000000001';
 const clinicId = '64b000000000000000000002';
@@ -34,6 +35,20 @@ const userId = '64b000000000000000000004';
 
 describe('branch holiday service', () => {
   beforeEach(() => vi.resetAllMocks());
+
+  it('rejects impossible dates and invalid exceptional-hours combinations', () => {
+    expect(createBranchHolidaySchema.safeParse({
+      title: 'Invalid date', type: 'closure', startDate: '2026-02-31', endDate: '2026-03-01',
+    }).success).toBe(false);
+    expect(createBranchHolidaySchema.safeParse({
+      title: 'Modified hours', type: 'modified_hours', startDate: '2026-12-25', endDate: '2026-12-25',
+      isAllDay: true,
+    }).success).toBe(false);
+    expect(createBranchHolidaySchema.safeParse({
+      title: 'Partial closure', type: 'closure', startDate: '2026-12-25', endDate: '2026-12-25',
+      isAllDay: false,
+    }).success).toBe(false);
+  });
 
   it('creates a holiday only after confirming the branch belongs to the tenant and clinic', async () => {
     vi.mocked(tenancyRepository.findBranchById).mockResolvedValue({ _id: branchId } as any);
