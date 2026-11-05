@@ -91,6 +91,18 @@ paths:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1replace"
   /tenant/documents/{documentId}/download:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1download"
+  /tenant/finance/overview:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1overview"
+  /tenant/finance/entries:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1entries"
+  /tenant/finance/invoices:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1invoices"
+  /tenant/finance/payments:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1payments"
+  /tenant/finance/refunds:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1refunds"
+  /tenant/finance/expenses:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1expenses"
   /tenant/subscription:
     $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription"
   /tenant/subscription/usage:
