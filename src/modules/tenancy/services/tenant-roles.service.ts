@@ -191,7 +191,7 @@ export const tenantRolesService = {
     if (!objectId(roleId)) return null;
     const role = await TenantRole.findOneAndUpdate({ _id: roleId, tenantId, status: 'active' }, { $set: { status: 'deactivated', deactivatedAt: new Date(), deactivatedBy: actorId, updatedBy: actorId }, $inc: { version: 1 } }, { new: true });
     if (!role) return null;
-    const assigned = await TenantMembership.countDocuments({ tenantId, roleId: role._id, status: { $in: ['active', 'invited'] } });
+    const assigned = await TenantMembership.countDocuments({ tenantId, roleId: role._id });
     if (assigned) {
       await TenantRole.updateOne({ _id: role._id, tenantId }, { $set: { status: 'active', deactivatedAt: null, deactivatedBy: null }, $inc: { version: 1 } });
       fail(409, 'ROLE_IN_USE', 'A role assigned to active memberships cannot be deactivated. Reassign those users first.');
