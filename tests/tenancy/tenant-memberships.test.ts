@@ -24,6 +24,13 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     findBranchById: vi.fn(),
     transitionBranchStatus: vi.fn(),
     updateTenantMembership: vi.fn(),
+    createTenantRole: vi.fn(),
+    findTenantRoleById: vi.fn(),
+    findActiveTenantRoleById: vi.fn(),
+    listTenantRoles: vi.fn(),
+    updateTenantRole: vi.fn(),
+    archiveTenantRole: vi.fn(),
+    countMembershipsUsingRole: vi.fn(),
     createTenantAuditEvent: vi.fn().mockResolvedValue({}),
     getDashboardCounts: vi.fn(),
     findSubscriptionByTenantId: vi.fn(),
@@ -64,6 +71,61 @@ describe('tenant membership administration', () => {
     vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue(null as any);
     vi.mocked(tenancyRepository.acquireTenantEntitlementLock).mockResolvedValue({ _id: tenantId } as any);
     vi.mocked(tenancyRepository.releaseTenantEntitlementLock).mockResolvedValue({ modifiedCount: 1 } as any);
+  });
+
+  it('creates tenant custom roles with deduplicated permissions and audit history', async () => {
+    const role = { _id: targetId, name: 'Front Desk', scope: 'clinic', permissions: ['branch.read'], version: 1 };
+    vi.mocked(tenancyRepository.createTenantRole).mockResolvedValue(role as any);
+    await expect(tenancyService.createCustomTenantRole(tenantId, actorId, 'tenant_owner', 'tenant', {
+      name: 'Front Desk', scope: 'clinic', permissions: ['branch.read', 'branch.read'],
+    })).resolves.toEqual(role);
+    expect(tenancyRepository.createTenantRole).toHaveBeenCalledWith(expect.objectContaining({
+      key: 'front-desk', permissions: ['branch.read'], scope: 'clinic', version: 1,
+    }));
+    expect(tenancyRepository.createTenantAuditEvent).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'authorization.role.created', targetId,
+    }));
+  });
+
+  it('rejects custom roles that grant permissions outside the actor permission set', async () => {
+    await expect(tenancyService.createCustomTenantRole(tenantId, actorId, 'tenant_admin', 'tenant', {
+      name: 'Elevated', scope: 'clinic', permissions: ['organization.manage'],
+    })).rejects.toMatchObject({ status: 403, code: 'PERMISSION_GRANT_ESCALATION' });
+    expect(tenancyRepository.createTenantRole).not.toHaveBeenCalled();
+  });
+
+  it('assigns a custom role only when its scope matches the membership scope', async () => {
+    vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
+      _id: membershipId, userId: targetId, role: 'clinic_manager', scope: 'clinic', status: 'active',
+      clinicId, branchIds: [],
+    } as any);
+    vi.mocked(tenancyRepository.findClinicById).mockResolvedValue({ _id: clinicId } as any);
+    vi.mocked(tenancyRepository.findActiveTenantRoleById).mockResolvedValue({
+      _id: targetId, scope: 'clinic', permissions: ['branch.read'],
+    } as any);
+    vi.mocked(tenancyRepository.updateTenantMembership).mockResolvedValue({ _id: membershipId, role: 'custom', customRoleId: targetId } as any);
+
+    await expect(tenancyService.updateTenantMembership(tenantId, membershipId, actorId, 'tenant_owner', {
+      role: 'custom', customRoleId: targetId,
+    })).resolves.toMatchObject({ role: 'custom', customRoleId: targetId });
+    expect(tenancyRepository.updateTenantMembership).toHaveBeenCalledWith(tenantId, membershipId, expect.objectContaining({
+      role: 'custom', customRoleId: targetId,
+    }));
+  });
+
+  it('prevents assigning custom roles with permissions above the actor', async () => {
+    vi.mocked(tenancyRepository.findTenantMembershipById).mockResolvedValue({
+      _id: membershipId, userId: targetId, role: 'clinic_manager', scope: 'clinic', status: 'active',
+      clinicId, branchIds: [],
+    } as any);
+    vi.mocked(tenancyRepository.findClinicById).mockResolvedValue({ _id: clinicId } as any);
+    vi.mocked(tenancyRepository.findActiveTenantRoleById).mockResolvedValue({
+      _id: targetId, scope: 'clinic', permissions: ['organization.manage'],
+    } as any);
+    await expect(tenancyService.updateTenantMembership(tenantId, membershipId, actorId, 'clinic_manager', {
+      role: 'custom', customRoleId: targetId,
+    })).rejects.toMatchObject({ status: 403, code: 'ROLE_GRANT_DENIED' });
+    expect(tenancyRepository.updateTenantMembership).not.toHaveBeenCalled();
   });
 
   it('temporarily closes an active branch with a reason and an audit event', async () => {
