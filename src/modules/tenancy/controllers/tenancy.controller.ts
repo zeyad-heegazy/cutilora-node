@@ -85,6 +85,20 @@ export const tenancyController = {
       res.json({ success: true, data: result.items, pagination: result.pagination });
     } catch (e) { next(e); }
   },
+  async listTenantMembershipHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const page = Math.max(1, Number(req.query.page) || 1);
+      const perPage = Math.min(100, Math.max(1, Number(req.query.perPage) || 25));
+      const result = await tenancyService.listTenantMembershipHistory(
+        req.tenantContext!.tenantId,
+        String(req.params.membershipId ?? ''),
+        page,
+        perPage,
+      );
+      if (!result) return res.status(404).json({ success: false, error: { code: 'MEMBERSHIP_NOT_FOUND', message: 'Membership not found.' } });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (e) { next(e); }
+  },
   async updateTenantMembership(req: Request, res: Response, next: NextFunction) {
     try {
       const input = updateTenantMembershipSchema.parse(req.body);
