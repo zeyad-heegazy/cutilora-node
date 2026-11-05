@@ -142,6 +142,7 @@ export const tenancyService = {
   async createBranch(input: Record<string, any>, tenantId: string, clinicId: string) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
     if (!clinic) return null;
+    await geoService.validateCity(input.cityId ?? null);
     const base = slugify(String(input.slug || input.name), 'branch');
     let slug = base;
     let suffix = 2;
@@ -160,6 +161,7 @@ export const tenancyService = {
     const current = await tenancyRepository.findBranchById(id, tenantId, clinicId);
     if (!current) return null;
     const update: Record<string, unknown> = { ...input };
+    if ('cityId' in input) await geoService.validateCity(input.cityId ?? null);
     if (typeof input.slug === 'string' || (typeof input.name === 'string' && input.name !== current.name)) {
       const base = slugify(String(input.slug || input.name), 'branch');
       let candidate = base;
