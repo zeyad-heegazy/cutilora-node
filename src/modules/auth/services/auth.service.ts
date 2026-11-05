@@ -137,7 +137,7 @@ export const authService = {
       });
       createdMembershipId = String(membership._id);
 
-      const accepted = await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), {
+      const accepted = await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), invitation.processingAt, {
         status: 'accepted',
         acceptedAt: new Date(),
         acceptedBy: String(user._id),
@@ -179,7 +179,7 @@ export const authService = {
     } catch (error) {
       if (createdMembershipId) await tenancyRepository.deleteTenantMembershipById(createdMembershipId).catch(() => null);
       if (createdUserId) await authRepository.deleteUserById(createdUserId).catch(() => null);
-      await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), { status: 'pending', processingAt: null }).catch(() => null);
+      await tenancyRepository.updateClaimedTenantInvitation(String(invitation._id), invitation.processingAt, { status: 'pending', processingAt: null }).catch(() => null);
       throw error;
     }
   },
