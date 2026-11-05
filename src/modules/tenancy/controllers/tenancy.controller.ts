@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
 import { getTenantRolePermissions } from '../middleware/tenant-permissions.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
@@ -37,6 +37,34 @@ export const tenancyController = {
       const item = await tenancyService.updatePreferences(req.tenantContext!.tenantId, req.auth!.userId, input.preferences);
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
       res.json({ success: true, data: item.preferences });
+    } catch (e) { next(e); }
+  },
+  async listTenantInvitations(req: Request, res: Response, next: NextFunction) {
+    try {
+      const items = await tenancyService.listTenantInvitations(req.tenantContext!.tenantId);
+      res.json({ success: true, data: items });
+    } catch (e) { next(e); }
+  },
+  async createTenantInvitation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = createTenantInvitationSchema.parse(req.body);
+      const result = await tenancyService.createTenantInvitation(req.tenantContext!.tenantId, req.auth!.userId, req.tenantContext!.role, input);
+      if (!result) return res.status(404).json({ success: false, error: { code: 'CLINIC_NOT_FOUND', message: 'The selected clinic does not belong to this tenant.' } });
+      res.status(201).json({ success: true, data: result });
+    } catch (e) { next(e); }
+  },
+  async revokeTenantInvitation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.revokeTenantInvitation(req.tenantContext!.tenantId, String(req.params.invitationId ?? ''), req.auth!.userId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'INVITATION_NOT_FOUND', message: 'Pending invitation not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async resendTenantInvitation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.resendTenantInvitation(req.tenantContext!.tenantId, String(req.params.invitationId ?? ''), req.auth!.userId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'INVITATION_NOT_FOUND', message: 'Pending or expired invitation not found.' } });
+      res.json({ success: true, data: item });
     } catch (e) { next(e); }
   },
   async listTenantUsers(req: Request, res: Response, next: NextFunction) {
