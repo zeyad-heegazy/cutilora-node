@@ -1,9 +1,43 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema } from '../validations/tenancy.validation.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
 
 export const tenancyController = {
+  async getProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getProfile(req.tenantContext!.tenantId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async updateProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = updateTenantSchema.parse(req.body);
+      if (req.tenantContext!.role !== 'tenant_owner' && ('legalName' in input || 'legal' in input)) {
+        return res.status(403).json({ success: false, error: { code: 'LEGAL_PROFILE_PERMISSION_REQUIRED', message: 'Only the Tenant Owner can change legal identity details.' } });
+      }
+      const item = await tenancyService.updateProfile(req.tenantContext!.tenantId, req.auth!.userId, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async getPreferences(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getProfile(req.tenantContext!.tenantId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
+      res.json({ success: true, data: item.preferences });
+    } catch (e) { next(e); }
+  },
+  async updatePreferences(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = updateTenantSchema.pick({ preferences: true }).parse(req.body);
+      if (!input.preferences) return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Preferences are required.' } });
+      const item = await tenancyService.updatePreferences(req.tenantContext!.tenantId, req.auth!.userId, input.preferences);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Tenant profile not found.' } });
+      res.json({ success: true, data: item.preferences });
+    } catch (e) { next(e); }
+  },
   async listGeo(req: Request, res: Response, next: NextFunction) {
     try {
       const resource = geoResourceSchema.parse(req.params.resource);
