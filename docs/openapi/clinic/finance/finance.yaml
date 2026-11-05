@@ -139,3 +139,33 @@ paths:
       summary: Approve and lock a cash session; opener/closer cannot approve
       responses:
         '200': { description: Cash session approved and locked }
+
+  /clinic/finance/receivables:
+    get:
+      tags: [Clinic Finance]
+      summary: Get aggregate receivables aging by currency
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - $ref: "../../../openapi.yaml#/components/parameters/ClinicIdRequired"
+        - $ref: "../../../openapi.yaml#/components/parameters/BranchId"
+      responses:
+        '200': { description: Aggregate outstanding balances by aging bucket and currency; no patient details }
+  /clinic/finance/reports:
+    get:
+      tags: [Clinic Finance]
+      summary: Get clinic financial reports for a bounded date range
+      parameters:
+        - in: query
+          name: from
+          required: true
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          required: true
+          schema: { type: string, format: date-time }
+        - in: query
+          name: groupBy
+          required: false
+          schema: { type: string, enum: [day, month], default: day }
+      responses:
+        '200': { description: Currency-separated collection, expense, service-revenue and trend summaries }
