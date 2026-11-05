@@ -1,3 +1,4 @@
+import { Types } from 'mongoose';
 import { Tenant } from '../models/tenant.model.js';
 import { Clinic } from '../models/clinic.model.js';
 import { Branch } from '../models/branch.model.js';
@@ -109,7 +110,7 @@ export const tenancyRepository = {
   },
   async listDashboardClinics(tenantId: string) {
     return Clinic.aggregate([
-      { $match: { tenantId: new (await import('mongoose')).Types.ObjectId(tenantId) } },
+      { $match: { tenantId: new Types.ObjectId(tenantId) } },
       { $lookup: { from: 'branches', let: { clinicId: '$_id', tenantId: '$tenantId' }, pipeline: [
         { $match: { $expr: { $and: [{ $eq: ['$clinicId', '$clinicId'] }, { $eq: ['$tenantId', '$tenantId'] }] } } },
         { $group: { _id: null, total: { $sum: 1 }, active: { $sum: { $cond: [{ $eq: ['$status', 'active'] }, 1, 0] } } } },
