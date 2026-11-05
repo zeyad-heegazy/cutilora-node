@@ -156,7 +156,7 @@ export const tenancyRepository = {
         : null,
       branchId
         ? Branch.findOne({ _id: branchId, tenantId, clinicId }).select(
-            'name slug status timezone operatingHours',
+            'name slug status timezone cityId operatingHours',
           )
         : null,
     ]);
