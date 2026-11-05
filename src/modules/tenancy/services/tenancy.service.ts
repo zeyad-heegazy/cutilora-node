@@ -570,6 +570,7 @@ export const tenancyService = {
     if (!current) return null;
     const update: Record<string, unknown> = { ...input, ...(userId ? { updatedBy: userId } : {}) };
     if ('cityId' in input) await geoService.validateCity(input.cityId ?? null);
+    else if (input.addressDetails?.cityId) update.cityId = input.addressDetails.cityId;
     if (input.addressDetails) await geoService.validateClinicLocation(input.addressDetails);
     if (input.cityId && input.addressDetails?.cityId && String(input.cityId) !== String(input.addressDetails.cityId)) throw { status: 400, code: 'BRANCH_CITY_MISMATCH', message: 'cityId and addressDetails.cityId must match.' };
     if (typeof input.code === 'string' && await tenancyRepository.findBranchByCode(clinicId, input.code, id)) throw { status: 409, code: 'BRANCH_CODE_EXISTS', message: 'Branch code already exists in this clinic.' };
