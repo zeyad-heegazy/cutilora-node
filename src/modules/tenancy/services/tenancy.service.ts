@@ -213,13 +213,14 @@ export const tenancyService = {
     return tenancyRepository.listTenantRoles(tenantId, filters);
   },
   async createCustomTenantRole(tenantId: string, actorUserId: string, actorRole: string, actorScope: string, input: { name: string; description?: string; scope: 'tenant' | 'clinic' | 'branch'; permissions: string[] }) {
+    if (actorScope !== 'tenant') throw { status: 403, code: 'TENANT_SCOPE_REQUIRED', message: 'Custom roles must be managed from tenant scope.' };
     if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
     if (actorRole !== 'tenant_owner' && input.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin can create clinic or branch scoped roles only.' };
     const invalid = input.permissions.filter((permission) => !TENANT_PERMISSION_CATALOG.includes(permission));
     if (invalid.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more permissions are not in the tenant permission catalog.', details: { permissions: invalid } };
     const actorPermissions = getTenantRolePermissions(actorRole);
     if (!input.permissions.every((permission) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
-    const key = input.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, '-').replace(/^-|-$/g, '');
     if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
     try {
       const role = await tenancyRepository.createTenantRole({
@@ -247,7 +248,7 @@ export const tenancyService = {
     const update: Record<string, unknown> = { updatedBy: actorUserId, permissions: [...new Set(permissions)].sort() };
     if (input.description !== undefined) update.description = input.description;
     if (input.name !== undefined) {
-      const key = input.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\\p{L}\\p{N}]+/gu, '-').replace(/^-|-$/g, '');
       if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
       update.name = input.name.trim(); update.key = key;
     }
