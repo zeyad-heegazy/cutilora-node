@@ -34,6 +34,7 @@ tenantRouter.get('/documents', requireTenantScope, requireTenantPermission('docu
 tenantRouter.post('/documents', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.createTenantDocument);
 tenantRouter.put('/documents/:documentId/replace', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.replaceTenantDocument);
 tenantRouter.get('/documents/:documentId', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.getTenantDocument);
+tenantRouter.get('/documents/:documentId/versions', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.getTenantDocumentVersionHistory);
 tenantRouter.get('/documents/:documentId/download', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.downloadTenantDocument);
 tenantRouter.delete('/documents/:documentId', requireTenantScope, requireTenantPermission('documents.manage'), tenancyController.archiveTenantDocument);
 tenantRouter.get('/profile', requireTenantScope, requireTenantPermission('organization.manage'), tenancyController.getProfile);
