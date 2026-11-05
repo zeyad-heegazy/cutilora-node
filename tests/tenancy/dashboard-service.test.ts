@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
+    createTenantAuditEvent: vi.fn().mockResolvedValue({}),
     getDashboardCounts: vi.fn(),
+    listTenantAuditEvents: vi.fn(),
     listDashboardClinics: vi.fn(),
     findSubscriptionByTenantId: vi.fn(),
   },
@@ -23,6 +25,17 @@ const tenantId = '64b000000000000000000001';
 
 describe('tenant dashboard service', () => {
   beforeEach(() => vi.resetAllMocks());
+
+  it('lists audit events with the active tenant forcibly applied to all filters', async () => {
+    vi.mocked(tenancyRepository.listTenantAuditEvents).mockResolvedValue({ items: [], pagination: { page: 1, perPage: 25, total: 0, pages: 0 } } as any);
+    const query = { page: 1, perPage: 25, actorId: '64b000000000000000000002', action: 'clinic.created' };
+    await tenancyService.listTenantAuditEvents(tenantId, query);
+    expect(tenancyRepository.listTenantAuditEvents).toHaveBeenCalledWith({
+      tenantId,
+      actorUserId: query.actorId,
+      action: query.action,
+    }, 1, 25);
+  });
 
   it('queries dashboard counts using only the active tenant id', async () => {
     const counts = {
