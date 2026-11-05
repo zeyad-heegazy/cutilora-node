@@ -214,8 +214,20 @@ export const tenancyRepository = {
       { $sort: { name: 1 } },
     ]);
   },
-  listClinics(tenantId: string) {
+  async listClinics(tenantId: string, query: { search?: string; status?: string; page: number; perPage: number }) {
+    const filter: Record<string, unknown> = { tenantId };
+    if (query.status) filter.status = query.status;
+    if (query.search) {
+      const escaped = query.search.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\  listClinics(tenantId: string) {
     return Clinic.find({ tenantId }).sort({ name: 1 });
+  },');
+      filter.$or = [{ name: { $regex: escaped, $options: 'i' } }, { code: { $regex: escaped, $options: 'i' } }];
+    }
+    const [items, total] = await Promise.all([
+      Clinic.find(filter).sort({ name: 1 }).skip((query.page - 1) * query.perPage).limit(query.perPage).lean(),
+      Clinic.countDocuments(filter),
+    ]);
+    return { items, pagination: { page: query.page, perPage: query.perPage, total, pages: Math.ceil(total / query.perPage) } };
   },
   findClinicById(id: string, tenantId: string) {
     return Clinic.findOne({ _id: id, tenantId });
