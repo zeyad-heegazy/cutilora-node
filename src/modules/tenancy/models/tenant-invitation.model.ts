@@ -17,6 +17,7 @@ const schema = new Schema({
   revokedBy: { type: Schema.Types.ObjectId, ref: 'User', default: null },
 }, { timestamps: true });
 
-schema.index({ tenantId: 1, email: 1, status: 1 });
+schema.index({ tenantId: 1, email: 1 }, { unique: true, partialFilterExpression: { status: 'pending' } });
+schema.index({ tenantId: 1, status: 1, createdAt: -1 });
 schema.index({ tokenHash: 1 }, { unique: true });
 export const TenantInvitation = (models.TenantInvitation || model('TenantInvitation', schema)) as Model<any>;
