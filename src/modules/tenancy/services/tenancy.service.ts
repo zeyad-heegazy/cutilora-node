@@ -248,6 +248,16 @@ export const tenancyService = {
       })),
     };
   },
+  async recordTenantUserSessionRevoked(tenantId: string, actorUserId: string, targetUserId: string, sessionId: string) {
+    await recordTenantAuditEvent({
+      tenantId,
+      actorUserId,
+      action: 'membership.user_session.revoked',
+      targetType: 'user_session',
+      targetId: sessionId,
+      metadata: { targetUserId },
+    });
+  },
   listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; branchId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number }) {
     return tenancyRepository.listTenantMemberships(tenantId, query);
   },
