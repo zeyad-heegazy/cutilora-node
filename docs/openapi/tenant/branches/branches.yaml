@@ -227,7 +227,7 @@ paths:
       tags: [Branches]
       x-apidog-folder: "Tenant/Branches"
       summary: List users assigned to a branch
-      description: Returns clinic-scoped members and branch-scoped members assigned to this branch. Branch-scoped users can only list users for their own branch. Requires branch.read.
+      description: Returns clinic-scoped members and branch-scoped members assigned to this branch. Branch-scoped users can only list users for their own branch. Requires branch.members.read.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
