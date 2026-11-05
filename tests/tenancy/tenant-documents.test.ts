@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
+    createTenantAuditEvent: vi.fn().mockResolvedValue({}),
     createTenantDocument: vi.fn(),
     listTenantDocuments: vi.fn(),
     findTenantDocument: vi.fn(),
