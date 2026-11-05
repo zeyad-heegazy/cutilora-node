@@ -1,17 +1,24 @@
 import { describe, expect, it } from 'vitest';
-import { createInvoiceSchema, recordPaymentSchema, refundPaymentSchema, reportQuerySchema, summaryQuerySchema } from '../../src/modules/clinic-finance/clinic-finance.validation.js';
+import { createExpenseSchema, createInvoiceSchema, recordPaymentSchema, refundPaymentSchema, reportQuerySchema, summaryQuerySchema } from '../../src/modules/clinic-finance/clinic-finance.validation.js';
 
 describe('clinic finance request validation', () => {
   it('requires customer snapshots and bounded integer invoice lines', () => {
     const valid = createInvoiceSchema.safeParse({
+      idempotencyKey: 'invoice-123',
       customer: { displayName: 'Patient' },
       lines: [{ description: 'Treatment', quantity: 1, unitPriceMinor: 12500 }],
     });
     expect(valid.success).toBe(true);
     expect(createInvoiceSchema.safeParse({
+      idempotencyKey: 'invoice-124',
       customer: { displayName: 'Patient' },
       lines: [{ description: 'Treatment', quantity: 1.5, unitPriceMinor: 12500 }],
     }).success).toBe(false);
+  });
+
+  it('requires an idempotency key for expense creation', () => {
+    expect(createExpenseSchema.safeParse({ description: 'Rent', category: 'rent', amountMinor: 5000 }).success).toBe(false);
+    expect(createExpenseSchema.safeParse({ idempotencyKey: 'expense-123', description: 'Rent', category: 'rent', amountMinor: 5000 }).success).toBe(true);
   });
 
   it('requires an idempotency key and integer amount for collections', () => {
