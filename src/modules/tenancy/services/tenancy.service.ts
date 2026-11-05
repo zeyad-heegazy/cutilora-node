@@ -583,7 +583,19 @@ export const tenancyService = {
       updatedBy: userId,
     });
     if (updated) await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'branch.settings.overridden', targetType: 'branch', targetId: branchId, clinicId, metadata: { changedKeys: Object.keys(settings) } });
-    return updated ? this.getBranchSettings(tenantId, clinicId, branchId) : null;
+    if (!updated) return null;
+    const updatedSettings = updated.settings?.toObject?.() ?? updated.settings ?? {};
+    const clinicSettings = clinic.settings?.toObject?.() ?? clinic.settings ?? {};
+    const inheritedValues = deepMerge(clinicSettings.organizationDefaults ?? {}, clinicSettings.organizationOverrides ?? {});
+    const branchOverrides = updatedSettings.organizationOverrides ?? {};
+    return {
+      inheritedValues,
+      overrides: branchOverrides,
+      effectiveValues: deepMerge(inheritedValues, branchOverrides),
+      inheritedVersion: clinicSettings.organizationDefaultsVersion ?? 0,
+      timezone: updated.timezone,
+      operatingHours: updated.operatingHours ?? [],
+    };
   },
   async createBranch(input: Record<string, any>, tenantId: string, clinicId: string, userId?: string) {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
