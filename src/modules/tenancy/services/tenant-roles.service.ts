@@ -16,7 +16,7 @@ export const TENANT_PERMISSION_CATALOG = [
   { module: 'integrations', actions: [] },
 ] as const;
 
-const permissionKeys = new Set(TENANT_PERMISSION_CATALOG.flatMap((item) => item.actions.map((action) => `${item.module}.${action}`)));
+const permissionKeys = new Set(TENANT_PERMISSION_CATALOG.flatMap((item) => item.actions));
 const builtInScopes: Record<string, 'tenant' | 'clinic' | 'branch'> = {
   tenant_owner: 'tenant', tenant_admin: 'tenant', billing_admin: 'tenant',
   clinic_admin: 'clinic', clinic_manager: 'clinic', branch_manager: 'branch',
