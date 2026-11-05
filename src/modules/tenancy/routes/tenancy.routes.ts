@@ -8,6 +8,7 @@ export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
 tenantRouter.get('/context', tenancyController.context);
 tenantRouter.get('/permissions', tenancyController.getPermissions);
+tenantRouter.get('/roles', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.listTenantRoles);
 tenantRouter.get('/invitations', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.listTenantInvitations);
 tenantRouter.post('/invitations', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.createTenantInvitation);
 tenantRouter.post('/invitations/:invitationId/revoke', requireTenantScope, requireTenantPermission('memberships.manage'), tenancyController.revokeTenantInvitation);
