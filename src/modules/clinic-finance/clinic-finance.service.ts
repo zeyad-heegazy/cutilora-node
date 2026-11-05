@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { Types } from 'mongoose';
 import { Clinic } from '../tenancy/models/clinic.model.js';
 import { ClinicInvoice, ClinicInvoiceCounter } from './models/clinic-invoice.model.js';
@@ -43,20 +44,30 @@ function invoiceFilter(scope: Scope) {
   };
 }
 
-async function reserveCashSession(scope: Scope): Promise<any> {
+async function reserveCashSession(scope: Scope): Promise<{ sessionId: any; token: string }> {
+  const token = randomBytes(24).toString('hex');
+  const now = new Date();
   const session = await ClinicCashSession.findOneAndUpdate(
-    { ...invoiceFilter(scope), status: 'open' },
-    { $inc: { pendingMutations: 1, version: 1 } },
+    { ...invoiceFilter(scope), status: 'open', $or: [
+      { cashMutationLockExpiresAt: null },
+      { cashMutationLockExpiresAt: { $lte: now } },
+      { cashMutationLockExpiresAt: { $exists: false } },
+    ] },
+    { $set: { cashMutationLockToken: token, cashMutationLockExpiresAt: new Date(now.getTime() + 5 * 60 * 1000) }, $inc: { version: 1 } },
     { new: true, projection: { _id: 1 } },
   );
-  if (!session) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording a cash transaction.' };
-  return session._id;
+  if (!session) {
+    const open = await ClinicCashSession.exists({ ...invoiceFilter(scope), status: 'open' });
+    if (!open) throw { status: 409, code: 'CASH_SESSION_REQUIRED', message: 'Open a cash session before recording a cash transaction.' };
+    throw { status: 409, code: 'CASH_SESSION_BUSY', message: 'Another cash transaction is being recorded. Retry shortly.' };
+  }
+  return { sessionId: session._id, token };
 }
 
-async function releaseCashSession(scope: Scope, sessionId: any): Promise<void> {
+async function releaseCashSession(scope: Scope, reservation: { sessionId: any; token: string }): Promise<void> {
   await ClinicCashSession.updateOne(
-    { _id: sessionId, ...invoiceFilter(scope), status: 'open', pendingMutations: { $gt: 0 } },
-    { $inc: { pendingMutations: -1, version: 1 } },
+    { _id: reservation.sessionId, ...invoiceFilter(scope), status: 'open', cashMutationLockToken: reservation.token },
+    { $set: { cashMutationLockToken: null, cashMutationLockExpiresAt: null }, $inc: { version: 1 } },
   );
 }
 
@@ -150,7 +161,8 @@ export const clinicFinanceService = {
     if (!['issued', 'partially_paid'].includes(current.status)) throw { status: 409, code: 'INVOICE_NOT_PAYABLE', message: 'Only issued invoices with an outstanding balance can receive payments.' };
     const balanceDueMinor = current.totalMinor - (current.paidMinor - current.refundedMinor);
     if (input.amountMinor > balanceDueMinor) throw { status: 400, code: 'PAYMENT_EXCEEDS_BALANCE', message: 'Payment exceeds the outstanding invoice balance.' };
-    const cashSessionId = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashReservation = input.method === 'cash' ? await reserveCashSession(scope) : null;
+    const cashSessionId = cashReservation?.sessionId ?? null;
     const payment = {
       _id: new Types.ObjectId(), cashSessionId, idempotencyKey: input.idempotencyKey, method: input.method, amountMinor: input.amountMinor,
       currency: current.currency, reference: input.reference ?? '', receivedAt: input.method === 'cash' ? new Date() : (input.receivedAt ?? new Date()),
@@ -168,7 +180,7 @@ export const clinicFinanceService = {
       if (!updated) throw { status: 409, code: 'INVOICE_CHANGED', message: 'Invoice changed while recording payment. Reload and retry.' };
       return updated;
     } finally {
-      if (cashSessionId) await releaseCashSession(scope, cashSessionId);
+      if (cashReservation) await releaseCashSession(scope, cashReservation);
     }
   },
 
