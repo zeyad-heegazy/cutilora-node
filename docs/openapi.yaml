@@ -163,6 +163,8 @@ paths:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches"
   /tenant/branches/{branchId}/users:
     $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches~1{branchId}~1users"
+  /tenant/branches/{branchId}/business-hours:
+    $ref: "./openapi/tenant/branches/branches.yaml#/paths/~1tenant~1branches~1{branchId}~1business-hours"
   /tenant/branches/{branchId}/settings:
     $ref: "./openapi/tenant/branches/settings.yaml#/paths/~1tenant~1branches~1{branchId}~1settings"
   /tenant/branches/{branchId}/holidays:
