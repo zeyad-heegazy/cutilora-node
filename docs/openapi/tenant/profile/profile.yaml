@@ -1,0 +1,72 @@
+paths:
+  /tenant/profile:
+    get:
+      tags: [Tenant Organization]
+      summary: Get organization profile
+      description: Returns the authenticated user's active tenant profile. Requires tenant-wide owner or admin access.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Tenant profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "../../../openapi.yaml#/components/schemas/Tenant" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    patch:
+      tags: [Tenant Organization]
+      summary: Update organization profile
+      description: Updates tenant identity, contact, address, legal details, branding and preferences. Only the Tenant Owner may change legal identity fields.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "../../../openapi.yaml#/components/schemas/TenantUpdate" }
+      responses:
+        "200":
+          description: Updated tenant profile
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/preferences:
+    get:
+      tags: [Tenant Organization]
+      summary: Get organization preferences
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Organization preferences }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    patch:
+      tags: [Tenant Organization]
+      summary: Update organization preferences
+      description: Updates organization-level defaults. Clinic and branch timezones remain independent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [preferences]
+              properties:
+                preferences: { $ref: "../../../openapi.yaml#/components/schemas/TenantPreferences" }
+      responses:
+        "200": { description: Updated preferences }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
