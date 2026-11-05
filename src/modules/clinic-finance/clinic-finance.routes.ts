@@ -18,6 +18,7 @@ clinicFinanceRouter.patch('/invoices/:invoiceId', requireTenantPermission('finan
 clinicFinanceRouter.post('/invoices/:invoiceId/issue', requireTenantPermission('finance.invoices.manage'), clinicFinanceController.issueInvoice);
 clinicFinanceRouter.post('/invoices/:invoiceId/payments', requireTenantPermission('finance.payments.manage'), clinicFinanceController.recordPayment);
 clinicFinanceRouter.post('/invoices/:invoiceId/payments/:paymentId/refunds', requireTenantPermission('finance.refunds.manage'), clinicFinanceController.refundPayment);
+clinicFinanceRouter.post('/invoices/:invoiceId/credit-notes', requireTenantPermission('finance.credit-notes.manage'), clinicFinanceController.issueCreditNote);
 clinicFinanceRouter.post('/invoices/:invoiceId/void', requireTenantPermission('finance.invoices.manage'), clinicFinanceController.voidInvoice);
 clinicFinanceRouter.get('/expenses', requireTenantPermission('finance.expenses.read'), clinicFinanceController.listExpenses);
 clinicFinanceRouter.post('/expenses', requireTenantPermission('finance.expenses.manage'), clinicFinanceController.createExpense);
