@@ -424,3 +424,10 @@ export const clinicListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
 });
+
+export const branchListQuerySchema = z.object({
+  search: z.string().trim().min(1).max(100).optional(),
+  status: z.enum(['active', 'suspended']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+});
