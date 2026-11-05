@@ -329,7 +329,7 @@ export const tenancyService = {
         permissionOverrides: overrides,
         permissionOrigins: effectivePermissions.map((permission) => ({
           permission,
-          source: (overrides.allow ?? []).includes(permission) ? 'direct' : 'role',
+          source: (overrides.allow ?? []).includes(permission) && rolePermissions.includes(permission) ? 'direct_and_role' : (overrides.allow ?? []).includes(permission) ? 'direct' : 'role',
           inheritedTo: membership.scope === 'tenant' ? ['clinic', 'branch'] : membership.scope === 'clinic' ? ['branch'] : [],
         })),
       };
