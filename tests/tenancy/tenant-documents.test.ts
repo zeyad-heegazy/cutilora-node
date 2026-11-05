@@ -138,7 +138,7 @@ describe('tenant document service', () => {
     vi.mocked(readPrivateTenantDocument).mockResolvedValue(Buffer.from('%PDF-1.7'));
 
     const result = await tenancyService.getTenantDocument(tenantId, documentId);
-    expect(tenancyRepository.findTenantDocument).toHaveBeenCalledWith(tenantId, documentId);
+    expect(tenancyRepository.findTenantDocument).toHaveBeenCalledWith(tenantId, documentId, null);
     expect(result?.content.toString()).toBe('%PDF-1.7');
   });
 
@@ -179,7 +179,7 @@ describe('tenant document service', () => {
       expiresAt: null,
       storageKey: tenantId + '/registration-v4.pdf',
     }));
-    expect(tenancyRepository.archiveTenantDocument).toHaveBeenCalledWith(tenantId, documentId, userId);
+    expect(tenancyRepository.archiveTenantDocument).toHaveBeenCalledWith(tenantId, documentId, userId, null);
     expect(result).toMatchObject({ version: 4, category: 'registration' });
     expect(removePrivateTenantDocument).not.toHaveBeenCalled();
   });
@@ -217,7 +217,7 @@ describe('tenant document service', () => {
 
     const result = await tenancyService.getTenantDocumentVersionHistory(tenantId, documentId);
 
-    expect(tenancyRepository.listTenantDocumentVersions).toHaveBeenCalledWith(tenantId, documentId);
+    expect(tenancyRepository.listTenantDocumentVersions).toHaveBeenCalledWith(tenantId, documentId, null);
     expect(result).toHaveLength(2);
     expect(result?.[0]).toMatchObject({ version: 1, status: 'archived' });
   });
