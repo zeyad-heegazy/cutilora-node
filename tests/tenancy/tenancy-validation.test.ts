@@ -40,6 +40,22 @@ describe('tenancy request validation', () => {
     expect(result.operatingHours).toHaveLength(1);
   });
 
+  it('rejects duplicate operating-hour days', () => {
+    expect(updateBranchSchema.safeParse({
+      operatingHours: [
+        { dayOfWeek: 0, isClosed: true },
+        { dayOfWeek: 0, isClosed: false, openTime: '09:00', closeTime: '17:00' },
+      ],
+    }).success).toBe(false);
+  });
+
+  it('rejects an invalid clinic timezone', () => {
+    expect(createClinicSchema.safeParse({
+      name: 'Cutilora Clinic',
+      timezone: 'Not/A_Timezone',
+    }).success).toBe(false);
+  });
+
   it('rejects an empty branch update', () => {
     expect(updateBranchSchema.safeParse({}).success).toBe(false);
   });
