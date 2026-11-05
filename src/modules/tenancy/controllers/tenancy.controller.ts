@@ -436,7 +436,14 @@ export const tenancyController = {
       const context = req.tenantContext!;
       const customRoles = await tenancyService.listCustomTenantRoles(context.tenantId, query);
       const actorPermissions = getTenantRoleGrants(context.role, context).map((grant) => grant.permission);
-      const builtInRoles = getTenantRoleCatalog(context.role).filter((role) => !query.scope || role.scopes.includes(query.scope));
+      const builtInRoles = getTenantRoleCatalog(context.role)
+        .filter((role) => !query.scope || role.scopes.includes(query.scope))
+        .map((role) => ({
+          ...role,
+          assignableByCurrentUser: role.assignableByCurrentUser
+            && (context.role === 'tenant_owner' || !role.scopes.includes('tenant'))
+            && role.permissions.every((permission) => actorPermissions.includes('*') || actorPermissions.includes(permission)),
+        }));
       res.json({ success: true, data: [
         ...builtInRoles,
         ...customRoles.map((role: any) => ({
