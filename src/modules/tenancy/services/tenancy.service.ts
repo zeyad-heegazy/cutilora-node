@@ -73,6 +73,72 @@ async function recordTenantAuditEvent(input: Record<string, unknown>): Promise<v
 }
 
 export const tenancyService = {
+  async getTenantConfiguration(tenantId: string) {
+    const configuration = await tenancyRepository.findTenantConfiguration(tenantId);
+    return configuration ?? { tenantId, version: 0, values: {}, history: [] };
+  },
+  async updateTenantConfiguration(tenantId: string, userId: string, values: Record<string, any>) {
+    const current = await tenancyRepository.findTenantConfiguration(tenantId);
+    let updated;
+    if (!current) {
+      updated = await tenancyRepository.createTenantConfiguration({
+        tenantId,
+        version: 1,
+        values,
+        history: [{ version: 1, values, changedBy: userId, changedAt: new Date() }],
+      });
+    } else {
+      updated = await tenancyRepository.updateTenantConfiguration(tenantId, current.version, deepMerge(current.values ?? {}, values), userId);
+      if (!updated) throw { status: 409, code: 'CONFIGURATION_VERSION_CONFLICT', message: 'Organization configuration changed concurrently. Reload and retry.' };
+    }
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'configuration.defaults.updated', targetType: 'tenant_configuration', targetId: tenantId, metadata: { version: updated.version, changedKeys: Object.keys(values) } });
+    return updated;
+  },
+  async previewTenantConfigurationApply(tenantId: string, input: { applyTo: 'all' | 'selected'; clinicIds?: string[] }) {
+    const configuration = await tenancyRepository.findTenantConfiguration(tenantId);
+    if (!configuration) return { version: 0, clinics: [], total: 0 };
+    const clinics = await tenancyRepository.listClinicsForConfiguration(tenantId, input.applyTo === 'selected' ? input.clinicIds : undefined);
+    if (input.applyTo === 'selected' && clinics.length !== (input.clinicIds?.length ?? 0)) {
+      throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'One or more selected clinics do not belong to this tenant.' };
+    }
+    return {
+      version: configuration.version,
+      total: clinics.length,
+      clinics: clinics.map((clinic: any) => {
+        const settings = clinic.settings ?? {};
+        const overrides = settings.organizationOverrides ?? {};
+        return {
+          clinicId: String(clinic._id),
+          name: clinic.name,
+          status: clinic.status,
+          currentVersion: settings.organizationDefaultsVersion ?? 0,
+          hasOverrides: Object.keys(overrides).length > 0,
+          willUpdate: (settings.organizationDefaultsVersion ?? 0) < configuration.version,
+          effectiveValues: deepMerge(configuration.values ?? {}, overrides),
+        };
+      }),
+    };
+  },
+  async applyTenantConfiguration(tenantId: string, userId: string, input: { applyTo: 'all' | 'selected'; clinicIds?: string[]; confirm: boolean }) {
+    if (!input.confirm) throw { status: 400, code: 'CONFIRMATION_REQUIRED', message: 'Set confirm=true after reviewing the preview.' };
+    const configuration = await tenancyRepository.findTenantConfiguration(tenantId);
+    if (!configuration) return { version: 0, updated: 0, skipped: 0 };
+    const clinics = await tenancyRepository.listClinicsForConfiguration(tenantId, input.applyTo === 'selected' ? input.clinicIds : undefined);
+    if (input.applyTo === 'selected' && clinics.length !== (input.clinicIds?.length ?? 0)) {
+      throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'One or more selected clinics do not belong to this tenant.' };
+    }
+    let updated = 0;
+    let skipped = 0;
+    for (const clinic of clinics as any[]) {
+      const currentVersion = clinic.settings?.organizationDefaultsVersion ?? 0;
+      if (currentVersion >= configuration.version) { skipped += 1; continue; }
+      const result = await tenancyRepository.applyTenantConfigurationToClinic(tenantId, String(clinic._id), configuration.values ?? {}, configuration.version);
+      if (result) updated += 1;
+      else skipped += 1;
+    }
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'configuration.defaults.applied', targetType: 'tenant_configuration', targetId: tenantId, metadata: { version: configuration.version, applyTo: input.applyTo, updated, skipped } });
+    return { version: configuration.version, updated, skipped };
+  },
   listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
     const filter: Record<string, any> = { tenantId };
     if (query.actorId) filter.actorUserId = query.actorId;
