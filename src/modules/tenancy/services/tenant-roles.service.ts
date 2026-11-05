@@ -59,14 +59,30 @@ async function actorGrants(tenantId: string, actorId: string, clinicId: string |
   if (membership.roleId) {
     const role = await TenantRole.findOne({ _id: membership.roleId, tenantId, status: 'active' }).lean() as any;
     if (!role) fail(403, 'ROLE_UNAVAILABLE', 'The assigned custom role is unavailable.');
-    return role.permissions as PermissionGrant[];
+    const grants = role.permissions as PermissionGrant[];
+    if (membership.scope === 'clinic') {
+      return grants.filter((grant) => grant.scope !== 'tenant'
+        && String(grant.clinicId ?? '') === String(membership.clinicId ?? ''));
+    }
+    if (membership.scope === 'branch') {
+      const assignedBranches = new Set((membership.branchIds ?? []).map((id: unknown) => String(id)));
+      return grants.filter((grant) => grant.scope === 'branch'
+        && String(grant.clinicId ?? '') === String(membership.clinicId ?? '')
+        && assignedBranches.has(String(grant.branchId ?? '')));
+    }
+    return grants;
   }
   const scope = builtInScopes[membership.role] ?? 'branch';
   const permissions = getTenantRolePermissions(membership.role);
+  const clinicId = membership.clinicId ? String(membership.clinicId) : null;
+  if (scope === 'branch') {
+    return (membership.branchIds ?? []).flatMap((branchId: unknown) => permissions.map((permission) => ({
+      permission, scope, clinicId, branchId: String(branchId),
+    })));
+  }
   return permissions.map((permission) => ({
     permission, scope,
-    ...(scope === 'clinic' || scope === 'branch' ? { clinicId: membership.clinicId ? String(membership.clinicId) : null } : {}),
-    ...(scope === 'branch' ? { branchId: null } : {}),
+    ...(scope === 'clinic' ? { clinicId } : {}),
   }));
 }
 
