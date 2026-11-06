@@ -166,6 +166,8 @@ export const tenancyController = {
       res.setHeader('Content-Disposition', 'attachment; filename="tenant-audit-logs.csv"');
       res.setHeader('X-Export-Truncated', String(result.truncated));
       res.setHeader('X-Exported-Rows', String(result.exported));
+      res.setHeader('X-Report-Generated-At', new Date().toISOString());
+      res.setHeader('X-Report-Timezone', 'UTC');
       res.send(result.csv);
     } catch (e) { next(e); }
   },
