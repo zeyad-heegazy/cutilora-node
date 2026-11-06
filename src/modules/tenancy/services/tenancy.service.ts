@@ -15,6 +15,18 @@ async function assertTenantLimit(tenantId: string, key: 'maxClinics' | 'maxBranc
   }
 }
 
+async function assertTenantStorageLimit(tenantId: string, incomingBytes: number, excludeDocumentId?: string) {
+  const [subscription, currentUsage] = await Promise.all([
+    tenancyRepository.findSubscriptionByTenantId(tenantId),
+    tenancyRepository.getTenantStorageUsageBytes(tenantId, excludeDocumentId),
+  ]);
+  const limit = subscription?.plan?.limits?.maxStorageBytes;
+  const nextUsage = currentUsage + incomingBytes;
+  if (typeof limit === 'number' && nextUsage > limit) {
+    throw { status: 403, code: 'SUBSCRIPTION_LIMIT_REACHED', message: 'The tenant has reached its subscription storage limit.', details: { resource: 'maxStorageBytes', limit, currentUsage, requestedBytes: incomingBytes } };
+  }
+}
+
 async function withBranchHolidayMutationLock<T>(tenantId: string, clinicId: string, branchId: string, work: () => Promise<T>): Promise<T> {
   const token = randomBytes(24).toString('hex');
   const now = new Date();
@@ -421,6 +433,7 @@ export const tenancyService = {
     const existing = await tenancyRepository.findTenantDocument(tenantId, documentId, clinicId);
     if (!existing) return null;
     const decoded = decodeTenantDocument(input.fileBase64);
+    await assertTenantStorageLimit(tenantId, decoded.content.length, documentId);
     const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
     let replacement;
     try {
@@ -453,6 +466,7 @@ export const tenancyService = {
   async createTenantDocument(tenantId: string, userId: string, input: Record<string, any>, clinicId: string | null = null) {
     if (clinicId && !await tenancyRepository.findClinicById(clinicId, tenantId)) return null;
     const decoded = decodeTenantDocument(input.fileBase64);
+    await assertTenantStorageLimit(tenantId, decoded.content.length);
     const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
     try {
       const document = await tenancyRepository.createTenantDocument({
