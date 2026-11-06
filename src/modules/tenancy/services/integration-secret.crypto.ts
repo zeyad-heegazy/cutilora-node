@@ -1,8 +1,10 @@
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:crypto';
-import { env } from '../../../config/env.js';
 
 function key() {
-  return createHash('sha256').update('cutilora:integration-secrets:v1:').update(env.INTEGRATION_ENCRYPTION_KEY).digest();
+  const configuredKey = process.env.INTEGRATION_ENCRYPTION_KEY ?? process.env.JWT_SECRET;
+  const secret = configuredKey ?? (process.env.NODE_ENV === 'test' ? 'cutilora-test-only-integration-key-not-for-production' : '');
+  if (secret.length < 32) throw new Error('INTEGRATION_ENCRYPTION_KEY must contain at least 32 characters.');
+  return createHash('sha256').update('cutilora:integration-secrets:v1:').update(secret).digest();
 }
 export function encryptIntegrationSecret(value: string): string {
   const iv = randomBytes(12);
