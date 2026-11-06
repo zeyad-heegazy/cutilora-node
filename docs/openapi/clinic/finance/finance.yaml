@@ -19,7 +19,6 @@ paths:
                 patientId: { type: string }
                 invoiceNumber: { type: string }
                 currency: { type: string, example: EGP }
-                status: { type: string, enum: [draft, issued] }
                 lineItems:
                   type: array
                   minItems: 1
