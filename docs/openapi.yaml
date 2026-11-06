@@ -107,6 +107,8 @@ paths:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1payments"
   /clinic/finance/refunds:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1refunds"
+  /clinic/finance/entries/void:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1entries~1void"
   /clinic/finance/expenses:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1expenses"
   /tenant/billing-profile:
