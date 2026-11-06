@@ -15,7 +15,7 @@ const packageSchema = z.object({ invoiceId: id, paymentId: id, name: z.string().
 const packageRedeemSchema = z.object({ sessions: z.number().int().min(1).max(100), idempotencyKey: z.string().trim().min(8).max(120), reference: z.string().trim().max(120).optional(), reason: z.string().trim().max(500).optional() });
 const packageRefundSchema = z.object({ reason: z.string().trim().min(3).max(500), method: z.string().trim().max(50).optional(), reference: z.string().trim().max(120).optional(), refundedAt: date });
 const dailyCloseOpenSchema = z.object({
-  clinicId: id, branchId: id.optional(), businessDate: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
+  clinicId: id, branchId: id.optional(), businessDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   timezone: z.string().trim().min(1).max(80), currency,
   periodStartAt: z.string().datetime({ offset: true }), periodEndAt: z.string().datetime({ offset: true }),
   openingCash: z.number().nonnegative().multipleOf(0.01),
