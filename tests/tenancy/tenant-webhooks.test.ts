@@ -1,21 +1,22 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const webhookMocks = vi.hoisted(() => ({
-  endpointFind: vi.fn(), endpointCreate: vi.fn(), deliveryInsertMany: vi.fn(),
+  endpointFind: vi.fn(), endpointCreate: vi.fn(), endpointFindOne: vi.fn(), deliveryInsertMany: vi.fn(), deliveryFindOneAndUpdate: vi.fn(), auditCreate: vi.fn(),
 }));
 vi.mock('../../src/modules/tenancy/models/tenant-webhook-endpoint.model.js', () => ({
-  TenantWebhookEndpoint: { find: webhookMocks.endpointFind, create: webhookMocks.endpointCreate },
+  TenantWebhookEndpoint: { find: webhookMocks.endpointFind, findOne: webhookMocks.endpointFindOne, create: webhookMocks.endpointCreate },
 }));
 vi.mock('../../src/modules/tenancy/models/tenant-webhook-delivery.model.js', () => ({
-  TenantWebhookDelivery: { insertMany: webhookMocks.deliveryInsertMany },
+  TenantWebhookDelivery: { insertMany: webhookMocks.deliveryInsertMany, findOneAndUpdate: webhookMocks.deliveryFindOneAndUpdate },
 }));
 vi.mock('../../src/modules/tenancy/models/clinic.model.js', () => ({ Clinic: { exists: vi.fn() } }));
+vi.mock('../../src/modules/tenancy/models/tenant-audit-event.model.js', () => ({ TenantAuditEvent: { create: webhookMocks.auditCreate } }));
 
 import { createHmac } from 'node:crypto';
 import { tenantWebhookService, verifyTenantWebhookSignature } from '../../src/modules/tenancy/services/tenant-webhook.service.js';
 
 describe('tenant webhook service', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => { vi.resetAllMocks(); webhookMocks.auditCreate.mockResolvedValue({}); });
 
   it('queues only safe tenant governance metadata and never includes arbitrary clinical data', async () => {
     const endpoint = { _id: '64b000000000000000000010', tenantId: '64b000000000000000000001' };
