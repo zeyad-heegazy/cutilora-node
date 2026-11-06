@@ -24,6 +24,21 @@ export const tenantIntegrationController = {
       res.status(200).json({ success: true, data: item });
     } catch (error) { next(error); }
   },
+  async rotateCredentials(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = z.object({ secrets: z.record(z.string().max(4096)).refine(value => Object.keys(value).length > 0) }).strict().parse(req.body);
+      const item = await tenantIntegrationService.rotateCredentials(req.tenantContext!.tenantId, req.auth!.userId, String(req.params.integrationId ?? ''), input.secrets);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'INTEGRATION_NOT_FOUND', message: 'Integration not found in this tenant.' } });
+      res.json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
+  async revokeCredentials(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenantIntegrationService.revokeCredentials(req.tenantContext!.tenantId, req.auth!.userId, String(req.params.integrationId ?? ''));
+      if (!item) return res.status(404).json({ success: false, error: { code: 'INTEGRATION_NOT_FOUND', message: 'Integration not found in this tenant.' } });
+      res.json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
   async testConnection(req: Request, res: Response, next: NextFunction) {
     try {
       const item = await tenantIntegrationService.testConnection(req.tenantContext!.tenantId, req.auth!.userId, String(req.params.integrationId ?? ''));
