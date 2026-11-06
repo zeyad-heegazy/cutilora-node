@@ -177,6 +177,8 @@ paths:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1status"
   /tenant/webhooks:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks"
+  /tenant/webhooks/{endpointId}:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}"
   /tenant/webhooks/{endpointId}/rotate-secret:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1rotate-secret"
   /tenant/webhooks/{endpointId}/status:
