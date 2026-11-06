@@ -19,7 +19,8 @@ const SAFE_EVENTS = new Set([
 ]);
 
 function privateAddress(address: string) {
-  if (address === '::1' || address.startsWith('fc') || address.startsWith('fd') || address.startsWith('fe80:')) return true;
+  if (address === '::1' || address === '::' || address.startsWith('fc') || address.startsWith('fd') || address.startsWith('fe80:') || address.startsWith('ff')) return true;
+  if (address.toLowerCase().startsWith('::ffff:')) return privateAddress(address.slice(7));
   const parts = address.split('.').map(Number);
   if (parts.length !== 4 || parts.some(n => !Number.isInteger(n) || n < 0 || n > 255)) return true;
   const [a,b] = parts;
@@ -154,7 +155,8 @@ export const tenantWebhookService = {
           body, signal: AbortSignal.timeout(10_000),
         });
         responseStatus = response.status;
-        responseExcerpt = (await response.text()).slice(0, 500);
+        responseExcerpt = response.ok ? 'Accepted by endpoint.' : 'Endpoint returned a non-success response.';
+        await response.body?.cancel();
         if (!response.ok) errorCode = `HTTP_${response.status}`;
       } catch (error) {
         errorCode = error instanceof Error && error.name === 'TimeoutError' ? 'TIMEOUT' : 'NETWORK_ERROR';
