@@ -130,6 +130,24 @@ export const clinicFinanceService = {
       throw error;
     }
   },
+  async voidEntry(actor: Actor, input: { entryId: string; reason: string }) {
+    if (!validId(input.entryId)) fail(400, 'INVALID_FINANCE_ENTRY_ID', 'entryId must be a valid identifier.');
+    const entry: any = await ClinicFinanceEntry.findOne({ _id: input.entryId, tenantId: actor.tenantId }).lean();
+    if (!entry) fail(404, 'FINANCE_ENTRY_NOT_FOUND', 'Finance entry not found in this tenant.');
+    assertActorClinic(actor, entry.clinicId, entry.branchId);
+    if (entry.type !== 'invoice' && entry.type !== 'expense') fail(409, 'FINANCE_ENTRY_NOT_VOIDABLE', 'Payments and refunds cannot be voided; use the refund/reversal workflow.');
+    const filter = entry.type === 'invoice'
+      ? { _id: entry._id, tenantId: actor.tenantId, type: 'invoice', status: { $in: ['draft', 'issued'] }, settledAmount: { $lte: 0 } }
+      : { _id: entry._id, tenantId: actor.tenantId, type: 'expense', status: 'posted' };
+    const updated = await ClinicFinanceEntry.findOneAndUpdate(
+      filter,
+      { $set: { status: 'void', voidedAt: new Date(), voidedBy: actor.userId, voidReason: input.reason.trim() } },
+      { new: true },
+    ).lean();
+    if (!updated) fail(409, 'FINANCE_ENTRY_VOID_CONFLICT', 'The finance entry is settled or has changed and cannot be voided.');
+    await audit(actor, 'finance.entry.voided', updated, { reason: input.reason.trim() });
+    return normalizeEntry(updated);
+  },
   async createExpense(actor: Actor, input: any) {
     await assertClinicScope(actor.tenantId, input.clinicId, input.branchId);
     if (!money(input.amount) || input.amount <= 0) fail(400, 'INVALID_AMOUNT', 'Expense amount must be greater than zero with at most two decimal places.');
