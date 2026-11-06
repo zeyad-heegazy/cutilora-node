@@ -5,6 +5,7 @@ import { request as httpsRequest } from 'node:https';
 import { TenantWebhookEndpoint } from '../models/tenant-webhook-endpoint.model.js';
 import { TenantWebhookDelivery } from '../models/tenant-webhook-delivery.model.js';
 import { Clinic } from '../models/clinic.model.js';
+import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { encryptIntegrationSecret, decryptIntegrationSecret } from './integration-secret.crypto.js';
 
 const MAX_ATTEMPTS = 8;
@@ -75,6 +76,13 @@ async function sendWebhook(urlValue: string, body: string, headers: Record<strin
     request.end(body);
   });
 }
+async function auditWebhook(tenantId: string, actorId: string, action: string, endpoint: any) {
+  await TenantAuditEvent.create({
+    tenantId, actorUserId: actorId, action, targetType: 'tenant_webhook_endpoint',
+    targetId: String(endpoint._id), clinicId: endpoint.clinicId ?? null,
+    metadata: { name: endpoint.name, scope: endpoint.clinicId ? 'clinic' : 'tenant', eventCount: endpoint.events?.length ?? 0, status: endpoint.status },
+  }).catch(() => undefined);
+}
 function safeEndpoint(item: any) {
   return {
     id: String(item._id), name: item.name, url: item.url,
@@ -100,6 +108,20 @@ export const tenantWebhookService = {
   },
   async list(tenantId: string) {
     return (await TenantWebhookEndpoint.find({ tenantId }).sort({ createdAt: -1 }).lean()).map(safeEndpoint);
+  },
+  async update(tenantId: string, actorId: string, endpointId: string, input: { name?: string; url?: string; clinicId?: string | null; events?: string[] }) {
+    if (input.clinicId && !await Clinic.exists({ _id: input.clinicId, tenantId })) throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'Clinic does not belong to this tenant.' };
+    const events = input.events ? [...new Set(input.events)] : undefined;
+    if (events && (!events.length || events.length > 100 || events.some(event => event !== '*' && !SAFE_EVENTS.has(event)))) throw { status: 400, code: 'WEBHOOK_EVENTS_INVALID', message: 'One or more webhook event types are not supported.' };
+    const update: Record<string, unknown> = { updatedBy: actorId };
+    if (input.name !== undefined) update.name = input.name.trim();
+    if (input.url !== undefined) update.url = await validateWebhookUrl(input.url);
+    if (input.clinicId !== undefined) update.clinicId = input.clinicId;
+    if (events) update.events = events;
+    const endpoint = await TenantWebhookEndpoint.findOneAndUpdate({ _id: endpointId, tenantId }, { $set: update }, { new: true, runValidators: true });
+    if (!endpoint) return null;
+    await auditWebhook(tenantId, actorId, 'integration.webhook.updated', endpoint);
+    return safeEndpoint(endpoint);
   },
   async rotateSecret(tenantId: string, actorId: string, endpointId: string) {
     const secret = `whsec_${randomBytes(32).toString('base64url')}`;
