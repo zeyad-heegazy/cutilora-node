@@ -62,7 +62,7 @@ function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
   const filter: Record<string, any> = { tenantId };
   if (query.actorId) filter.actorUserId = query.actorId;
   if (query.action) filter.action = query.action;
-  if (query.targetType) filter.targetType = query.targetType;
+  if (query.targetType) filter.targetType = query.targetType;\n  if (query.module) filter.action = new RegExp('^' + String(query.module).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\  if (query.targetType) filter.targetType = query.targetType;') + '\\\\.');\n  if (query.result) filter.result = query.result;\n  if (query.requestId) filter.requestId = query.requestId;
   if (query.clinicId) filter.clinicId = query.clinicId;
   if (query.branchId) filter.branchId = query.branchId;
   if (query.from || query.to) filter.createdAt = {
@@ -416,7 +416,7 @@ export const tenancyService = {
     const limit = 5000;
     const rows = await tenancyRepository.exportTenantAuditEvents(buildTenantAuditFilter(tenantId, query), limit + 1);
     const truncated = rows.length > limit;
-    const columns = ['createdAt', 'actorUserId', 'action', 'targetType', 'targetId', 'clinicId', 'branchId', 'result', 'requestId'];
+    const columns = ['createdAt', 'actorUserId', 'action', 'targetType', 'targetId', 'clinicId', 'branchId', 'result', 'requestId', 'metadata', 'changes'];
     const escape = (value: unknown) => {
       let text = String(value ?? '');
       if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
@@ -424,7 +424,7 @@ export const tenancyService = {
     };
     const csv = [
       columns.join(','),
-      ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(row[column])).join(',')),
+      ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(['metadata', 'changes'].includes(column) ? JSON.stringify(row[column] ?? null) : row[column])).join(',')),
     ].join('\r\n');
     return { csv, truncated, exported: Math.min(rows.length, limit) };
   },
