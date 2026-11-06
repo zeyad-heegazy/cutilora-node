@@ -1,71 +1,48 @@
 import type { NextFunction, Request, Response } from 'express';
 import { hasScopedPermission } from '../../../shared/authorization/permission.engine.js';
 import { getTenantRoleGrants } from '../services/tenant-access.service.js';
-export { getTenantRoleCatalog, getTenantRolePermissions, getTenantRoleGrants, TENANT_ROLE_PERMISSIONS } from '../services/tenant-access.service.js';
+import { Subscription } from '../models/subscription.model.js';
+
+export {
+  getTenantRoleCatalog,
+  getTenantRolePermissions,
+  getTenantRoleGrants,
+  TENANT_ROLE_PERMISSIONS,
+} from '../services/tenant-access.service.js';
 
 export function requireTenantPermission(permission: string) {
   return (req: Request, res: Response, next: NextFunction) => {
-    const context = req.tenantContext;
-    const grants = context ? getTenantRoleGrants(context.role, context) : [];
-    const requestedScope = context?.branchId
-      ? { scope: 'branch' as const, clinicId: context.clinicId, branchId: context.branchId }
-      : context?.clinicId
-        ? { scope: 'clinic' as const, clinicId: context.clinicId }
-        : { scope: 'tenant' as const };
-
-    if (!context || !hasScopedPermission(grants, permission, requestedScope)) {
-      return res.status(403).json({
-        success: false,
-        error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission}.` },
-      });
-      const membership = await TenantMembership.findOne({
-        userId: req.auth.userId,
-        tenantId: context.tenantId,
-        status: 'active',
-        ...(context.clinicId ? { $or: [{ clinicId: context.clinicId }, { clinicId: null }] } : { clinicId: null }),
-      }).sort({ clinicId: context.clinicId ? -1 : 1 }).select('role roleId scope clinicId branchIds').lean() as any;
-      if (!membership) return res.status(403).json({
-        success: false,
-        error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission}.` },
-      });
-      let resourceClinicId = String(req.params.clinicId ?? req.query.clinicId ?? context.clinicId ?? membership.clinicId ?? '') || null;
-      let resourceBranchId = String(req.params.branchId ?? req.query.branchId ?? context.branchId ?? '') || null;
-      if (resourceBranchId) {
-        const branch = await Branch.findOne({ _id: resourceBranchId, tenantId: context.tenantId }).select('clinicId').lean() as any;
-        if (!branch) return res.status(404).json({ success: false, error: { code: 'BRANCH_NOT_FOUND', message: 'Branch not found in this tenant.' } });
-        const branchClinicId = String(branch.clinicId);
-        if (resourceClinicId && resourceClinicId !== branchClinicId) return res.status(403).json({ success: false, error: { code: 'BRANCH_SCOPE_DENIED', message: 'The selected branch does not belong to the requested clinic.' } });
-        resourceClinicId = branchClinicId;
-      }
-      if (membership.scope === 'clinic' && resourceClinicId && String(membership.clinicId) !== resourceClinicId) {
-        return res.status(403).json({ success: false, error: { code: 'CLINIC_ACCESS_DENIED', message: 'You do not have access to this clinic resource.' } });
-      }
-      if (membership.scope === 'branch') {
-        const allowedBranches = (membership.branchIds ?? []).map((id: unknown) => String(id));
-        if (!resourceClinicId || String(membership.clinicId) !== resourceClinicId || !resourceBranchId || !allowedBranches.includes(resourceBranchId)) {
-          return res.status(403).json({ success: false, error: { code: 'BRANCH_ACCESS_DENIED', message: 'You do not have access to this branch resource.' } });
-        }
-      }
-      if (membership.roleId) {
-        const role = await TenantRole.findOne({ _id: membership.roleId, tenantId: context.tenantId, status: 'active' }).select('permissions scope').lean() as any;
-        const requestedScope = resourceBranchId ? 'branch' : resourceClinicId ? 'clinic' : 'tenant';
-        const grants = (role?.permissions ?? []) as PermissionGrant[];
-        if (!role || !hasScopedPermission(grants, permission, { scope: requestedScope, clinicId: resourceClinicId, branchId: resourceBranchId })) {
-          return res.status(403).json({
-            success: false,
-            error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission} at the selected scope.` },
-          });
-        }
-        return next();
-      }
-      if (!hasPermission(getTenantRolePermissions(membership.role), permission)) {
+    try {
+      const context = req.tenantContext;
+      if (!context) {
         return res.status(403).json({
           success: false,
           error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission}.` },
         });
       }
-      next();
-    } catch (error) { next(error); }
+
+      // Resource identifiers may narrow the requested scope beyond the active
+      // tenant context. Grants remain bound to the membership's authorized scope.
+      const clinicId = String(req.params.clinicId ?? req.query.clinicId ?? context.clinicId ?? '') || null;
+      const branchId = String(req.params.branchId ?? req.query.branchId ?? context.branchId ?? '') || null;
+      const requestedScope = branchId
+        ? { scope: 'branch' as const, clinicId, branchId }
+        : clinicId
+          ? { scope: 'clinic' as const, clinicId }
+          : { scope: 'tenant' as const };
+
+      const grants = getTenantRoleGrants(context.role, context);
+      if (!hasScopedPermission(grants, permission, requestedScope)) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission} at the selected scope.` },
+        });
+      }
+
+      return next();
+    } catch (error) {
+      return next(error);
+    }
   };
 }
 
@@ -73,17 +50,36 @@ export function requireTenantFeature(feature: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const context = req.tenantContext;
-      if (!context) return res.status(403).json({
-        success: false,
-        error: { code: 'TENANT_FEATURE_DENIED', message: `Subscription feature required: ${feature}.` },
-      });
-      const subscription = await Subscription.findOne({ tenantId: context.tenantId, status: { $in: ['active', 'trialing', 'past_due'] } }).select('plan.features status paymentRecovery.gracePeriodEndsAt').lean() as any;
-      const withinGrace = subscription?.status !== 'past_due' || (subscription.paymentRecovery?.gracePeriodEndsAt && new Date(subscription.paymentRecovery.gracePeriodEndsAt).getTime() > Date.now());
-      if (!subscription?.plan?.features?.includes(feature) || !withinGrace) return res.status(403).json({
-        success: false,
-        error: { code: 'SUBSCRIPTION_FEATURE_REQUIRED', message: `The current plan does not include the ${feature} feature.`, details: { feature } },
-      });
-      next();
-    } catch (error) { next(error); }
+      if (!context) {
+        return res.status(403).json({
+          success: false,
+          error: { code: 'TENANT_FEATURE_DENIED', message: `Subscription feature required: ${feature}.` },
+        });
+      }
+
+      const subscription = await Subscription.findOne({
+        tenantId: context.tenantId,
+        status: { $in: ['active', 'trialing', 'past_due'] },
+      }).select('plan.features status paymentRecovery.gracePeriodEndsAt').lean() as any;
+
+      const gracePeriodEndsAt = subscription?.paymentRecovery?.gracePeriodEndsAt;
+      const withinGrace = subscription?.status !== 'past_due'
+        || Boolean(gracePeriodEndsAt && new Date(gracePeriodEndsAt).getTime() > Date.now());
+
+      if (!subscription?.plan?.features?.includes(feature) || !withinGrace) {
+        return res.status(403).json({
+          success: false,
+          error: {
+            code: 'SUBSCRIPTION_FEATURE_REQUIRED',
+            message: `The current plan does not include the ${feature} feature.`,
+            details: { feature },
+          },
+        });
+      }
+
+      return next();
+    } catch (error) {
+      return next(error);
+    }
   };
 }
