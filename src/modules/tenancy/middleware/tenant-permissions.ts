@@ -3,6 +3,7 @@ import { hasPermission, hasScopedPermission, type PermissionGrant } from '../../
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { TenantRole } from '../models/tenant-role.model.js';
 import { Branch } from '../models/branch.model.js';
+import { Subscription } from '../models/subscription.model.js';
 import { getTenantRolePermissions } from '../services/tenant-access.service.js';
 export { getTenantRoleCatalog, getTenantRolePermissions, TENANT_ROLE_PERMISSIONS } from '../services/tenant-access.service.js';
 
@@ -60,6 +61,24 @@ export function requireTenantPermission(permission: string) {
           error: { code: 'TENANT_PERMISSION_DENIED', message: `Missing tenant permission: ${permission}.` },
         });
       }
+      next();
+    } catch (error) { next(error); }
+  };
+}
+
+export function requireTenantFeature(feature: string) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const context = req.tenantContext;
+      if (!context) return res.status(403).json({
+        success: false,
+        error: { code: 'TENANT_FEATURE_DENIED', message: `Subscription feature required: ${feature}.` },
+      });
+      const subscription = await Subscription.findOne({ tenantId: context.tenantId }).select('plan.features').lean() as any;
+      if (!subscription?.plan?.features?.includes(feature)) return res.status(403).json({
+        success: false,
+        error: { code: 'SUBSCRIPTION_FEATURE_REQUIRED', message: `The current plan does not include the ${feature} feature.`, details: { feature } },
+      });
       next();
     } catch (error) { next(error); }
   };
