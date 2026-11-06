@@ -14,7 +14,7 @@ const SAFE_EVENTS = new Set([
   'membership.invited', 'membership.accepted', 'membership.suspended', 'membership.removed',
   'role.created', 'role.updated', 'role.deactivated', 'permission.changed',
   'organization.updated', 'configuration.updated', 'configuration.published',
-  'subscription.change_requested', 'integration.configuration.saved', 'integration.disabled', 'integration.enabled',
+  'subscription.change_requested', 'integration.configuration.saved', 'integration.disabled', 'integration.enabled',\n  'integration.connection_verified', 'integration.connection_failed', 'integration.credentials.rotated', 'integration.credentials.revoked',
 ]);
 
 function privateAddress(address: string) {
