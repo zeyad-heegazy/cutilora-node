@@ -18,6 +18,11 @@ const SAFE_EVENTS = new Set([
   'integration.connection_verified', 'integration.connection_failed', 'integration.credentials.rotated', 'integration.credentials.revoked',
 ]);
 
+function privateIpv6(address: string) {
+  const value = address.toLowerCase();
+  if (value.startsWith('::ffff:')) return privateAddress(value.slice(7));
+  return !/^[23][0-9a-f]{0,3}:/.test(value) || value.startsWith('2001:db8:');
+}
 function privateAddress(address: string) {
   if (address === '::1' || address === '::' || address.startsWith('fc') || address.startsWith('fd') || address.startsWith('fe80:') || address.startsWith('ff')) return true;
   if (address.toLowerCase().startsWith('::ffff:')) return privateAddress(address.slice(7));
@@ -39,7 +44,7 @@ async function validateWebhookUrl(value: string) {
   let addresses: Array<{ address: string; family: number }>;
   try { addresses = await lookup(url.hostname, { all: true, verbatim: true }); }
   catch { throw { status: 400, code: 'WEBHOOK_HOST_UNRESOLVED', message: 'Webhook hostname could not be resolved.' }; }
-  if (!addresses.length || addresses.some(item => item.family === 4 ? privateAddress(item.address) : item.address === '::1' || item.address.startsWith('fc') || item.address.startsWith('fd') || item.address.startsWith('fe80:'))) {
+  if (!addresses.length || addresses.some(item => item.family === 4 ? privateAddress(item.address) : privateIpv6(item.address))) {
     throw { status: 400, code: 'WEBHOOK_URL_UNSAFE', message: 'Webhook hostname resolves to a non-public network address.' };
   }
   return url.toString();
