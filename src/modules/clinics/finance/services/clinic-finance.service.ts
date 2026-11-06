@@ -160,7 +160,7 @@ export const clinicFinanceService = {
     const payment: any = await ClinicFinanceEntry.findOne({ _id: input.paymentId, tenantId: actor.tenantId, type: 'payment', status: 'posted', invoiceId: invoice._id }).lean();
     if (!payment) fail(404, 'PAYMENT_NOT_FOUND', 'A posted payment for the package invoice is required.');
     assertActorClinic(actor, payment.clinicId, payment.branchId);
-    if (invoice.settledAmount < invoice.amount || payment.amount < input.saleAmount || !money(input.saleAmount) || input.saleAmount <= 0) {
+    if (invoice.settledAmount < invoice.amount || payment.amount < input.saleAmount || !money(input.saleAmount) || input.saleAmount <= 0 || input.saleAmount !== invoice.amount) {
       fail(409, 'PACKAGE_NOT_PAID', 'The package invoice must be fully settled and the linked payment must cover the package sale amount.');
     }
     const packageRecord = await ClinicFinancePackage.create({
@@ -280,6 +280,8 @@ export const clinicFinanceService = {
     catch { fail(400, 'INVALID_TIMEZONE', 'timezone must be a valid IANA timezone.'); }
     const periodStartAt = new Date(input.periodStartAt), periodEndAt = new Date(input.periodEndAt);
     if (!Number.isFinite(periodStartAt.getTime()) || !Number.isFinite(periodEndAt.getTime()) || periodStartAt >= periodEndAt) fail(400, 'INVALID_CLOSE_PERIOD', 'periodStartAt must be before periodEndAt.');
+    const localBusinessDate = new Intl.DateTimeFormat('en-CA', { timeZone: input.timezone }).format(periodStartAt);
+    if (localBusinessDate !== input.businessDate) fail(400, 'BUSINESS_DATE_MISMATCH', 'businessDate must match periodStartAt in the supplied timezone.');
     try {
       const close = await ClinicFinanceDailyClose.create({
         tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null,
@@ -338,9 +340,16 @@ export const clinicFinanceService = {
     return updated;
   },
   async listDailyCloses(tenantId: string, scope: Scope) {
-    const filter = { ...scopeFilter(tenantId, scope), ...(scope.clinicId ? { clinicId: scope.clinicId } : {}) };
-    const items = await ClinicFinanceDailyClose.find(filter).sort({ periodStartAt: -1 }).limit(100).lean();
-    return items;
+    const filter: Record<string, any> = {
+      tenantId: new Types.ObjectId(tenantId),
+      ...(scope.clinicId ? { clinicId: new Types.ObjectId(scope.clinicId) } : {}),
+      ...(scope.branchId ? { branchId: new Types.ObjectId(scope.branchId) } : {}),
+    };
+    if (scope.from || scope.to) filter.periodStartAt = {
+      ...(scope.from ? { $gte: scope.from } : {}),
+      ...(scope.to ? { $lte: scope.to } : {}),
+    };
+    return ClinicFinanceDailyClose.find(filter).sort({ periodStartAt: -1 }).limit(100).lean();
   },
   async createExpense(actor: Actor, input: any) {
     await assertClinicScope(actor.tenantId, input.clinicId, input.branchId);
