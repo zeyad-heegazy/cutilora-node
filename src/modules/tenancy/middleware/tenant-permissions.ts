@@ -74,8 +74,9 @@ export function requireTenantFeature(feature: string) {
         success: false,
         error: { code: 'TENANT_FEATURE_DENIED', message: `Subscription feature required: ${feature}.` },
       });
-      const subscription = await Subscription.findOne({ tenantId: context.tenantId }).select('plan.features').lean() as any;
-      if (!subscription?.plan?.features?.includes(feature)) return res.status(403).json({
+      const subscription = await Subscription.findOne({ tenantId: context.tenantId, status: { $in: ['active', 'trialing', 'past_due'] } }).select('plan.features status paymentRecovery.gracePeriodEndsAt').lean() as any;
+      const withinGrace = subscription?.status !== 'past_due' || (subscription.paymentRecovery?.gracePeriodEndsAt && new Date(subscription.paymentRecovery.gracePeriodEndsAt).getTime() > Date.now());
+      if (!subscription?.plan?.features?.includes(feature) || !withinGrace) return res.status(403).json({
         success: false,
         error: { code: 'SUBSCRIPTION_FEATURE_REQUIRED', message: `The current plan does not include the ${feature} feature.`, details: { feature } },
       });
