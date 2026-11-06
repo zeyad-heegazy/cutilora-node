@@ -4,6 +4,7 @@ import { Clinic } from '../models/clinic.model.js';
 import { Branch } from '../models/branch.model.js';
 import { Subscription } from '../models/subscription.model.js';
 import { SubscriptionPayment } from '../models/subscription-payment.model.js';
+import { SubscriptionChangeRequest } from '../models/subscription-change-request.model.js';
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { User } from '../../auth/models/user.model.js';
 import { TenantDocument } from '../models/tenant-document.model.js';
@@ -250,6 +251,19 @@ export const tenancyRepository = {
       tenantId,
       $or: [{ invoiceNumber: { $gt: '' } }, { invoiceUrl: { $gt: '' } }],
     }).select('amount currency status method provider invoiceNumber invoiceUrl paidAt failureReason recordedAt createdAt').lean();
+  },
+  async listTenantBillingPayments(tenantId: string) {
+    return SubscriptionPayment.find({ tenantId })
+      .select('amount currency status method provider invoiceNumber paidAt failureReason recordedAt createdAt')
+      .sort({ createdAt: -1 }).limit(100).lean();
+  },
+  async createSubscriptionChangeRequest(data: Record<string, unknown>) {
+    const subscription = await Subscription.findOne({ tenantId: data.tenantId }).select('_id');
+    if (!subscription) return null;
+    return SubscriptionChangeRequest.create({ ...data, subscriptionId: subscription._id });
+  },
+  listSubscriptionChangeRequests(tenantId: string) {
+    return SubscriptionChangeRequest.find({ tenantId }).sort({ createdAt: -1 }).limit(50).lean();
   },
   async addSubscriptionPayment(
     tenantId: string,
