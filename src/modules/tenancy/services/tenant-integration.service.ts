@@ -13,9 +13,14 @@ type IntegrationInput = {
   secrets?: Record<string, string>;
 };
 
-function safeRecord(value: unknown) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
-  return Object.fromEntries(Object.entries(value as Record<string, unknown>).filter(([key]) => !/secret|token|password|credential|api.?key/i.test(key)));
+function safeRecord(value: unknown, depth = 0): Record<string, unknown> {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || depth > 5) return {};
+  return Object.fromEntries(Object.entries(value as Record<string, unknown>).slice(0, 100).map(([key, item]) => [
+    key,
+    /secret|token|password|credential|api.?key|authorization/i.test(key)
+      ? '[REDACTED]'
+      : item && typeof item === 'object' ? safeRecord(item, depth + 1) : item,
+  ]));
 }
 function present(item: any) {
   return {
@@ -67,6 +72,15 @@ export const tenantIntegrationService = {
     return present(item);
   },
   listProviders() { return INTEGRATION_PROVIDER_CATALOG; },
+  async resolveForClinic(tenantId: string, clinicId: string, provider: string) {
+    if (!await Clinic.exists({ _id: clinicId, tenantId })) return null;
+    const item = await TenantIntegration.findOne({ tenantId, provider, clinicId }).select('+encryptedSecrets')
+      ?? await TenantIntegration.findOne({ tenantId, provider, clinicId: null }).select('+encryptedSecrets');
+    if (!item || item.status === 'disabled') return null;
+    const secrets = item.encryptedSecrets ? JSON.parse(decryptIntegrationSecret(item.encryptedSecrets)) : {};
+    return { id: String(item._id), provider: item.provider, integrationType: item.integrationType, config: item.config ?? {}, secrets };
+  },
+
   async testConnection(tenantId: string, actorId: string, integrationId: string) {
     const item = await TenantIntegration.findOne({ _id: integrationId, tenantId }).select('+encryptedSecrets');
     if (!item) return null;
