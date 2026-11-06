@@ -17,6 +17,10 @@ function rows(report: any) {
       else result.push({ section, metric, value: Array.isArray(item) ? JSON.stringify(item) : String(item ?? '') });
     }
   };
+  result.push({ section: 'metadata', metric: 'generatedAt', value: report.generatedAt });
+  result.push({ section: 'metadata', metric: 'timezone', value: report.timezone });
+  result.push({ section: 'metadata', metric: 'freshness', value: report.freshness });
+  flatten('definitions', report.definitions);
   for (const section of ['clinics', 'branches', 'memberships', 'invitations']) flatten(section, report[section]);
   for (const item of report.topAuditActions) result.push({ section: 'audit', metric: item.action, value: String(item.count) });
   return result;
