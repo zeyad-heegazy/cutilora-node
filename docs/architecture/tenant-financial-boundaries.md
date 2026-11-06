@@ -46,3 +46,17 @@
 - Never derive clinic revenue from Cutilora subscription charges.
 - Never expose Platform payment-provider credentials or webhook state through Tenant APIs.
 - Never duplicate clinic transactions in a Tenant-owned ledger.
+
+## Platform subscription self-service boundary
+
+- Tenant subscription records and SubscriptionPayment records belong to Platform billing. Tenant APIs scope every invoice/payment lookup by the active tenant and expose no Platform mutation operations.
+- The subscription summary may expose a masked payment-method display (provider/type/brand/last four/expiry) and payment-recovery timeline (failure timestamp/code, retry timestamp/count, grace-period end and scheduled suspension).
+- The gateway token reference is selected out of normal queries and is never returned to Tenant APIs. Tokenization, payment collection, retries, refunds and subscription suspension remain Platform-owned.
+- Subscription change requests are review requests only; tenant users cannot directly change plan, price, payment state or lifecycle status.
+- Clinic Finance entries use a separate model and collection. Tenant subscription invoice/payment history never queries Clinic Finance entries, and Tenant Finance never queries Platform subscription payments.
+
+## TEN-12 verification boundary
+
+- Regression tests verify tenant-scoped source invoice lookup, clinic/branch authorization, tenant-scoped aggregate report pipelines and the separation of Platform subscription records from Clinic Finance source records.
+- Clinic Finance currently implements invoices, partial payments, refunds and expenses. Package/prepaid balance accounting, cash drawers, daily closing, staff commissions, suppliers/payables, tax/VAT, double-entry accounting, void/reversal workflows and bank/gateway reconciliation remain separate Clinic Finance implementation work; they are not silently represented as completed by this domain-boundary card.
+- No Platform revenue reporting is derived from Clinic Finance records. Tenant consolidated reports remain a read-only projection and preserve currency boundaries.
