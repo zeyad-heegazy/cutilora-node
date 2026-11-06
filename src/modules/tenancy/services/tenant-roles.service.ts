@@ -16,7 +16,7 @@ export const TENANT_PERMISSION_CATALOG = [
   { module: 'documents', actions: ['documents.manage'] },
   { module: 'finance', actions: ['billing.read', 'finance.read', 'finance.manage'] },
   { module: 'reports', actions: ['dashboard.read', 'audit.read', 'audit.export'] },
-  { module: 'integrations', actions: [] },
+  { module: 'integrations', actions: ['integrations.manage'] },
 ] as const;
 
 const permissionKeys = new Set(TENANT_PERMISSION_CATALOG.flatMap((item) => item.actions));
