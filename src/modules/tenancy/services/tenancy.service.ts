@@ -709,6 +709,23 @@ export const tenancyService = {
       nextBillingAt: item.nextBillingAt,
       cancelAtPeriodEnd: item.cancelAtPeriodEnd,
       canceledAt: item.canceledAt,
+      paymentMethod: item.paymentMethod ? {
+        provider: item.paymentMethod.provider || '',
+        type: item.paymentMethod.type || '',
+        brand: item.paymentMethod.brand || '',
+        last4: item.paymentMethod.last4 || '',
+        expiryMonth: item.paymentMethod.expiryMonth ?? null,
+        expiryYear: item.paymentMethod.expiryYear ?? null,
+        updatedAt: item.paymentMethod.updatedAt ?? null,
+      } : null,
+      paymentRecovery: item.paymentRecovery ? {
+        failedAt: item.paymentRecovery.failedAt ?? null,
+        failureCode: item.paymentRecovery.failureCode || '',
+        retryAt: item.paymentRecovery.retryAt ?? null,
+        retryCount: item.paymentRecovery.retryCount ?? 0,
+        gracePeriodEndsAt: item.paymentRecovery.gracePeriodEndsAt ?? null,
+        suspensionAt: item.paymentRecovery.suspensionAt ?? null,
+      } : null,
     };
   },
   async getTenantSubscriptionUsage(tenantId: string) {
