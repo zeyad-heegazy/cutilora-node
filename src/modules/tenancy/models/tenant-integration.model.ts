@@ -8,7 +8,9 @@ const schema = new Schema({
   displayName: { type: String, required: true, trim: true, maxlength: 120 },
   config: { type: Schema.Types.Mixed, default: {} },
   encryptedSecrets: { type: String, select: false, default: '' },
-  status: { type: String, enum: ['configured', 'disabled'], default: 'configured' },
+  status: { type: String, enum: ['configured', 'connected', 'disabled', 'error'], default: 'configured' },
+  lastCheckedAt: { type: Date, default: null },
+  lastError: { type: String, default: '', maxlength: 300 },
   createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
   updatedBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
 }, { timestamps: true, minimize: false });
