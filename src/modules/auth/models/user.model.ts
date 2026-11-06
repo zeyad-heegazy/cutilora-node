@@ -6,6 +6,7 @@ const schema = new Schema({
   passwordHash: { type: String, required: true, select: false },
   platformRole: { type: String, enum: ['platform_admin', 'user'], default: 'user', required: true },
   isActive: { type: Boolean, default: true, required: true },
+  lastLoginAt: { type: Date, default: null },
 }, { timestamps: true });
 
 export const User = (models.User || model('User', schema)) as Model<any>;

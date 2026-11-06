@@ -1,0 +1,194 @@
+paths:
+  /tenant/subscription:
+    get:
+      tags: [Tenant Subscription]
+      x-apidog-folder: "Tenant/Subscription"
+      summary: Get current Cutilora subscription
+      description: Read-only tenant self-service view. Platform retains ownership of plan pricing, billing, invoices, collection and administrative changes.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Current subscription summary with masked payment method and recovery timeline; no gateway token is exposed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      paymentMethod:
+                        type: object
+                        nullable: true
+                        properties:
+                          provider: { type: string }
+                          type: { type: string }
+                          brand: { type: string }
+                          last4: { type: string, maxLength: 4 }
+                          expiryMonth: { type: integer, nullable: true }
+                          expiryYear: { type: integer, nullable: true }
+                          updatedAt: { type: string, format: date-time, nullable: true }
+                      paymentRecovery:
+                        type: object
+                        nullable: true
+                        properties:
+                          failedAt: { type: string, format: date-time, nullable: true }
+                          failureCode: { type: string }
+                          retryAt: { type: string, format: date-time, nullable: true }
+                          retryCount: { type: integer }
+                          gracePeriodEndsAt: { type: string, format: date-time, nullable: true }
+                          suspensionAt: { type: string, format: date-time, nullable: true }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/subscription/usage:
+    get:
+      tags: [Tenant Subscription]
+      x-apidog-folder: "Tenant/Subscription"
+      summary: Get tenant subscription usage
+      description: Returns current tenant-scoped usage counts against Platform-configured plan limits. Usage is read-only; Platform remains authoritative for entitlements.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Usage counts and entitlement availability
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      usage:
+                        type: object
+                        properties:
+                          clinics: { type: integer }
+                          branches: { type: integer }
+                          activeMembers: { type: integer }
+                          pendingInvitations: { type: integer }
+                      limits: { type: object, nullable: true }
+                      limitsAvailable: { type: boolean }
+                      limitsMessage: { type: string }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/invoices:
+    get:
+      tags: [Tenant Subscription]
+      x-apidog-folder: "Tenant/Subscription/Invoices"
+      summary: List tenant subscription invoices
+      description: Lists only invoice/payment records associated with the current tenant's Cutilora subscription. Clinic patient invoices are never included.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant subscription invoice records }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/invoices/{invoiceId}:
+    get:
+      tags: [Tenant Subscription]
+      x-apidog-folder: "Tenant/Subscription/Invoices"
+      summary: Get tenant subscription invoice
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: invoiceId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Tenant subscription invoice details }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
+  /tenant/billing-profile:
+    get:
+      tags: [Tenant Subscription]
+      summary: Get tenant billing profile
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant billing profile }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    patch:
+      tags: [Tenant Subscription]
+      summary: Update tenant billing profile
+      description: Updates billing contact and legal invoice details only. Does not alter subscription pricing or payment state.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                legalName: { type: string, maxLength: 200 }
+                taxNumber: { type: string, maxLength: 100 }
+                vatNumber: { type: string, maxLength: 100 }
+                email: { type: string, format: email }
+                phone: { type: string, maxLength: 40 }
+                address: { type: string, maxLength: 500 }
+                city: { type: string, maxLength: 120 }
+                countryCode: { type: string, minLength: 2, maxLength: 2 }
+      responses:
+        "200": { description: Updated billing profile }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/subscription/change-requests:
+    get:
+      tags: [Tenant Subscription]
+      summary: List subscription change requests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant's subscription change requests }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    post:
+      tags: [Tenant Subscription]
+      summary: Request a subscription change
+      description: Creates a request for Platform review. It does not change plan, price, payment state or subscription status.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type]
+              properties:
+                type: { type: string, enum: [upgrade, downgrade, cancel, reactivate] }
+                targetPlanCode: { type: string, maxLength: 60 }
+                targetBillingCycle: { type: string, enum: [monthly, quarterly, yearly] }
+                effectiveAt: { type: string, enum: [immediate, period_end], default: period_end }
+                reason: { type: string, maxLength: 1000 }
+      responses:
+        "201": { description: Request submitted for Platform review }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: Conflicting pending request or invalid subscription state }
+  /tenant/subscription/payments:
+    get:
+      tags: [Tenant Subscription]
+      summary: List Cutilora subscription payment history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant subscription payment history }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/invoices/{invoiceId}/download:
+    get:
+      tags: [Tenant Subscription]
+      summary: Redirect to the platform-issued invoice document
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: invoiceId, in: path, required: true, schema: { type: string } }
+      responses:
+        "302": { description: HTTPS redirect to invoice document }
+        "404": { description: Invoice or document not found }
+        "409": { description: Invoice document URL is invalid }

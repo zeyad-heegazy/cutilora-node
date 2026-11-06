@@ -1,0 +1,254 @@
+paths:
+  /tenant/integrations/providers:
+    get:
+      tags: [Tenant Integrations]
+      summary: List supported integration providers
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Provider catalog and supported capabilities }
+  /tenant/integrations:
+    get:
+      tags: [Tenant Integrations]
+      summary: List tenant and clinic integration configurations
+      description: Secrets are encrypted at rest and never returned.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Integration configurations with masked credential presence }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    put:
+      tags: [Tenant Integrations]
+      summary: Create or update an integration configuration
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, integrationType, displayName]
+              properties:
+                clinicId: { type: string, nullable: true }
+                provider: { type: string, maxLength: 80 }
+                integrationType: { type: string, enum: [communication, payment_gateway, calendar, other] }
+                displayName: { type: string, maxLength: 120 }
+                config: { type: object, additionalProperties: true }
+                secrets: { type: object, additionalProperties: { type: string, maxLength: 4096 } }
+      responses:
+        "200": { description: Saved configuration; secret values are not returned }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/integrations/{integrationId}/rotate-credentials:
+    post:
+      tags: [Tenant Integrations]
+      summary: Rotate provider credentials
+      description: Replaces the complete encrypted credential set. Secret values are never returned.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: integrationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [secrets]
+              properties:
+                secrets: { type: object, minProperties: 1, additionalProperties: { type: string, maxLength: 4096 } }
+      responses:
+        "200": { description: Credentials replaced; only credential presence is returned }
+        "404": { description: Integration not found }
+  /tenant/integrations/{integrationId}/revoke-credentials:
+    post:
+      tags: [Tenant Integrations]
+      summary: Revoke provider credentials and disable the integration
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: integrationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Credentials cleared and integration disabled }
+        "404": { description: Integration not found }
+  /tenant/integrations/{integrationId}/test:
+    post:
+      tags: [Tenant Integrations]
+      summary: Test provider credentials
+      description: Tests provider authentication only. It does not perform a payment, send a message, or activate settlement.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: integrationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Connection test result and sanitized health state }
+        "404": { description: Integration not found in this tenant }
+  /tenant/integrations/{integrationId}/status:
+    patch:
+      tags: [Tenant Integrations]
+      summary: Enable or disable an integration configuration
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: integrationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [configured, disabled] }
+      responses:
+        "200": { description: Updated configuration status }
+        "404": { description: Integration not found in this tenant }
+  /tenant/webhooks:
+    get:
+      tags: [Tenant Webhooks]
+      summary: List tenant webhook endpoints
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Endpoint metadata without signing secrets }
+    post:
+      tags: [Tenant Webhooks]
+      summary: Create a signed webhook endpoint
+      description: HTTPS public destinations only. Signing secret is returned once at creation.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, url, events]
+              properties:
+                name: { type: string, maxLength: 120 }
+                url: { type: string, format: uri }
+                clinicId: { type: string, nullable: true }
+                events: { type: array, minItems: 1, maxItems: 100, items: { type: string } }
+      responses:
+        "201": { description: Endpoint and one-time signing secret }
+        "400": { description: Invalid or unsafe URL or event list }
+  /tenant/webhooks/{endpointId}:
+    patch:
+      tags: [Tenant Webhooks]
+      summary: Update webhook endpoint configuration
+      description: Updates name, public HTTPS URL, clinic scope or subscribed events.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name: { type: string, maxLength: 120 }
+                url: { type: string, format: uri }
+                clinicId: { type: string, nullable: true }
+                events: { type: array, minItems: 1, maxItems: 100, items: { type: string } }
+      responses:
+        "200": { description: Updated endpoint metadata }
+        "400": { description: Invalid or unsafe URL or event list }
+        "404": { description: Endpoint not found }
+  /tenant/webhooks/{endpointId}/rotate-secret:
+    post:
+      tags: [Tenant Webhooks]
+      summary: Rotate webhook signing secret
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Updated endpoint and one-time new signing secret }
+        "404": { description: Endpoint not found }
+  /tenant/webhooks/{endpointId}/status:
+    patch:
+      tags: [Tenant Webhooks]
+      summary: Enable or disable a webhook endpoint
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [active, disabled] }
+      responses:
+        "200": { description: Updated endpoint status }
+        "404": { description: Endpoint not found }
+  /tenant/webhooks/{endpointId}/deliveries:
+    get:
+      tags: [Tenant Webhooks]
+      summary: List webhook delivery attempts
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200": { description: Delivery history without payload bodies }
+        "404": { description: Endpoint not found }
+
+  /tenant/webhooks/{endpointId}/deliveries/{deliveryId}/retry:
+    post:
+      tags: [Tenant Webhooks]
+      summary: Requeue a failed webhook delivery
+      description: Requeues only a terminal failed delivery for this tenant endpoint. The original event ID and payload are preserved; the attempt counter is reset for a deliberate manual redrive.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: deliveryId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Delivery returned to the pending queue }
+        "404": { description: Failed delivery not found for this endpoint and tenant }

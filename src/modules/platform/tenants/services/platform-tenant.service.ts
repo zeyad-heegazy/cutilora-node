@@ -80,7 +80,7 @@ export const platformTenantService = {
     const tenant = await tenancyRepository.findTenantById(id);
     if (!tenant) return null;
     const [clinics, subscription] = await Promise.all([
-      tenancyRepository.listClinics(id),
+      tenancyRepository.listAllClinics(id),
       tenancyRepository.findSubscriptionByTenantId(id),
     ]);
     const paymentHistory = subscription

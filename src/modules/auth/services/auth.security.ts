@@ -16,13 +16,13 @@ export async function verifyPassword(password: string, stored: string): Promise<
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 export type AuthTokenType = 'user' | 'platform';
-type TokenPayload = { sub: string; iat: number; exp: number; tokenType: AuthTokenType };
+type TokenPayload = { sub: string; iat: number; exp: number; tokenType: AuthTokenType; sessionId?: string };
 const secret = env.JWT_SECRET;
 function encode(value: unknown) { return Buffer.from(JSON.stringify(value)).toString('base64url'); }
-export function signAccessToken(userId: string, tokenType: AuthTokenType = 'user'): string {
+export function signAccessToken(userId: string, tokenType: AuthTokenType = 'user', sessionId?: string): string {
   const now = Math.floor(Date.now() / 1000);
   const header = encode({ alg: 'HS256', typ: 'JWT' });
-  const payload = encode({ sub: userId, tokenType, iat: now, exp: now + env.ACCESS_TOKEN_TTL_SECONDS });
+  const payload = encode({ sub: userId, tokenType, ...(sessionId ? { sessionId } : {}), iat: now, exp: now + env.ACCESS_TOKEN_TTL_SECONDS });
   const input = `${header}.${payload}`;
   return `${input}.${createHmac('sha256', secret).update(input).digest('base64url')}`;
 }
@@ -40,5 +40,5 @@ export function verifyAccessToken(token: string): TokenPayload {
   if (!payload.sub || !payload.exp || payload.exp <= Math.floor(Date.now() / 1000) || !['user', 'platform'].includes(tokenType)) {
     throw new Error('Expired or invalid token');
   }
-  return { sub: payload.sub, iat: payload.iat ?? 0, exp: payload.exp, tokenType };
+  return { sub: payload.sub, iat: payload.iat ?? 0, exp: payload.exp, tokenType, ...(typeof payload.sessionId === 'string' ? { sessionId: payload.sessionId } : {}) };
 }

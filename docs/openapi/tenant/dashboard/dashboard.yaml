@@ -1,0 +1,92 @@
+paths:
+  /tenant/dashboard/summary:
+    get:
+      tags: [Tenant Dashboard]
+      summary: Get tenant dashboard summary
+      description: Returns organization identity, tenant-scoped clinic/branch/member counts and the current Cutilora subscription summary. Counts include only records owned by the active tenant.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Tenant dashboard summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: object
+                    properties:
+                      organization:
+                        type: object
+                        properties:
+                          id: { type: string }
+                          name: { type: string }
+                          status: { type: string, enum: [active, suspended] }
+                      counts:
+                        type: object
+                        properties:
+                          clinics:
+                            type: object
+                            properties:
+                              total: { type: integer }
+                              active: { type: integer }
+                              suspended: { type: integer }
+                          branches:
+                            type: object
+                            properties:
+                              total: { type: integer }
+                              active: { type: integer }
+                              suspended: { type: integer }
+                          activeMembers: { type: integer }
+                          pendingInvitations: { type: integer }
+                      subscription:
+                        type: object
+                        nullable: true
+                        properties:
+                          plan: { type: object, additionalProperties: true }
+                          billingCycle: { type: string }
+                          status: { type: string }
+                          nextBillingAt: { type: string, format: date-time, nullable: true }
+                      generatedAt: { type: string, format: date-time }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/dashboard/activity:
+    get:
+      tags: [Tenant Dashboard]
+      summary: Get recent organization activity
+      description: Returns the latest tenant-scoped audit events. This is not a clinic operational activity feed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Recent tenant activity events }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/dashboard/clinics:
+    get:
+      tags: [Tenant Dashboard]
+      summary: List clinic portfolio for dashboard
+      description: Returns tenant-owned clinics with branch counts, active clinic manager identity when assigned through a clinic membership, and latest tenant audit activity timestamp/action when available.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant clinic portfolio }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/dashboard/alerts:
+    get:
+      tags: [Tenant Dashboard]
+      summary: Get organization alerts
+      description: Returns actionable alerts derived from available tenant data, including pending invitations, suspended clinics and past-due subscription status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Organization alerts }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }

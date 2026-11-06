@@ -1,11 +1,18 @@
 import type { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
-import { loginSchema } from '../validations/auth.validation.js';
+import { acceptInvitationSchema, loginSchema } from '../validations/auth.validation.js';
 
 export const authController = {
   async login(req: Request, res: Response, next: NextFunction) {
-    try { const input = loginSchema.parse(req.body); res.json({ success: true, data: await authService.login(input.email, input.password) }); }
+    try { const input = loginSchema.parse(req.body); res.json({ success: true, data: await authService.login(input.email, input.password, { userAgent: req.get('user-agent') ?? null }) }); }
     catch (error) { next(error); }
+  },
+  async acceptInvitation(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = acceptInvitationSchema.parse(req.body);
+      const data = await authService.acceptInvitation(input);
+      res.status(200).json({ success: true, data });
+    } catch (error) { next(error); }
   },
   async logout(req: Request, res: Response, next: NextFunction) {
     try {

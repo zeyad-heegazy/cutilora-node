@@ -59,20 +59,57 @@ const timeString = z
   .string()
   .regex(/^([01]\d|2[0-3]):[0-5]\d$/, 'Time must be in HH:mm format');
 
+const breakTimesSchema = z.array(z.object({
+  startTime: timeString,
+  endTime: timeString,
+})).max(5);
+
+const operatingShiftSchema = z.object({
+  startTime: timeString,
+  endTime: timeString,
+  breakTimes: breakTimesSchema.optional(),
+});
+
 const operatingHourSchema = z.object({
   dayOfWeek: z.number().int().min(0).max(6),
   isClosed: z.boolean().optional(),
+  // Legacy single-window fields remain supported for existing records and clients.
   openTime: timeString.optional(),
   closeTime: timeString.optional(),
-  breakTimes: z
-    .array(
-      z.object({
-        startTime: timeString,
-        endTime: timeString,
-      }),
-    )
-    .max(5)
-    .optional(),
+  breakTimes: breakTimesSchema.optional(),
+  // New split-shift schedule; intervals are local to the branch timezone.
+  shifts: z.array(operatingShiftSchema).min(1).max(3).optional(),
+}).refine((hour) => {
+  if (hour.isClosed) return !(hour.shifts?.length || hour.openTime || hour.closeTime || hour.breakTimes?.length);
+  if (hour.shifts?.length) return !hour.openTime && !hour.closeTime && !hour.breakTimes?.length;
+  return Boolean(hour.openTime && hour.closeTime && hour.openTime < hour.closeTime);
+}, {
+  message: 'Open days require either one valid open/close window or one to three split shifts; overnight hours are not supported.',
+  path: ['shifts'],
+}).refine((hour) => {
+  if (hour.isClosed) return true;
+  const validateBreaks = (breaks: Array<{ startTime: string; endTime: string }>, start: string, end: string) => {
+    const sorted = [...breaks].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return sorted.every((item, index) =>
+      item.startTime < item.endTime &&
+      item.startTime >= start &&
+      item.endTime <= end &&
+      (index === 0 || sorted[index - 1]!.endTime <= item.startTime)
+    );
+  };
+  if (hour.shifts?.length) {
+    const shifts = [...hour.shifts].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    return shifts.every((shift, index) =>
+      shift.startTime < shift.endTime &&
+      (index === 0 || shifts[index - 1]!.endTime <= shift.startTime) &&
+      validateBreaks(shift.breakTimes ?? [], shift.startTime, shift.endTime)
+    );
+  }
+  if (!hour.openTime || !hour.closeTime) return true;
+  return validateBreaks(hour.breakTimes ?? [], hour.openTime, hour.closeTime);
+}, {
+  message: 'Shifts and breaks must be ordered, non-overlapping, and breaks must be inside their shift.',
+  path: ['shifts'],
 });
 
 const operatingHoursArraySchema = z.array(operatingHourSchema).max(7).refine(
@@ -92,7 +129,7 @@ const clinicFields = {
   address: addressSchema.optional(),
   timezone: timezoneSchema.default('Africa/Cairo'),
   preferences: preferencesSchema.optional(),
-  settings: z.record(z.unknown()).optional(),
+  settings: z.record(z.unknown()).refine((settings) => !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides'].some((key) => key in settings), 'Reserved organization configuration keys cannot be changed through clinic settings.').optional(),
   operatingHours: operatingHoursArraySchema.optional(),
   branding: brandingSchema.optional(),
   bookingSettings: z
@@ -185,7 +222,7 @@ export const updateClinicSchema = z
     address: addressSchema.partial().optional(),
     timezone: timezoneSchema.optional(),
     preferences: preferencesSchema.partial().optional(),
-    settings: z.record(z.unknown()).optional(),
+    settings: z.record(z.unknown()).refine((settings) => !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides'].some((key) => key in settings), 'Reserved organization configuration keys cannot be changed through clinic settings.').optional(),
     countryId: z.string().optional(),
     governorateId: z.string().optional(),
     cityId: z.string().optional(),
@@ -214,31 +251,74 @@ export const updateClinicSchema = z
 
 const branchFields = {
   name: z.string().trim().min(2).max(160),
+  code: z.string().trim().max(30).transform((value) => value.toUpperCase()).optional(),
   slug: slug.optional(),
-  status: z.enum(['active', 'suspended']),
   address: z.string().trim().max(500).optional(),
+  addressDetails: addressSchema.partial().optional(),
+  contact: contactSchema.partial().optional(),
+  contactPerson: z.object({
+    name: optionalText(160),
+    email: z.string().trim().email().optional(),
+    phone,
+  }).partial().optional(),
   cityId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
+  postalCode: optionalText(30),
+  latitude: z.number().min(-90).max(90).nullable().optional(),
+  longitude: z.number().min(-180).max(180).nullable().optional(),
   timezone: timezoneSchema,
   operatingHours: operatingHoursArraySchema,
+  settings: z.record(z.unknown()).refine((settings) => !('organizationOverrides' in settings), 'Use the branch settings endpoint to update organization overrides.').optional(),
+  openingDate: z.coerce.date().nullable().optional(),
 };
 
 export const createBranchSchema = z.object({
   name: branchFields.name,
+  code: branchFields.code,
   slug: branchFields.slug,
   address: branchFields.address,
+  addressDetails: branchFields.addressDetails,
+  contact: branchFields.contact,
+  contactPerson: branchFields.contactPerson,
   cityId: branchFields.cityId,
+  postalCode: branchFields.postalCode,
+  latitude: branchFields.latitude,
+  longitude: branchFields.longitude,
   timezone: timezoneSchema.optional(),
   operatingHours: branchFields.operatingHours.optional(),
+  settings: branchFields.settings,
+  openingDate: branchFields.openingDate,
+  status: z.enum(['draft', 'active']).optional(),
+});
+
+const branchWeeklyOperatingHoursSchema = operatingHoursArraySchema.refine(
+  (hours) => hours.length === 7,
+  'A complete weekly schedule must include exactly one entry for every weekday.',
+);
+
+export const updateBranchOperatingHoursSchema = z.object({
+  operatingHours: branchWeeklyOperatingHoursSchema,
+});
+
+export const branchLifecycleReasonSchema = z.object({
+  reason: z.string().trim().min(3).max(500),
 });
 
 export const updateBranchSchema = z.object({
   name: branchFields.name.optional(),
+  code: branchFields.code,
   slug: branchFields.slug,
-  status: branchFields.status.optional(),
   address: branchFields.address,
+  addressDetails: branchFields.addressDetails,
+  contact: branchFields.contact,
+  contactPerson: branchFields.contactPerson,
   cityId: branchFields.cityId,
+  postalCode: branchFields.postalCode,
+  latitude: branchFields.latitude,
+  longitude: branchFields.longitude,
   timezone: timezoneSchema.optional(),
   operatingHours: branchFields.operatingHours.optional(),
+  settings: branchFields.settings,
+  openingDate: branchFields.openingDate,
 }).refine((data) => Object.keys(data).length > 0, {
   message: 'At least one field must be provided.',
 });
@@ -254,6 +334,13 @@ export const upsertSubscriptionSchema = z.object({
       .length(3)
       .transform((value) => value.toUpperCase())
       .default('EGP'),
+    limits: z.object({
+      maxClinics: z.number().int().min(0).nullable().optional(),
+      maxBranches: z.number().int().min(0).nullable().optional(),
+      maxUsers: z.number().int().min(0).nullable().optional(),
+      maxStorageBytes: z.number().int().min(0).nullable().optional(),
+    }).optional(),
+    features: z.array(z.string().trim().min(1).max(80)).max(100).optional(),
   }),
   billingCycle: z.enum(['monthly', 'quarterly', 'yearly']).default('monthly'),
   status: z
@@ -284,4 +371,176 @@ export const createPaymentSchema = z.object({
   invoiceUrl: z.string().trim().url().or(z.literal('')).optional(),
   paidAt: z.coerce.date().nullable().optional(),
   failureReason: optionalText(1000),
+});
+
+export const updateTenantPreferencesSchema = z.object({ preferences: preferencesSchema.partial() });
+
+export const createTenantDocumentSchema = z.object({
+  name: z.string().trim().min(1).max(180),
+  category: z.enum(['registration', 'tax', 'license', 'insurance', 'contract', 'other']),
+  fileBase64: z.string().min(1).max(4_200_000),
+  expiresAt: z.coerce.date().nullable().optional(),
+});
+
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must use YYYY-MM-DD.').refine((value) => { const date = new Date(value + 'T00:00:00.000Z'); return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value; }, 'Date must be a real calendar date.');
+export const createBranchHolidaySchema = z.object({
+  title: z.string().trim().min(1).max(160),
+  type: z.enum(['closure', 'modified_hours']),
+  startDate: dateOnly,
+  endDate: dateOnly,
+  isAllDay: z.boolean().default(true),
+  startTime: timeString.optional(),
+  endTime: timeString.optional(),
+  reason: optionalText(500),
+}).refine((data) => data.startDate <= data.endDate, {
+  message: 'endDate must be on or after startDate.',
+  path: ['endDate'],
+}).refine((data) => data.isAllDay || Boolean(data.startTime && data.endTime && data.startTime < data.endTime), {
+  message: 'Partial-day closures require a valid startTime before endTime.',
+  path: ['startTime'],
+}).refine((data) => data.type !== 'modified_hours' || !data.isAllDay, {
+  message: 'Modified hours must set isAllDay=false.',
+  path: ['isAllDay'],
+});
+
+export const tenantAuditQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+  actorId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  action: z.string().trim().min(2).max(120).optional(),
+  targetType: z.string().trim().min(2).max(80).optional(),
+  module: z.string().trim().regex(/^[a-z][a-z0-9_-]{1,79}$/i).optional(),
+  result: z.enum(['success', 'failure']).optional(),
+  requestId: z.string().trim().min(1).max(120).optional(),
+  clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+}).refine((query) => !query.from || !query.to || query.from <= query.to, {
+  message: 'from must be before or equal to to.',
+  path: ['to'],
+});
+
+const configurationValuesSchema = z.record(z.unknown()).refine((values) =>
+  !['organizationDefaults', 'organizationDefaultsVersion', 'organizationOverrides'].some((key) => key in values),
+  'Reserved configuration keys cannot be supplied.',
+);
+export const updateTenantConfigurationSchema = z.object({
+  values: configurationValuesSchema.refine((values) => Object.keys(values).length > 0, 'At least one configuration value is required.'),
+});
+const configurationApplyFields = {
+  applyTo: z.enum(['all', 'selected']),
+  clinicIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).min(1).max(100).refine((ids) => new Set(ids).size === ids.length, 'clinicIds must be unique.').optional(),
+};
+const tenantConfigurationApplyBaseSchema = z.object(configurationApplyFields);
+export const previewTenantConfigurationApplySchema = tenantConfigurationApplyBaseSchema.refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
+  message: 'clinicIds are required when applyTo=selected.',
+  path: ['clinicIds'],
+});
+export const applyTenantConfigurationSchema = tenantConfigurationApplyBaseSchema.extend({
+  confirm: z.boolean(),
+}).refine((value) => value.applyTo !== 'selected' || Boolean(value.clinicIds?.length), {
+  message: 'clinicIds are required when applyTo=selected.',
+  path: ['clinicIds'],
+});
+
+export const updateTenantMembershipSchema = z.object({
+  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
+  scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
+  clinicId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
+  branchIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).max(50).optional(),
+  status: z.enum(['active', 'suspended']).optional(),
+}).refine((value) => Object.keys(value).length > 0, {
+  message: 'At least one membership field must be supplied.',
+});
+
+export const updateBranchSettingsSchema = z.object({
+  overrides: z.record(z.unknown()).refine((overrides) => Object.keys(overrides).length > 0, 'At least one override is required.'),
+});
+
+export const updateClinicSettingsSchema = z.object({
+  overrides: z.record(z.unknown()).refine((value) => Object.keys(value).length > 0, 'At least one override is required.'),
+});
+
+export const clinicListQuerySchema = z.object({
+  search: z.string().trim().min(1).max(100).optional(),
+  status: z.enum(['active', 'suspended']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const branchListQuerySchema = z.object({
+  clinicId: z.string().regex(/^[a-f0-9]{24}$/i).optional(),
+  search: z.string().trim().min(1).max(100).optional(),
+  status: z.enum(['draft', 'active', 'temporarily_closed', 'suspended', 'closed']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+export const replaceTenantDocumentSchema = z.object({
+  name: z.string().trim().min(1).max(180).optional(),
+  fileBase64: z.string().min(1).max(4_200_000),
+  expiresAt: z.coerce.date().nullable().optional(),
+});
+
+export const createTenantInvitationSchema = z.object({
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  phone: z.string().trim().regex(/^\+[1-9]\d{7,14}$/, 'Phone must be in E.164 format.').optional(),
+  channels: z.array(z.enum(['email', 'sms'])).min(1).max(2).default(['email']).refine((channels) => new Set(channels).size === channels.length, 'Channels must not contain duplicates.'),
+  role: z.enum(['tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']),
+  scope: z.enum(['tenant', 'clinic', 'branch']),
+  clinicId: z.string().regex(/^[a-f0-9]{24}$/i).optional(),
+  branchIds: z.array(z.string().regex(/^[a-f0-9]{24}$/i)).max(100).optional(),
+  expiresInDays: z.coerce.number().int().min(1).max(30).default(7),
+}).refine((input) => !input.channels.includes('sms') || Boolean(input.phone), {
+  message: 'A phone number in E.164 format is required when SMS is selected.', path: ['phone'],
+});
+
+export const tenantUserListQuerySchema = z.object({
+  search: z.string().trim().min(1).max(100).optional(),
+  status: z.enum(['active', 'invited', 'suspended']).optional(),
+  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
+  scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
+  clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
+  lastLoginFrom: z.coerce.date().optional(),
+  lastLoginTo: z.coerce.date().optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+}).refine((query) => !query.lastLoginFrom || !query.lastLoginTo || query.lastLoginFrom <= query.lastLoginTo, {
+  message: 'lastLoginFrom must be before or equal to lastLoginTo.', path: ['lastLoginTo'],
+});
+
+export const tenantInvitationListQuerySchema = z.object({
+  search: z.string().trim().min(1).max(100).optional(),
+  status: z.enum(['pending', 'processing', 'expired', 'accepted', 'revoked']).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+});
+
+
+export const tenantBillingProfileSchema = z.object({
+  legalName: optionalText(200),
+  taxNumber: optionalText(100),
+  vatNumber: optionalText(100),
+  email: z.string().trim().email().max(254).transform(value => value.toLowerCase()).optional(),
+  phone: optionalText(40),
+  address: optionalText(500),
+  city: optionalText(120),
+  countryCode: z.string().trim().length(2).transform(value => value.toUpperCase()).optional(),
+}).refine(value => Object.keys(value).length > 0, 'At least one billing profile field is required.');
+
+export const tenantSubscriptionChangeRequestSchema = z.object({
+  type: z.enum(['upgrade', 'downgrade', 'cancel', 'reactivate']),
+  targetPlanCode: z.string().trim().min(1).max(60).toLowerCase().optional(),
+  targetBillingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+  effectiveAt: z.enum(['immediate', 'period_end']).default('period_end'),
+  reason: optionalText(1000),
+}).superRefine((value, ctx) => {
+  if (['upgrade', 'downgrade'].includes(value.type) && !value.targetPlanCode) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetPlanCode'], message: 'A targetPlanCode is required for plan changes.' });
+  }
+  if (['cancel', 'reactivate'].includes(value.type) && (value.targetPlanCode || value.targetBillingCycle)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetPlanCode'], message: 'Plan details are not accepted for cancel/reactivate requests.' });
+  }
 });

@@ -5,11 +5,14 @@ paths:
       tags: [Clinics]
       x-apidog-folder: "Tenant/Clinics"
       summary: List clinics in current tenant
+      description: Returns only clinics owned by the authenticated tenant. Supports search by clinic name/code, status filtering and pagination. Requires clinic.manage.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
-        - $ref: "../../../openapi.yaml#/components/parameters/ClinicId"
-        - $ref: "../../../openapi.yaml#/components/parameters/BranchId"
+        - { name: search, in: query, schema: { type: string, minLength: 1, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, suspended] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
       responses:
         "200":
           description: Clinic list
@@ -56,7 +59,7 @@ paths:
       summary: Get clinic details
       security: [{ bearerAuth: [] }]
       parameters:
-        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: clinicId, in: path, required: true, schema: { type: string, pattern: "^[a-f0-9]{24}$" } }
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       responses:
         "200":
@@ -95,3 +98,236 @@ paths:
                   data: { $ref: "../../../openapi.yaml#/components/schemas/Clinic" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
+  /tenant/clinics/{clinicId}/documents:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: List clinic documents
+      description: Lists active private documents belonging only to the selected clinic. Requires clinic.documents.read.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Clinic documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { $ref: "#/components/schemas/ClinicDocument" } }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    post:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Upload a clinic document
+      description: Stores a private PDF, JPEG, PNG or WebP document scoped to the clinic. Maximum file size is 3 MB. Requires clinic.documents.manage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category, fileBase64]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 180 }
+                category: { type: string, enum: [registration, tax, license, insurance, contract, other] }
+                fileBase64: { type: string, description: Base64 content or supported data URL }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "201":
+          description: Clinic document uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/ClinicDocument" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/clinics/{clinicId}/documents/{documentId}:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Get clinic document metadata
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Clinic document metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { $ref: "#/components/schemas/ClinicDocument" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    delete:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Archive a clinic document
+      description: Archives the active version without deleting its file history. Requires clinic.documents.manage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Clinic document archived }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/clinics/{clinicId}/documents/{documentId}/replace:
+    put:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Replace a clinic document
+      description: Creates a new immutable version and archives the previous active version. Requires clinic.documents.manage.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileBase64]
+              properties:
+                name: { type: string, maxLength: 180 }
+                fileBase64: { type: string }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "200": { description: Clinic document replaced }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { description: Concurrent document replacement conflict }
+  /tenant/clinics/{clinicId}/documents/{documentId}/versions:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: List clinic document versions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Clinic document version history }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/clinics/{clinicId}/documents/{documentId}/download:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Documents"
+      summary: Download a private clinic document
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200":
+          description: Original private document bytes
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
+  /tenant/clinics/{clinicId}/activity:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics"
+      summary: List clinic activity
+      description: Returns audit events for this clinic only. Clinic-scoped users can view only their own clinic; branch-scoped users cannot access the clinic-wide activity feed. Requires clinic.activity.read.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: actorId, in: query, schema: { type: string, pattern: "^[a-f0-9]{24}$" } }
+        - { name: action, in: query, schema: { type: string, maxLength: 120 } }
+        - { name: targetType, in: query, schema: { type: string, maxLength: 80 } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Clinic activity events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+                  pagination: { type: object, additionalProperties: true }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
+  /tenant/clinics/{clinicId}/users:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics"
+      summary: List users assigned to a clinic
+      description: Returns clinic-scoped and branch-scoped memberships within this clinic. Branch-scoped users cannot list the clinic-wide user directory. Requires clinic.members.read.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, invited, suspended] } }
+        - { name: role, in: query, schema: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Clinic assigned users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data: { type: array, items: { type: object, additionalProperties: true } }
+                  pagination: { type: object, additionalProperties: true }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+
+components:
+  schemas:
+    ClinicDocument:
+      type: object
+      properties:
+        _id: { type: string }
+        tenantId: { type: string }
+        clinicId: { type: string }
+        category: { type: string, enum: [registration, tax, license, insurance, contract, other] }
+        name: { type: string }
+        mimeType: { type: string, enum: [application/pdf, image/jpeg, image/png, image/webp] }
+        sizeBytes: { type: integer }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        version: { type: integer }
+        status: { type: string, enum: [active, archived] }
+        uploadedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }

@@ -1,0 +1,38 @@
+paths:
+  /tenant/clinics/{clinicId}/settings:
+    get:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Settings"
+      summary: Get effective clinic settings
+      description: Returns tenant defaults, clinic overrides, effective values, per-setting source labels (tenant_default or clinic_override) and the inherited configuration version.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Clinic defaults, overrides and effective values }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [Clinics]
+      x-apidog-folder: "Tenant/Clinics/Settings"
+      summary: Update clinic-specific overrides
+      description: Merges only clinic override values; tenant defaults and other clinics are not modified.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [overrides]
+              properties:
+                overrides: { type: object, minProperties: 1, additionalProperties: true }
+      responses:
+        "200": { description: Updated effective clinic settings }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }

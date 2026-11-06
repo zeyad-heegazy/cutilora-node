@@ -1,0 +1,343 @@
+paths:
+  /tenant/roles:
+    post:
+      tags: [Tenant Access Control]
+      summary: Create a tenant custom role
+      description: Creates a tenant-owned role with explicit tenant, clinic or branch permission grants. Every permission must exist in the catalog, every target must belong to the tenant, and the actor cannot grant beyond their own effective authority.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, scope, permissions]
+              properties:
+                key: { type: string, minLength: 2, maxLength: 80 }
+                name: { type: string, minLength: 2, maxLength: 120 }
+                description: { type: string, maxLength: 500 }
+                scope: { type: string, enum: [tenant, clinic, branch] }
+                permissions:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [permission, scope]
+                    properties:
+                      permission: { type: string, maxLength: 120 }
+                      scope: { type: string, enum: [tenant, clinic, branch] }
+                      clinicId: { type: string, nullable: true }
+                      branchId: { type: string, nullable: true }
+      responses:
+        "201": { description: Tenant custom role created and audited }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: Tenant role key already exists }
+    get:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: List built-in role templates and tenant custom roles
+      description: Returns built-in role templates, starter templates (including Organization Manager, Clinic Manager, Branch Manager, Finance Viewer/Manager and Read-only Analyst), and tenant-scoped custom roles. Starter templates are cloned into tenant-owned roles and then editable; grants are restricted to the actor's permission authority.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Built-in tenant role catalog and permission matrix }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/roles/{roleId}:
+    get:
+      tags: [Tenant Access Control]
+      summary: Get a tenant custom role
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: roleId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      responses:
+        "200": { description: Tenant role with scoped grants and version }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [Tenant Access Control]
+      summary: Update a tenant custom role
+      description: Updates role grants using optimistic version checks. Every grant must be within the actor's effective authority. Permission changes are audited and increment the role version.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: roleId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 2
+              required: [expectedVersion]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                name: { type: string, minLength: 2, maxLength: 120 }
+                description: { type: string, maxLength: 500 }
+                scope: { type: string, enum: [tenant, clinic, branch] }
+                permissions: { type: array, maxItems: 200, items: { type: object, required: [permission, scope], properties: { permission: { type: string }, scope: { type: string, enum: [tenant, clinic, branch] }, clinicId: { type: string, nullable: true }, branchId: { type: string, nullable: true } } } }
+      responses:
+        "200": { description: Updated role and incremented version }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: Role version conflict }
+  /tenant/roles/{roleId}/clone:
+    post:
+      tags: [Tenant Access Control]
+      summary: Clone a tenant custom role or starter template
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: roleId, in: path, required: true, schema: { type: string, description: "Custom role ObjectId or template:<key>" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [key, name]
+              properties:
+                key: { type: string, minLength: 2, maxLength: 80 }
+                name: { type: string, minLength: 2, maxLength: 120 }
+                description: { type: string, maxLength: 500 }
+                clinicId: { type: string, description: Required when cloning a clinic-scoped template }
+                branchIds: { type: array, maxItems: 20, items: { type: string }, description: Required when cloning a branch-scoped template }
+      responses:
+        "201": { description: Cloned tenant-owned role from a custom role or starter template }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/roles/{roleId}/deactivate:
+    post:
+      tags: [Tenant Access Control]
+      summary: Deactivate an unused custom role
+      description: A role referenced by any membership, including suspended memberships, cannot be deactivated.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: roleId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      responses:
+        "200": { description: Role deactivated }
+        "409": { description: Role is still assigned }
+  /tenant/memberships/{membershipId}/role:
+    put:
+      tags: [Tenant Access Control]
+      summary: Assign a custom role to a tenant membership
+      description: Requires a matching membership scope, prevents self-escalation, checks actor authority and protects the last active Tenant Owner.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: membershipId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roleId]
+              properties:
+                roleId: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      responses:
+        "200": { description: Custom role assigned }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: Last Owner or role scope conflict }
+  /tenant/access/me:
+    get:
+      tags: [Tenant Access Control]
+      summary: Get current user's effective permissions
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Effective permissions for the selected tenant, clinic and branch context }
+  /tenant/permissions/catalog:
+    get:
+      tags: [Tenant Access Control]
+      summary: Get supported tenant permission catalog
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Permissions grouped by module and action }
+  /tenant/users/{userId}/effective-access:
+    get:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Preview a tenant user's effective access
+      description: Returns only memberships in the active tenant, including custom role identity/version, scoped grants and direct-versus-inherited permission sources. Suspended memberships return no effective permissions.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: userId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      responses:
+        "200": { description: Tenant-scoped effective access preview }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/users/{userId}:
+    get:
+      tags: [Tenant Organization]
+      summary: Get tenant user details and memberships
+      description: Returns global identity details, memberships belonging only to the active tenant, and a limited summary of recent user sessions. Sensitive IP addresses and access tokens are never returned.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: userId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Tenant user details and tenant-scoped memberships }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/users:
+    get:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: List tenant users and memberships
+      description: Lists tenant memberships with linked user identity, clinic/branch scopes and lastLoginAt.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [active, invited, suspended] } }
+        - { name: role, in: query, schema: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] } }
+        - { name: scope, in: query, schema: { type: string, enum: [tenant, clinic, branch] } }
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: lastLoginFrom, in: query, schema: { type: string, format: date-time } }
+        - { name: lastLoginTo, in: query, schema: { type: string, format: date-time } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Paginated tenant memberships and scoped user identities }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/users/{userId}/sessions/{sessionId}/revoke:
+    post:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Revoke one tenant user's active session
+      description: Revokes a selected active session for a user who has a membership in the active tenant. Session revocation is global to that user's account.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: userId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+        - { name: sessionId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200": { description: Session revoked }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/invitations:
+    get:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: List tenant invitations
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: status, in: query, schema: { type: string, enum: [pending, processing, expired, accepted, revoked] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Paginated tenant invitations without token hashes }
+    post:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Create a tenant invitation
+      description: Returns a single-use invitation token for private delivery. Delivery channels are selected per invitation; provider adapters are not configured, so no automatic message is sent.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, role, scope]
+              properties:
+                email: { type: string, format: email }
+                phone:
+                  type: string
+                  pattern: "^\\+[1-9][0-9]{7,14}$"
+                  description: Required when sms is selected; E.164 format.
+                channels:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  default: [email]
+                  description: Delivery channels to use when provider integrations are configured. SMS requires phone.
+                  items: { type: string, enum: [email, sms] }
+                role: { type: string, enum: [tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] }
+                scope: { type: string, enum: [tenant, clinic, branch] }
+                clinicId: { type: string }
+                branchIds: { type: array, items: { type: string } }
+                expiresInDays: { type: integer, minimum: 1, maximum: 30, default: 7 }
+      responses:
+        "201": { description: Invitation created; token returned once for private delivery }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: A pending invitation already exists for this email }
+  /tenant/invitations/{invitationId}/revoke:
+    post:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Revoke a pending invitation
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: invitationId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Invitation revoked }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/invitations/{invitationId}/resend:
+    post:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Resend an invitation by rotating its token
+      description: Returns a new token for private delivery. The previous token becomes invalid.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: invitationId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: New single-use token returned }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/memberships/{membershipId}/history:
+    get:
+      tags: [Tenant Organization]
+      summary: List tenant membership history
+      description: Returns append-only tenant audit events associated with a membership. Membership ownership is checked before history is returned.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: membershipId, in: path, required: true, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Membership audit history }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/memberships/{membershipId}:
+    patch:
+      tags: [Tenant Memberships]
+      x-apidog-folder: "Tenant/Users and Memberships"
+      summary: Update tenant membership role, scope or status
+      description: Enforces role-to-scope compatibility, validates clinic/branch ownership, prevents self-modification and protects the last active Tenant Owner.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: membershipId, in: path, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] }
+                scope: { type: string, enum: [tenant, clinic, branch] }
+                clinicId: { type: string, nullable: true }
+                branchIds: { type: array, items: { type: string }, maxItems: 50 }
+                status: { type: string, enum: [active, suspended] }
+      responses:
+        "200": { description: Membership updated }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { description: Last active Tenant Owner cannot be demoted or suspended }

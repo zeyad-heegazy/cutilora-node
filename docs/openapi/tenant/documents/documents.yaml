@@ -1,0 +1,130 @@
+paths:
+  /tenant/documents:
+    get:
+      tags: [Tenant Organization]
+      summary: List organization documents
+      description: Lists active documents belonging to the active tenant. File contents and storage keys are never included.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Tenant document metadata list }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    post:
+      tags: [Tenant Organization]
+      summary: Upload organization document
+      description: Uploads a private PDF, JPEG, PNG or WebP document using base64. The file is content-sniffed and limited to 3 MB. Documents are stored outside the public uploads directory.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category, fileBase64]
+              properties:
+                name: { type: string, maxLength: 180 }
+                category: { type: string, enum: [registration, tax, license, insurance, contract, other] }
+                fileBase64: { type: string, description: Base64 file or supported data URL; maximum decoded size 3 MB }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "201": { description: Document uploaded }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/documents/{documentId}:
+    get:
+      tags: [Tenant Organization]
+      summary: Get organization document metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Document metadata }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+    delete:
+      tags: [Tenant Organization]
+      summary: Archive organization document
+      description: Archives the document without physically deleting its legally relevant file.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Document archived }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/documents/{documentId}/versions:
+    get:
+      tags: [Tenant Organization]
+      summary: List document version history
+      description: Returns metadata for the document and its replacement chain, including archived versions. Private storage keys and file contents are never returned.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: documentId, in: path, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Ordered document version history }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+  /tenant/documents/{documentId}/replace:
+    put:
+      tags: [Tenant Organization]
+      summary: Replace an organization document
+      description: Creates a new immutable document version and archives the previous active version. The category is retained from the original document.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fileBase64]
+              properties:
+                name: { type: string, maxLength: 180 }
+                fileBase64: { type: string, description: Base64 file or supported data URL; maximum decoded size 3 MB }
+                expiresAt: { type: string, format: date-time, nullable: true }
+      responses:
+        "200": { description: Replacement document version created }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
+  /tenant/documents/{documentId}/download:
+    get:
+      tags: [Tenant Organization]
+      summary: Download organization document
+      description: Streams the private file only after tenant ownership, active status and tenant-wide role authorization are checked.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: documentId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Private document file
+          content:
+            application/pdf: { schema: { type: string, format: binary } }
+            image/jpeg: { schema: { type: string, format: binary } }
+            image/png: { schema: { type: string, format: binary } }
+            image/webp: { schema: { type: string, format: binary } }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }

@@ -122,3 +122,26 @@ Tenant-scoped routes require a bearer token and `X-Tenant-Id`. `X-Clinic-Id` and
 ## Security status
 
 Access tokens are currently stateless. Refresh-token rotation/revocation, membership invitations, complete audit-event coverage, permission-based RBAC and automated tenant-isolation tests remain outstanding. Do not consider this API production-ready until those controls and automated tests are implemented.
+
+
+## Tenant integrations and webhooks
+
+Tenant integrations are provider-neutral configuration records. The Platform plan must include the `integrations` feature; webhook management additionally requires `webhooks`, alongside the tenant permission. Current connection-check adapters are:
+- Email: Resend API.
+- SMS: Twilio.
+- WhatsApp: Meta WhatsApp Cloud API (Graph API v26.0 by default).
+- Calendar: Google Calendar OAuth access token.
+- Payment gateway references: Stripe and Paymob (credential verification only; no patient settlement is performed by Tenant APIs).
+
+A provider is shown as connected only after its credential check succeeds. Configuration does not imply that messaging or payment processing is enabled. Patient payment settlement remains Clinic Finance-owned and must use clinic merchant credentials.
+
+Tenant-wide integrations act as defaults. A clinic-specific record overrides the tenant default; a disabled clinic override intentionally suppresses fallback to the tenant default. Integration credentials are encrypted with AES-256-GCM, excluded from responses, and support rotation/revocation. Set a separate random `INTEGRATION_ENCRYPTION_KEY` (at least 32 characters) in production. Do not rotate this key without a planned decrypt/re-encrypt migration.
+
+Webhook endpoints accept public HTTPS destinations only. Events are signed using HMAC-SHA256 over `timestamp.body`; consumers should verify the signature and reject stale timestamps. Delivery attempts are persisted, retried with backoff, and eventually marked failed. Delivery history does not expose payloads. The API process runs the delivery worker; deployments with multiple API replicas may run multiple workers safely through atomic delivery claims. Apply outbound network egress restrictions as an additional SSRF defense.
+
+## Tenant governance reports
+
+- `GET /api/v1/tenant/reports/organization` provides tenant-scoped clinic/branch lifecycle, membership, invitation and audit aggregates.
+- `GET /api/v1/tenant/reports/organization/export` exports the same report as CSV with generation timestamp, UTC timezone and freshness headers.
+- Appointment and patient-growth aggregates are intentionally omitted until Clinic scheduling/patient domains expose approved aggregate contracts.
+- Tenant audit events are append-only through the application model, redact sensitive metadata, and support actor/action/module/clinic/branch/date/result/request filters.

@@ -1,0 +1,69 @@
+paths:
+  /tenant/audit-logs/export:
+    get:
+      tags: [Tenant Governance]
+      x-apidog-folder: "Tenant/Governance/Audit Logs"
+      summary: Export tenant audit events as CSV
+      description: Exports at most 5,000 tenant-scoped events. Only safe audit identifiers and action metadata are included; secrets and arbitrary metadata are excluded. X-Export-Truncated indicates whether additional rows were omitted.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: actorId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: targetType, in: query, schema: { type: string } }
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: CSV audit export
+          content:
+            text/csv:
+              schema: { type: string }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/audit-logs:
+    get:
+      tags: [Tenant Governance]
+      x-apidog-folder: "Tenant/Governance/Audit Logs"
+      summary: List tenant audit events
+      description: Returns append-only audit events for the active tenant only. Supports filters by actor, action, target type, clinic, branch and date range. Sensitive before/after values, secrets and file contents are not stored.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+        - { name: actorId, in: query, schema: { type: string } }
+        - { name: action, in: query, schema: { type: string } }
+        - { name: targetType, in: query, schema: { type: string } }
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200":
+          description: Paginated tenant audit events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        actorUserId: { type: string }
+                        action: { type: string }
+                        targetType: { type: string }
+                        targetId: { type: string }
+                        clinicId: { type: string, nullable: true }
+                        branchId: { type: string, nullable: true }
+                        result: { type: string, enum: [success, failure] }
+                        requestId: { type: string }
+                        metadata: { type: object }
+                        createdAt: { type: string, format: date-time }
+                  pagination: { type: object, additionalProperties: true }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }

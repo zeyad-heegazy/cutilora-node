@@ -39,6 +39,29 @@ paths:
                           { $ref: "../../../openapi.yaml#/components/schemas/MembershipSummary" }
         "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+  /auth/invitations/accept:
+    post:
+      tags: [Authentication]
+      x-apidog-folder: "Tenant/Auth"
+      summary: Accept a tenant invitation
+      description: Uses the single-use invitation token as proof of invitation. Existing active user accounts are linked by the invited email. New users must provide a name and password. The invitation token must be delivered privately by the tenant. Acceptance attempts are limited to 10 per IP per 15 minutes on each API process.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token: { type: string, minLength: 32 }
+                name: { type: string, minLength: 2, maxLength: 120, description: Required when the email has no existing user account }
+                password: { type: string, format: password, minLength: 12, maxLength: 128, description: Required when the email has no existing user account }
+      responses:
+        "200": { description: Invitation accepted and tenant membership activated }
+        "400": { description: Invalid, expired, or already-used invitation token }
+        "409": { description: Membership or invitation state conflict }
+        "422": { description: Account details required for a new user }
+        "429": { description: Invitation acceptance rate limit exceeded }
   /auth/logout:
     post:
       tags: [Authentication]
