@@ -9,7 +9,7 @@ paths:
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       responses:
-        "200": { description: Current subscription summary }
+        "200":\n          description: Current subscription summary with masked payment method and recovery timeline; no gateway token is exposed\n          content:\n            application/json:\n              schema:\n                type: object\n                properties:\n                  data:\n                    type: object\n                    properties:\n                      paymentMethod:\n                        type: object\n                        nullable: true\n                        properties:\n                          provider: { type: string }\n                          type: { type: string }\n                          brand: { type: string }\n                          last4: { type: string, maxLength: 4 }\n                          expiryMonth: { type: integer, nullable: true }\n                          expiryYear: { type: integer, nullable: true }\n                          updatedAt: { type: string, format: date-time, nullable: true }\n                      paymentRecovery:\n                        type: object\n                        nullable: true\n                        properties:\n                          failedAt: { type: string, format: date-time, nullable: true }\n                          failureCode: { type: string }\n                          retryAt: { type: string, format: date-time, nullable: true }\n                          retryCount: { type: integer }\n                          gracePeriodEndsAt: { type: string, format: date-time, nullable: true }\n                          suspensionAt: { type: string, format: date-time, nullable: true }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
   /tenant/subscription/usage:
@@ -17,7 +17,7 @@ paths:
       tags: [Tenant Subscription]
       x-apidog-folder: "Tenant/Subscription"
       summary: Get tenant subscription usage
-      description: Returns current tenant-scoped usage counts. Plan limits are explicitly unavailable until the Platform entitlement schema is implemented.
+      description: Returns current tenant-scoped usage counts against Platform-configured plan limits. Usage is read-only; Platform remains authoritative for entitlements.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
