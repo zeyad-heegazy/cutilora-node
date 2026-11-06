@@ -548,3 +548,33 @@ export const cloneTenantRoleSchema = z.object({
   name: z.string().trim().min(2).max(80),
   description: z.string().trim().max(500).optional(),
 });
+
+
+export const tenantBillingProfileSchema = z.object({
+  legalName: z.string().trim().max(200).optional(),
+  taxNumber: z.string().trim().max(100).optional(),
+  vatNumber: z.string().trim().max(100).optional(),
+  email: z.string().trim().email().max(254).or(z.literal('')).optional(),
+  phone: z.string().trim().max(40).optional(),
+  address: z.string().trim().max(500).optional(),
+  city: z.string().trim().max(120).optional(),
+  countryCode: z.string().trim().length(2).transform((value) => value.toUpperCase()).or(z.literal('')).optional(),
+}).refine((value) => Object.keys(value).length > 0, {
+  message: 'At least one billing profile field must be supplied.',
+});
+
+export const tenantSubscriptionChangeRequestSchema = z.object({
+  type: z.enum(['upgrade', 'downgrade', 'cancel', 'reactivate']),
+  targetPlanCode: z.string().trim().min(1).max(60).toLowerCase().optional(),
+  targetBillingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+  effectiveAt: z.enum(['immediate', 'period_end']).default('period_end'),
+  reason: z.string().trim().max(1000).optional(),
+}).superRefine((value, context) => {
+  if (['upgrade', 'downgrade'].includes(value.type) && !value.targetPlanCode && !value.targetBillingCycle) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'A target plan or billing cycle is required for upgrade and downgrade requests.',
+      path: ['targetPlanCode'],
+    });
+  }
+});
