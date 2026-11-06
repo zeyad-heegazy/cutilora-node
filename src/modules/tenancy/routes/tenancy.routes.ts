@@ -7,6 +7,7 @@ import { tenantRolesController } from '../controllers/tenant-roles.controller.js
 import { tenantCatalogController } from '../controllers/tenant-catalog.controller.js';
 import { tenantFinanceController } from '../controllers/tenant-finance.controller.js';
 import { tenantIntegrationController } from '../controllers/tenant-integration.controller.js';
+import { tenantWebhookController } from '../controllers/tenant-webhook.controller.js';
 
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
@@ -45,6 +46,11 @@ tenantRouter.post('/configuration/apply', requireTenantScope, requireTenantPermi
 tenantRouter.get('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.list);
 tenantRouter.put('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.save);
 tenantRouter.patch('/integrations/:integrationId/status', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.updateStatus);
+tenantRouter.get('/webhooks', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.list);
+tenantRouter.post('/webhooks', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.create);
+tenantRouter.post('/webhooks/:endpointId/rotate-secret', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.rotateSecret);
+tenantRouter.patch('/webhooks/:endpointId/status', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.setStatus);
+tenantRouter.get('/webhooks/:endpointId/deliveries', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.deliveries);
 tenantRouter.get('/audit-logs', requireTenantScope, requireTenantPermission('audit.read'), tenancyController.listTenantAuditEvents);
 tenantRouter.get('/audit-logs/export', requireTenantScope, requireTenantPermission('audit.export'), tenancyController.exportTenantAuditEvents);
 tenantRouter.get('/billing-profile', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantBillingProfile);
