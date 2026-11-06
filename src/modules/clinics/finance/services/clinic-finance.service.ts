@@ -320,7 +320,8 @@ export const clinicFinanceService = {
     await assertClinicScope(actor.tenantId, input.clinicId, input.branchId);
     assertActorClinic(actor, input.clinicId, input.branchId || null);
     if (!money(input.openingCash)) fail(400, 'INVALID_OPENING_CASH', 'openingCash must be a non-negative amount with at most two decimal places.');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.businessDate) || new Date(`${input.businessDate}T00:00:00.000Z`).toISOString().slice(0, 10) !== input.businessDate) fail(400, 'INVALID_BUSINESS_DATE', 'businessDate must be a real calendar date in YYYY-MM-DD format.');
+    const businessDateValue = new Date(`${input.businessDate}T00:00:00.000Z`);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.businessDate) || !Number.isFinite(businessDateValue.getTime()) || businessDateValue.toISOString().slice(0, 10) !== input.businessDate) fail(400, 'INVALID_BUSINESS_DATE', 'businessDate must be a real calendar date in YYYY-MM-DD format.');
     try { new Intl.DateTimeFormat('en', { timeZone: input.timezone }).format(new Date()); }
     catch { fail(400, 'INVALID_TIMEZONE', 'timezone must be a valid IANA timezone.'); }
     const periodStartAt = new Date(input.periodStartAt), periodEndAt = new Date(input.periodEndAt);
