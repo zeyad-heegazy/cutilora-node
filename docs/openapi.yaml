@@ -91,6 +91,34 @@ paths:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1replace"
   /tenant/documents/{documentId}/download:
     $ref: "./openapi/tenant/documents/documents.yaml#/paths/~1tenant~1documents~1{documentId}~1download"
+  /tenant/finance/summary:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1summary"
+  /tenant/finance/clinic-comparison:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1clinic-comparison"
+  /tenant/finance/revenue-trends:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1revenue-trends"
+  /tenant/finance/expense-summary:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1expense-summary"
+  /tenant/finance/reports:
+    $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1reports"
+  /clinic/finance/invoices:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1invoices"
+  /clinic/finance/payments:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1payments"
+  /clinic/finance/refunds:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1refunds"
+  /clinic/finance/entries/void:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1entries~1void"
+  /clinic/finance/expenses:
+    $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1expenses"
+  /tenant/billing-profile:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1billing-profile"
+  /tenant/subscription/change-requests:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription~1change-requests"
+  /tenant/subscription/payments:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription~1payments"
+  /tenant/invoices/{invoiceId}/download:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1invoices~1{invoiceId}~1download"
   /tenant/subscription:
     $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription"
   /tenant/subscription/usage:
@@ -109,18 +137,22 @@ paths:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles"
   /tenant/roles/{roleId}:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}"
-  /tenant/roles/{roleId}/archive:
-    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1archive"
-  /tenant/roles/{roleId}/permissions:
-    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1permissions"
   /tenant/roles/{roleId}/clone:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1clone"
+  /tenant/roles/{roleId}/deactivate:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1deactivate"
+  /tenant/memberships/{membershipId}/role:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1memberships~1{membershipId}~1role"
   /tenant/access/me:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1access~1me"
+  /tenant/permissions/catalog:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1permissions~1catalog"
   /tenant/users/{userId}/effective-access:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users~1{userId}~1effective-access"
   /tenant/users/{userId}:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users~1{userId}"
+  /tenant/users/{userId}/sessions/{sessionId}/revoke:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users~1{userId}~1sessions~1{sessionId}~1revoke"
   /tenant/users:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1users"
   /tenant/memberships/{membershipId}/history:
@@ -133,6 +165,32 @@ paths:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1preview-apply"
   /tenant/configuration/apply:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1apply"
+  /tenant/integrations/providers:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1providers"
+  /tenant/integrations:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations"
+  /tenant/integrations/{integrationId}/rotate-credentials:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1rotate-credentials"
+  /tenant/integrations/{integrationId}/revoke-credentials:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1revoke-credentials"
+  /tenant/integrations/{integrationId}/test:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1test"
+  /tenant/integrations/{integrationId}/status:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1status"
+  /tenant/webhooks:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks"
+  /tenant/webhooks/{endpointId}:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}"
+  /tenant/webhooks/{endpointId}/rotate-secret:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1rotate-secret"
+  /tenant/webhooks/{endpointId}/status:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1status"
+  /tenant/webhooks/{endpointId}/deliveries:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1deliveries"
+  /tenant/reports/organization:
+    $ref: "./openapi/tenant/reports/reports.yaml#/paths/~1tenant~1reports~1organization"
+  /tenant/reports/organization/export:
+    $ref: "./openapi/tenant/reports/reports.yaml#/paths/~1tenant~1reports~1organization~1export"
   /tenant/audit-logs/export:
     $ref: "./openapi/tenant/governance/audit-logs.yaml#/paths/~1tenant~1audit-logs~1export"
   /tenant/audit-logs:

@@ -1,0 +1,22 @@
+import { Router } from 'express';
+import { authenticate } from '../../../auth/middleware/authenticate.js';
+import { resolveTenantContext } from '../../../tenancy/middleware/tenant-context.js';
+import { requireTenantPermission } from '../../../tenancy/middleware/tenant-permissions.js';
+import { clinicFinanceController } from '../controllers/clinic-finance.controller.js';
+
+export const clinicFinanceRouter = Router();
+clinicFinanceRouter.use(authenticate, resolveTenantContext);
+clinicFinanceRouter.post('/invoices', requireTenantPermission('finance.manage'), clinicFinanceController.createInvoice);
+clinicFinanceRouter.post('/payments', requireTenantPermission('finance.manage'), clinicFinanceController.payment);
+clinicFinanceRouter.post('/refunds', requireTenantPermission('finance.manage'), clinicFinanceController.refund);
+clinicFinanceRouter.post('/expenses', requireTenantPermission('finance.manage'), clinicFinanceController.expense);
+clinicFinanceRouter.post('/entries/void', requireTenantPermission('finance.manage'), clinicFinanceController.voidEntry);
+clinicFinanceRouter.get('/packages', requireTenantPermission('finance.read'), clinicFinanceController.listPackages);
+clinicFinanceRouter.post('/packages', requireTenantPermission('finance.manage'), clinicFinanceController.createPackage);
+clinicFinanceRouter.post('/packages/:packageId/redeem', requireTenantPermission('finance.manage'), clinicFinanceController.redeemPackage);
+clinicFinanceRouter.post('/packages/:packageId/refund', requireTenantPermission('finance.manage'), clinicFinanceController.refundPackage);
+clinicFinanceRouter.get('/packages/:packageId/events', requireTenantPermission('finance.read'), clinicFinanceController.packageEvents);
+clinicFinanceRouter.post('/daily-closes', requireTenantPermission('finance.manage'), clinicFinanceController.openDailyClose);
+clinicFinanceRouter.get('/daily-closes', requireTenantPermission('finance.read'), clinicFinanceController.listDailyCloses);
+clinicFinanceRouter.post('/daily-closes/:closeId/close', requireTenantPermission('finance.manage'), clinicFinanceController.closeDailyClose);
+clinicFinanceRouter.post('/daily-closes/:closeId/approve', requireTenantPermission('finance.manage'), clinicFinanceController.approveDailyClose);

@@ -3,6 +3,8 @@ import { Schema, model, models, type Model } from 'mongoose';
 const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, index: true },
   email: { type: String, required: true, lowercase: true, trim: true },
+  phone: { type: String, default: null, trim: true },
+  channels: { type: [{ type: String, enum: ['email', 'sms'] }], default: ['email'], required: true },
   role: { type: String, enum: ['tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'], required: true },
   scope: { type: String, enum: ['tenant', 'clinic', 'branch'], required: true },
   clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', default: null },

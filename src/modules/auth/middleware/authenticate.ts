@@ -11,6 +11,11 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const payload = verifyAccessToken(token);
     if (payload.tokenType !== 'user') return res.status(401).json({ success: false, error: { code: 'INVALID_TOKEN_TYPE', message: 'A regular user access token is required.' } });
     if (await tokenRevocationService.isRevoked(token)) return res.status(401).json({ success: false, error: { code: 'TOKEN_REVOKED', message: 'This access token has been revoked.' } });
+    if (payload.sessionId) {
+      const session = await authRepository.findActiveUserSession(payload.sessionId, payload.sub, new Date());
+      if (!session) return res.status(401).json({ success: false, error: { code: 'SESSION_REVOKED', message: 'This session is no longer active.' } });
+      await authRepository.touchUserSession(payload.sessionId, new Date());
+    }
     const user = await authRepository.findActiveUserById(payload.sub);
     if (!user || !user.isActive || user.platformRole === 'platform_admin') return res.status(401).json({ success: false, error: { code: 'UNAUTHENTICATED', message: 'Invalid user.' } });
     req.auth = { userId: user.id, platformRole: user.platformRole, activeClinicId: null, clinicRole: null };

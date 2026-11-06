@@ -409,6 +409,9 @@ export const tenantAuditQuerySchema = z.object({
   actorId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   action: z.string().trim().min(2).max(120).optional(),
   targetType: z.string().trim().min(2).max(80).optional(),
+  module: z.string().trim().regex(/^[a-z][a-z0-9_-]{1,79}$/i).optional(),
+  result: z.enum(['success', 'failure']).optional(),
+  requestId: z.string().trim().min(1).max(120).optional(),
   clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   from: z.coerce.date().optional(),
@@ -487,11 +490,15 @@ export const replaceTenantDocumentSchema = z.object({
 
 export const createTenantInvitationSchema = z.object({
   email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
+  phone: z.string().trim().regex(/^\+[1-9]\d{7,14}$/, 'Phone must be in E.164 format.').optional(),
+  channels: z.array(z.enum(['email', 'sms'])).min(1).max(2).default(['email']).refine((channels) => new Set(channels).size === channels.length, 'Channels must not contain duplicates.'),
   role: z.enum(['tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']),
   scope: z.enum(['tenant', 'clinic', 'branch']),
   clinicId: z.string().regex(/^[a-f0-9]{24}$/i).optional(),
   branchIds: z.array(z.string().regex(/^[a-f0-9]{24}$/i)).max(100).optional(),
   expiresInDays: z.coerce.number().int().min(1).max(30).default(7),
+}).refine((input) => !input.channels.includes('sms') || Boolean(input.phone), {
+  message: 'A phone number in E.164 format is required when SMS is selected.', path: ['phone'],
 });
 
 export const tenantUserListQuerySchema = z.object({

@@ -1,0 +1,83 @@
+paths:
+  /tenant/finance/summary:
+    get:
+      tags: [Tenant Finance]
+      summary: Consolidated financial summary
+      description: Read-only group report aggregated from Clinic Finance source entries. Returns currency-separated totals and aggregate outstanding patient balances. It never exposes patient-level details or Cutilora subscription billing.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: currency, in: query, schema: { type: string, pattern: "^[A-Za-z]{3}$" } }
+      responses:
+        "200": { description: Consolidated totals grouped by currency, receivables and clinic breakdown }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/finance/clinic-comparison:
+    get:
+      tags: [Tenant Finance]
+      summary: Compare clinic and branch financial performance
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: currency, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Clinic and branch totals, grouped by currency }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/finance/revenue-trends:
+    get:
+      tags: [Tenant Finance]
+      summary: Revenue and collection trends
+      description: Returns monthly invoice and collection trends, payment-method mix and service/category revenue mix when source line items provide categories. Periods use UTC.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: currency, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Monthly trends, payment-method mix and revenue mix grouped by currency }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/finance/expense-summary:
+    get:
+      tags: [Tenant Finance]
+      summary: Expense category and clinic comparison
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: currency, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Expenses grouped by category, clinic, branch and currency }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/finance/reports:
+    get:
+      tags: [Tenant Finance]
+      summary: Export consolidated financial report
+      description: Downloads a CSV export of clinic and branch totals. Patient-level records are not included.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: currency, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: CSV export
+          content:
+            text/csv:
+              schema: { type: string }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
