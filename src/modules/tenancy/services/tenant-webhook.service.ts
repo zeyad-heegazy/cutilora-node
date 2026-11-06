@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
+import { request as httpsRequest } from 'node:https';
 import { TenantWebhookEndpoint } from '../models/tenant-webhook-endpoint.model.js';
 import { TenantWebhookDelivery } from '../models/tenant-webhook-delivery.model.js';
 import { Clinic } from '../models/clinic.model.js';
@@ -48,6 +49,31 @@ async function validateWebhookUrl(value: string) {
     throw { status: 400, code: 'WEBHOOK_URL_UNSAFE', message: 'Webhook hostname resolves to a non-public network address.' };
   }
   return url.toString();
+}
+async function sendWebhook(urlValue: string, body: string, headers: Record<string, string>) {
+  const url = new URL(await validateWebhookUrl(urlValue));
+  const addresses = await lookup(url.hostname, { all: true, verbatim: true });
+  const target = addresses[0];
+  if (!target || (target.family === 4 ? privateAddress(target.address) : privateIpv6(target.address))) {
+    throw new Error('Webhook destination is not publicly routable.');
+  }
+  return new Promise<number>((resolve, reject) => {
+    const request = httpsRequest(url, {
+      method: 'POST',
+      headers,
+      timeout: 10_000,
+      lookup: ((_hostname: string, _options: unknown, callback: (error: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
+        callback(null, target.address, target.family);
+      }) as any,
+    }, response => {
+      const status = response.statusCode ?? 0;
+      response.resume();
+      response.on('end', () => resolve(status));
+    });
+    request.on('timeout', () => request.destroy(new Error('Webhook request timed out.')));
+    request.on('error', reject);
+    request.end(body);
+  });
 }
 function safeEndpoint(item: any) {
   return {
@@ -150,19 +176,13 @@ export const tenantWebhookService = {
       let responseExcerpt = '';
       let errorCode = '';
       try {
-        const response = await fetch(endpoint.url, {
-          method: 'POST', redirect: 'error',
-          headers: {
-            'content-type': 'application/json', 'user-agent': 'Cutilora-Webhooks/1.0',
-            'x-cutilora-event': delivery.eventType, 'x-cutilora-delivery': delivery.eventId,
-            'x-cutilora-timestamp': timestamp, 'x-cutilora-signature': `v1=${signature}`,
-          },
-          body, signal: AbortSignal.timeout(10_000),
+        responseStatus = await sendWebhook(endpoint.url, body, {
+          'content-type': 'application/json', 'user-agent': 'Cutilora-Webhooks/1.0',
+          'x-cutilora-event': delivery.eventType, 'x-cutilora-delivery': delivery.eventId,
+          'x-cutilora-timestamp': timestamp, 'x-cutilora-signature': `v1=${signature}`,
         });
-        responseStatus = response.status;
-        responseExcerpt = response.ok ? 'Accepted by endpoint.' : 'Endpoint returned a non-success response.';
-        await response.body?.cancel();
-        if (!response.ok) errorCode = `HTTP_${response.status}`;
+        responseExcerpt = responseStatus >= 200 && responseStatus < 300 ? 'Accepted by endpoint.' : 'Endpoint returned a non-success response.';
+        if (responseStatus < 200 || responseStatus >= 300) errorCode = `HTTP_${responseStatus}`;
       } catch (error) {
         errorCode = error instanceof Error && error.name === 'TimeoutError' ? 'TIMEOUT' : 'NETWORK_ERROR';
       }
