@@ -13,7 +13,7 @@ const schema = new Schema({
   metadata: { type: Schema.Types.Mixed, default: {}, immutable: true },
 }, { timestamps: { createdAt: true, updatedAt: false }, versionKey: false, minimize: false });
 
-schema.index({ tenantId: 1, createdAt: -1 });
+schema.post('save', (doc) => {\n  void import('../services/tenant-webhook.service.js')\n    .then(({ tenantWebhookService }) => tenantWebhookService.queueAuditEvent(doc.toObject()))\n    .catch(() => undefined);\n});\n\nschema.index({ tenantId: 1, createdAt: -1 });
 schema.index({ tenantId: 1, actorUserId: 1, createdAt: -1 });
 schema.index({ tenantId: 1, action: 1, createdAt: -1 });
 schema.index({ tenantId: 1, clinicId: 1, createdAt: -1 });
