@@ -13,6 +13,7 @@ const envSchema = z.object({
     .string()
     .min(32, 'JWT_SECRET must contain at least 32 characters'),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+  INTEGRATION_ENCRYPTION_KEY: z.string().min(32).optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
