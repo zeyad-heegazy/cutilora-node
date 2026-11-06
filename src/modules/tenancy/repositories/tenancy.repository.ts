@@ -4,12 +4,14 @@ import { Clinic } from '../models/clinic.model.js';
 import { Branch } from '../models/branch.model.js';
 import { Subscription } from '../models/subscription.model.js';
 import { SubscriptionPayment } from '../models/subscription-payment.model.js';
+import { SubscriptionChangeRequest } from '../models/subscription-change-request.model.js';
 import { TenantMembership } from '../models/tenant-membership.model.js';
 import { User } from '../../auth/models/user.model.js';
 import { TenantDocument } from '../models/tenant-document.model.js';
 import { BranchHoliday } from '../models/branch-holiday.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { TenantConfiguration } from '../models/tenant-configuration.model.js';
+import { TenantCatalogTemplate } from '../models/tenant-catalog-template.model.js';
 import { TenantInvitation } from '../models/tenant-invitation.model.js';
 import { TenantRole } from '../models/tenant-role.model.js';
 
@@ -39,6 +41,56 @@ export const tenancyRepository = {
     return Clinic.findOneAndUpdate(
       { _id: clinicId, tenantId, $or: [{ 'settings.organizationDefaultsVersion': { $lt: version } }, { 'settings.organizationDefaultsVersion': { $exists: false } }] },
       { $set: { 'settings.organizationDefaults': values, 'settings.organizationDefaultsVersion': version } },
+      { new: true, runValidators: true },
+    );
+  },
+  listPublishedTenantCatalogTemplates(tenantId: string) {
+    return TenantCatalogTemplate.find({ tenantId, status: 'published' }).select('_id key type version content publishedAt').lean();
+  },
+  listTenantCatalogTemplates(tenantId: string, query: { type?: string; status?: string }) {
+    return TenantCatalogTemplate.find({ tenantId, ...(query.type ? { type: query.type } : {}), ...(query.status ? { status: query.status } : {}) }).sort({ type: 1, name: 1 }).lean();
+  },
+  findTenantCatalogTemplate(tenantId: string, templateId: string) {
+    return TenantCatalogTemplate.findOne({ _id: templateId, tenantId }).lean();
+  },
+  createTenantCatalogTemplate(data: Record<string, unknown>) {
+    return TenantCatalogTemplate.create(data);
+  },
+  updateTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number, data: Record<string, unknown>, changedBy: string) {
+    const nextVersion = expectedVersion + 1;
+    return TenantCatalogTemplate.findOneAndUpdate(
+      { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
+      { $set: { ...data, status: 'draft', publishedAt: null, publishedBy: null, version: nextVersion }, $push: { history: { $each: [{ version: nextVersion, content: data.content, changedBy, changedAt: new Date() }], $slice: -50 } } },
+      { new: true, runValidators: true },
+    );
+  },
+  rollbackTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number, targetVersion: number, content: Record<string, unknown>, changedBy: string) {
+    const nextVersion = expectedVersion + 1;
+    return TenantCatalogTemplate.findOneAndUpdate(
+      { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
+      { $set: { content, version: nextVersion, status: 'draft', publishedAt: null, publishedBy: null }, $push: { history: { $each: [{ version: nextVersion, content, changedBy, changedAt: new Date() }], $slice: -50 } } },
+      { new: true, runValidators: true },
+    );
+  },
+  archiveTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number) {
+    return TenantCatalogTemplate.findOneAndUpdate(
+      { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
+      { $set: { status: 'archived', version: expectedVersion + 1 } },
+      { new: true, runValidators: true },
+    );
+  },
+  publishTenantCatalogTemplate(tenantId: string, templateId: string, expectedVersion: number, userId: string) {
+    return TenantCatalogTemplate.findOneAndUpdate(
+      { _id: templateId, tenantId, version: expectedVersion, status: { $ne: 'archived' } },
+      { $set: { status: 'published', publishedAt: new Date(), publishedBy: userId } },
+      { new: true, runValidators: true },
+    );
+  },
+  applyCatalogTemplateToClinic(tenantId: string, clinicId: string, template: Record<string, any>) {
+    const path = `settings.organizationTemplates.${template.key.replace(/[^a-z0-9_-]/gi, '_')}`;
+    return Clinic.findOneAndUpdate(
+      { _id: clinicId, tenantId, [`${path}.version`]: { $ne: template.version } },
+      { $set: { [path]: { templateId: String(template._id), type: template.type, version: template.version, content: template.content, appliedAt: new Date() } } },
       { new: true, runValidators: true },
     );
   },
@@ -79,6 +131,13 @@ export const tenancyRepository = {
   },
   countExpiringTenantDocuments(tenantId: string, from: Date, to: Date) {
     return TenantDocument.countDocuments({ tenantId, status: 'active', expiresAt: { $gte: from, $lte: to } });
+  },
+  async getTenantStorageUsageBytes(tenantId: string, excludeDocumentId?: string) {
+    const [result] = await TenantDocument.aggregate([
+      { $match: { tenantId: new Types.ObjectId(tenantId), status: 'active', ...(excludeDocumentId ? { _id: { $ne: new Types.ObjectId(excludeDocumentId) } } : {}) } },
+      { $group: { _id: null, totalBytes: { $sum: '$sizeBytes' } } },
+    ]);
+    return Number(result?.totalBytes ?? 0);
   },
   listTenantDocuments(tenantId: string, clinicId: string | null = null) {
     return TenantDocument.find({ tenantId, clinicId, status: 'active' }).sort({ createdAt: -1 }).lean();
@@ -200,6 +259,22 @@ export const tenancyRepository = {
       tenantId,
       $or: [{ invoiceNumber: { $gt: '' } }, { invoiceUrl: { $gt: '' } }],
     }).select('amount currency status method provider invoiceNumber invoiceUrl paidAt failureReason recordedAt createdAt').lean();
+  },
+  async listTenantBillingPayments(tenantId: string) {
+    return SubscriptionPayment.find({ tenantId })
+      .select('amount currency status method provider invoiceNumber paidAt failureReason recordedAt createdAt')
+      .sort({ createdAt: -1 }).limit(100).lean();
+  },
+  hasPendingSubscriptionChangeRequest(tenantId: string) {
+    return SubscriptionChangeRequest.exists({ tenantId, status: 'pending' });
+  },
+  async createSubscriptionChangeRequest(data: Record<string, unknown>) {
+    const subscription = await Subscription.findOne({ tenantId: data.tenantId }).select('_id');
+    if (!subscription) return null;
+    return SubscriptionChangeRequest.create({ ...data, subscriptionId: subscription._id });
+  },
+  listSubscriptionChangeRequests(tenantId: string) {
+    return SubscriptionChangeRequest.find({ tenantId }).sort({ createdAt: -1 }).limit(50).lean();
   },
   async addSubscriptionPayment(
     tenantId: string,

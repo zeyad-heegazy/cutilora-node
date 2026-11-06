@@ -9,6 +9,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     exportTenantAuditEvents: vi.fn(),
     listDashboardClinics: vi.fn(),
     findSubscriptionByTenantId: vi.fn(),
+    getTenantStorageUsageBytes: vi.fn().mockResolvedValue(0),
     // Counts pending invitations from the dedicated invitation collection.
   },
 }));
@@ -27,7 +28,10 @@ import { tenancyRepository } from '../../src/modules/tenancy/repositories/tenanc
 const tenantId = '64b000000000000000000001';
 
 describe('tenant dashboard service', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(tenancyRepository.getTenantStorageUsageBytes).mockResolvedValue(0);
+  });
 
   it('returns only safe organization profile fields', async () => {
     vi.mocked(tenancyRepository.findTenantById).mockResolvedValue({
@@ -97,7 +101,7 @@ describe('tenant dashboard service', () => {
     } as any);
 
     const usage = await tenancyService.getTenantSubscriptionUsage(tenantId);
-    expect(usage.usage).toEqual({ clinics: 3, branches: 5, activeMembers: 8, pendingInvitations: 2 });
+    expect(usage.usage).toEqual({ clinics: 3, branches: 5, activeMembers: 8, pendingInvitations: 2, storageBytes: 0 });
     expect(usage.limits).toBeNull();
     expect(usage.limitsAvailable).toBe(false);
   });
@@ -142,6 +146,8 @@ describe('tenant dashboard service', () => {
     const usage = await tenancyService.getTenantSubscriptionUsage(tenantId);
     expect(usage.limits).toEqual({ maxClinics: 5, maxBranches: 10, maxUsers: 20, maxStorageBytes: 104857600 });
     expect(usage.limitsAvailable).toBe(true);
+    expect(usage.usage.storageBytes).toBe(0);
+    expect(usage.warnings).toEqual([]);
     expect(usage.plan?.features).toEqual(['advanced_reports']);
   });
 

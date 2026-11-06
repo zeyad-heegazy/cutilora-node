@@ -4,7 +4,7 @@ import { acceptInvitationSchema, loginSchema } from '../validations/auth.validat
 
 export const authController = {
   async login(req: Request, res: Response, next: NextFunction) {
-    try { const input = loginSchema.parse(req.body); res.json({ success: true, data: await authService.login(input.email, input.password) }); }
+    try { const input = loginSchema.parse(req.body); res.json({ success: true, data: await authService.login(input.email, input.password, { userAgent: req.get('user-agent') ?? null }) }); }
     catch (error) { next(error); }
   },
   async acceptInvitation(req: Request, res: Response, next: NextFunction) {

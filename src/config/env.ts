@@ -13,6 +13,11 @@ const envSchema = z.object({
     .string()
     .min(32, 'JWT_SECRET must contain at least 32 characters'),
   ACCESS_TOKEN_TTL_SECONDS: z.coerce.number().int().positive().default(3600),
+  INTEGRATION_ENCRYPTION_KEY: z.string().min(32).optional(),
+}).superRefine((value, context) => {
+  if (value.NODE_ENV === 'production' && !value.INTEGRATION_ENCRYPTION_KEY) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['INTEGRATION_ENCRYPTION_KEY'], message: 'INTEGRATION_ENCRYPTION_KEY is required in production.' });
+  }
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -27,4 +32,5 @@ if (!parsed.success) {
 
 export const env = {
   ...parsed.data,
+  INTEGRATION_ENCRYPTION_KEY: parsed.data.INTEGRATION_ENCRYPTION_KEY ?? parsed.data.JWT_SECRET,
 };

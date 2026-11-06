@@ -3,6 +3,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
   tenancyRepository: {
     createTenantAuditEvent: vi.fn().mockResolvedValue({}),
+    findSubscriptionByTenantId: vi.fn().mockResolvedValue(null),
+    getTenantStorageUsageBytes: vi.fn().mockResolvedValue(0),
+    acquireTenantEntitlementLock: vi.fn().mockResolvedValue(true),
+    releaseTenantEntitlementLock: vi.fn().mockResolvedValue(true),
     findClinicById: vi.fn(),
     createTenantDocument: vi.fn(),
     listTenantDocuments: vi.fn(),
@@ -36,7 +40,13 @@ const documentId = '64b000000000000000000003';
 const pdfBase64 = Buffer.from('%PDF-1.7\nprivate document').toString('base64');
 
 describe('tenant document service', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(tenancyRepository.acquireTenantEntitlementLock).mockResolvedValue(true);
+    vi.mocked(tenancyRepository.releaseTenantEntitlementLock).mockResolvedValue(true);
+    vi.mocked(tenancyRepository.findSubscriptionByTenantId).mockResolvedValue(null as any);
+    vi.mocked(tenancyRepository.getTenantStorageUsageBytes).mockResolvedValue(0);
+  });
 
   it('stores validated document bytes privately and persists tenant ownership metadata', async () => {
     vi.mocked(storePrivateTenantDocument).mockResolvedValue(tenantId + '/file.pdf');

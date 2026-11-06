@@ -29,22 +29,23 @@ server-side and must not be committed.
 
 ## Invitation delivery
 
-Tenant invitations remain on the existing manual-delivery flow for now:
-the API returns the one-time invitation token to the authorized inviter and
-does not claim that an email or SMS was sent. Do not wire automatic delivery
-until the provider, sender identity, invitation URL strategy, retry policy,
-and delivery/audit requirements are approved.
+Tenant invitations persist a configurable channel selection (`email`, `sms`,
+or both) and an optional E.164 phone destination. Email remains the account
+identity and invitation uniqueness key; selecting SMS requires a phone number.
+The API still returns the one-time invitation token to the authorized inviter
+for private/manual delivery. Provider adapters are not registered, so no
+automatic message is sent and the API does not claim delivery. The selected
+channels are retained for the eventual dispatcher.
 
 ## Decisions required before adapter integration
 
 1. Email provider and verified sender/domain.
 2. SMS provider with Egypt and intended GCC country coverage, sender ID/OTP
    requirements, and commercial account.
-3. Whether invitations are email-only, SMS-only, or channel-selectable.
-4. Public invitation acceptance URL and link/token format.
-5. Retry, timeout, idempotency, bounce/failure handling, and delivery status
+3. Public invitation acceptance URL and link/token format.
+4. Retry, timeout, idempotency, bounce/failure handling, and delivery status
    persistence requirements.
-6. Whether messages are sent synchronously or through a durable queue/outbox.
+5. Whether messages are sent synchronously or through a durable queue/outbox.
 
 ## Safety and operational rules
 

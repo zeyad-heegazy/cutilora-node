@@ -63,6 +63,17 @@ const preferencesSchema = new Schema(
   { _id: false },
 );
 
+const billingProfileSchema = new Schema({
+  legalName: { type: String, trim: true, maxlength: 200, default: '' },
+  taxNumber: { type: String, trim: true, maxlength: 100, default: '' },
+  vatNumber: { type: String, trim: true, maxlength: 100, default: '' },
+  email: { type: String, trim: true, lowercase: true, maxlength: 254, default: '' },
+  phone: { type: String, trim: true, maxlength: 40, default: '' },
+  address: { type: String, trim: true, maxlength: 500, default: '' },
+  city: { type: String, trim: true, maxlength: 120, default: '' },
+  countryCode: { type: String, trim: true, uppercase: true, minlength: 2, maxlength: 2, default: '' },
+}, { _id: false });
+
 const schema = new Schema(
   {
     name: { type: String, required: true, trim: true, maxlength: 160 },
@@ -90,6 +101,7 @@ const schema = new Schema(
       required: true,
     },
     contact: { type: contactSchema, default: () => ({}) },
+    billingProfile: { type: billingProfileSchema, default: () => ({}) },
     address: { type: addressSchema, default: () => ({}) },
     legal: { type: legalSchema, default: () => ({}) },
     branding: { type: brandingSchema, default: () => ({}) },
