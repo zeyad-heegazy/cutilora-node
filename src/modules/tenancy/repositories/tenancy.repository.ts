@@ -131,6 +131,13 @@ export const tenancyRepository = {
   countExpiringTenantDocuments(tenantId: string, from: Date, to: Date) {
     return TenantDocument.countDocuments({ tenantId, status: 'active', expiresAt: { $gte: from, $lte: to } });
   },
+  async getTenantStorageUsageBytes(tenantId: string, excludeDocumentId?: string) {
+    const [result] = await TenantDocument.aggregate([
+      { $match: { tenantId: new Types.ObjectId(tenantId), status: 'active', ...(excludeDocumentId ? { _id: { $ne: new Types.ObjectId(excludeDocumentId) } } : {}) } },
+      { $group: { _id: null, totalBytes: { $sum: '$sizeBytes' } } },
+    ]);
+    return Number(result?.totalBytes ?? 0);
+  },
   listTenantDocuments(tenantId: string, clinicId: string | null = null) {
     return TenantDocument.find({ tenantId, clinicId, status: 'active' }).sort({ createdAt: -1 }).lean();
   },
