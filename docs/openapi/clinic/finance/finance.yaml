@@ -120,6 +120,20 @@ paths:
         "409": { description: Entry is settled, unsupported or changed concurrently }
 
   /clinic/finance/packages:
+    get:
+      tags: [Clinic Finance]
+      summary: List prepaid packages
+      description: Lists package balances and lifecycle status within the tenant and active clinic or branch membership scope.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { type: string, enum: [active, fully_redeemed, refund_pending, refunded, expired] } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Paginated prepaid package inventory }
     post:
       tags: [Clinic Finance]
       summary: Create a prepaid package from a fully paid clinic invoice
