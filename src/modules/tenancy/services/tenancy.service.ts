@@ -696,22 +696,30 @@ export const tenancyService = {
     };
   },
   async getTenantSubscriptionUsage(tenantId: string) {
-    const [counts, subscription] = await Promise.all([
+    const [counts, subscription, storageBytes] = await Promise.all([
       tenancyRepository.getDashboardCounts(tenantId),
       tenancyRepository.findSubscriptionByTenantId(tenantId),
+      tenancyRepository.getTenantStorageUsageBytes(tenantId),
     ]);
     const limits = subscription?.plan?.limits ?? null;
     const limitsAvailable = Boolean(limits && Object.values(limits).some((value) => typeof value === 'number'));
+    const usage = {
+      clinics: counts.clinics.total,
+      branches: counts.branches.total,
+      activeMembers: counts.activeMembers,
+      pendingInvitations: counts.pendingInvitations,
+      storageBytes,
+    };
+    const warnings = limits ? Object.entries({ clinics: limits.maxClinics, branches: limits.maxBranches, activeMembers: limits.maxUsers, storageBytes: limits.maxStorageBytes })
+      .filter(([key, limit]) => typeof limit === 'number' && (usage as any)[key] >= Number(limit) * 0.8)
+      .map(([key, limit]) => ({ resource: key, limit, currentUsage: (usage as any)[key], exceeded: (usage as any)[key] > Number(limit), approaching: (usage as any)[key] <= Number(limit) }))
+      : [];
     return {
       plan: subscription ? { code: subscription.plan?.code, name: subscription.plan?.name, features: subscription.plan?.features ?? [] } : null,
-      usage: {
-        clinics: counts.clinics.total,
-        branches: counts.branches.total,
-        activeMembers: counts.activeMembers,
-        pendingInvitations: counts.pendingInvitations,
-      },
+      usage,
       limits,
       limitsAvailable,
+      warnings,
       limitsMessage: limitsAvailable ? null : 'No usage limits are configured for this subscription.',
     };
   },
