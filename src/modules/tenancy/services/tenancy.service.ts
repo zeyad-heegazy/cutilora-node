@@ -638,6 +638,39 @@ export const tenancyService = {
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
     };
   },
+  async getTenantBillingProfile(tenantId: string) {
+    const tenant = await tenancyRepository.findTenantById(tenantId);
+    return tenant?.billingProfile ?? null;
+  },
+  async updateTenantBillingProfile(tenantId: string, userId: string, input: Record<string, unknown>) {
+    const tenant = await tenancyRepository.updateTenant(tenantId, { billingProfile: input, updatedBy: userId });
+    if (!tenant) return null;
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'billing.profile.updated', targetType: 'tenant', targetId: tenantId, metadata: { changedFields: Object.keys(input) } });
+    return tenant.billingProfile;
+  },
+  async createTenantSubscriptionChangeRequest(tenantId: string, userId: string, input: Record<string, any>) {
+    const subscription = await tenancyRepository.findSubscriptionByTenantId(tenantId);
+    if (!subscription) return null;
+    if (input.type === 'cancel' && ['canceled', 'expired'].includes(subscription.status)) {
+      throw { status: 409, code: 'SUBSCRIPTION_ALREADY_ENDED', message: 'This subscription is already ended.' };
+    }
+    if (input.type === 'reactivate' && !subscription.cancelAtPeriodEnd && subscription.status !== 'canceled') {
+      throw { status: 409, code: 'SUBSCRIPTION_NOT_PENDING_CANCELLATION', message: 'There is no pending cancellation to reactivate.' };
+    }
+    const pending = await tenancyRepository.listSubscriptionChangeRequests(tenantId);
+    if (pending.some((item: any) => item.status === 'pending')) {
+      throw { status: 409, code: 'SUBSCRIPTION_CHANGE_REQUEST_PENDING', message: 'A subscription change request is already awaiting Platform review.' };
+    }
+    const request = await tenancyRepository.createSubscriptionChangeRequest({ ...input, tenantId, requestedBy: userId });
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'subscription.change_requested', targetType: 'subscription', targetId: String(subscription._id), metadata: { requestId: String(request?._id), type: input.type, effectiveAt: input.effectiveAt } });
+    return request;
+  },
+  listTenantSubscriptionChangeRequests(tenantId: string) {
+    return tenancyRepository.listSubscriptionChangeRequests(tenantId);
+  },
+  listTenantBillingPayments(tenantId: string) {
+    return tenancyRepository.listTenantBillingPayments(tenantId);
+  },
   async getTenantSubscription(tenantId: string) {
     const item = await tenancyRepository.findSubscriptionByTenantId(tenantId);
     if (!item) return null;
