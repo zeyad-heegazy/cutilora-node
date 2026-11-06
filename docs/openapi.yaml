@@ -163,6 +163,10 @@ paths:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1preview-apply"
   /tenant/configuration/apply:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1apply"
+  /tenant/integrations:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations"
+  /tenant/integrations/{integrationId}/status:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1status"
   /tenant/audit-logs/export:
     $ref: "./openapi/tenant/governance/audit-logs.yaml#/paths/~1tenant~1audit-logs~1export"
   /tenant/audit-logs:
