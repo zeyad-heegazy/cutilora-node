@@ -8,6 +8,7 @@ import { tenantCatalogController } from '../controllers/tenant-catalog.controlle
 import { tenantFinanceController } from '../controllers/tenant-finance.controller.js';
 import { tenantIntegrationController } from '../controllers/tenant-integration.controller.js';
 import { tenantWebhookController } from '../controllers/tenant-webhook.controller.js';
+import { tenantReportsController } from '../controllers/tenant-reports.controller.js';
 
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
@@ -51,6 +52,8 @@ tenantRouter.post('/webhooks', requireTenantScope, requireTenantPermission('inte
 tenantRouter.post('/webhooks/:endpointId/rotate-secret', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.rotateSecret);
 tenantRouter.patch('/webhooks/:endpointId/status', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.setStatus);
 tenantRouter.get('/webhooks/:endpointId/deliveries', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.deliveries);
+tenantRouter.get('/reports/organization', requireTenantScope, requireTenantPermission('dashboard.read'), tenantReportsController.organizationOverview);
+tenantRouter.get('/reports/organization/export', requireTenantScope, requireTenantPermission('reports.export'), tenantReportsController.exportOrganizationOverview);
 tenantRouter.get('/audit-logs', requireTenantScope, requireTenantPermission('audit.read'), tenancyController.listTenantAuditEvents);
 tenantRouter.get('/audit-logs/export', requireTenantScope, requireTenantPermission('audit.export'), tenancyController.exportTenantAuditEvents);
 tenantRouter.get('/billing-profile', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantBillingProfile);
