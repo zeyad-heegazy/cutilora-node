@@ -58,6 +58,18 @@ function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>
   return result;
 }
 
+function sanitizeAuditValue(value: any, depth = 0): any {
+  if (depth > 5) return '[TRUNCATED]';
+  if (Array.isArray(value)) return value.slice(0, 100).map(item => sanitizeAuditValue(item, depth + 1));
+  if (!value || typeof value !== 'object') return typeof value === 'string' ? value.slice(0, 2000) : value;
+  return Object.fromEntries(Object.entries(value).slice(0, 100).map(([key, item]) => [
+    key,
+    /password|secret|token|credential|authorization|api.?key|card|cvv/i.test(key)
+      ? '[REDACTED]'
+      : sanitizeAuditValue(item, depth + 1),
+  ]));
+}
+
 function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
   const filter: Record<string, any> = { tenantId };
   if (query.actorId) filter.actorUserId = query.actorId;
@@ -411,8 +423,9 @@ export const tenancyService = {
   countExpiringTenantDocuments(tenantId: string, from: Date, to: Date) {
     return tenancyRepository.countExpiringTenantDocuments(tenantId, from, to);
   },
-  listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
-    return tenancyRepository.listTenantAuditEvents(buildTenantAuditFilter(tenantId, query), query.page, query.perPage);
+  async listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
+    const result = await tenancyRepository.listTenantAuditEvents(buildTenantAuditFilter(tenantId, query), query.page, query.perPage);
+    return { ...result, items: result.items.map((item: any) => ({ ...item, metadata: sanitizeAuditValue(item.metadata), changes: sanitizeAuditValue(item.changes) })) };
   },
   async exportTenantAuditEvents(tenantId: string, query: Record<string, any>) {
     const limit = 5000;
@@ -426,7 +439,7 @@ export const tenancyService = {
     };
     const csv = [
       columns.join(','),
-      ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(['metadata', 'changes'].includes(column) ? JSON.stringify(row[column] ?? null) : row[column])).join(',')),
+      ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(['metadata', 'changes'].includes(column) ? JSON.stringify(sanitizeAuditValue(row[column] ?? null)) : row[column])).join(',')),
     ].join('\r\n');
     return { csv, truncated, exported: Math.min(rows.length, limit) };
   },
