@@ -1,5 +1,8 @@
 import { Types } from 'mongoose';
 import { ClinicFinanceEntry } from '../models/clinic-finance-entry.model.js';
+import { ClinicFinancePackage } from '../models/clinic-finance-package.model.js';
+import { ClinicFinancePackageEvent } from '../models/clinic-finance-package-event.model.js';
+import { ClinicFinanceDailyClose } from '../models/clinic-finance-daily-close.model.js';
 import { Clinic } from '../../../tenancy/models/clinic.model.js';
 import { Branch } from '../../../tenancy/models/branch.model.js';
 import { TenantAuditEvent } from '../../../tenancy/models/tenant-audit-event.model.js';
@@ -153,7 +156,7 @@ export const clinicFinanceService = {
     if (!money(input.amount) || input.amount <= 0) fail(400, 'INVALID_AMOUNT', 'Expense amount must be greater than zero with at most two decimal places.');
     const currency = cleanCurrency(input.currency);
     if (!/^[A-Z]{3}$/.test(currency)) fail(400, 'INVALID_CURRENCY', 'currency must be a three-letter ISO currency code.');
-    const expense = await ClinicFinanceEntry.create({ tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null, type: 'expense', status: 'posted', currency, amount: input.amount, category: input.category.trim(), description: input.description?.trim() || '', reference: input.reference?.trim() || null, occurredAt: input.spentAt ? new Date(input.spentAt) : new Date(), createdBy: actor.userId });
+    const expense = await ClinicFinanceEntry.create({ tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null, type: 'expense', status: 'posted', currency, amount: input.amount, category: input.category.trim(), description: input.description?.trim() || '', reference: input.reference?.trim() || null, method: input.method?.trim() || 'other', occurredAt: input.spentAt ? new Date(input.spentAt) : new Date(), createdBy: actor.userId });
     await audit(actor, 'finance.expense.recorded', expense);
     return normalizeEntry(expense);
   },
