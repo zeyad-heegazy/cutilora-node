@@ -44,8 +44,10 @@ tenantRouter.get('/configuration', requireTenantScope, requireTenantPermission('
 tenantRouter.patch('/configuration', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.updateTenantConfiguration);
 tenantRouter.post('/configuration/preview-apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.previewTenantConfigurationApply);
 tenantRouter.post('/configuration/apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.applyTenantConfiguration);
-tenantRouter.get('/integrations/providers', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.providers);\ntenantRouter.get('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.list);
-tenantRouter.put('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.save);\ntenantRouter.post('/integrations/:integrationId/test', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.testConnection);
+tenantRouter.get('/integrations/providers', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.providers);
+tenantRouter.get('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.list);
+tenantRouter.put('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.save);
+tenantRouter.post('/integrations/:integrationId/test', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.testConnection);
 tenantRouter.patch('/integrations/:integrationId/status', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.updateStatus);
 tenantRouter.get('/webhooks', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.list);
 tenantRouter.post('/webhooks', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.create);
