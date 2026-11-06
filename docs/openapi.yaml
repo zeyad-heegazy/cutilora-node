@@ -163,10 +163,22 @@ paths:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1preview-apply"
   /tenant/configuration/apply:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1apply"
+  /tenant/integrations/providers:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1providers"
   /tenant/integrations:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations"
+  /tenant/integrations/{integrationId}/test:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1test"
   /tenant/integrations/{integrationId}/status:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1status"
+  /tenant/webhooks:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks"
+  /tenant/webhooks/{endpointId}/rotate-secret:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1rotate-secret"
+  /tenant/webhooks/{endpointId}/status:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1status"
+  /tenant/webhooks/{endpointId}/deliveries:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1deliveries"
   /tenant/audit-logs/export:
     $ref: "./openapi/tenant/governance/audit-logs.yaml#/paths/~1tenant~1audit-logs~1export"
   /tenant/audit-logs:
