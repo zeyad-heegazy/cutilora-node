@@ -109,6 +109,14 @@ paths:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1refunds"
   /clinic/finance/expenses:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1expenses"
+  /tenant/billing-profile:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1billing-profile"
+  /tenant/subscription/change-requests:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription~1change-requests"
+  /tenant/subscription/payments:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription~1payments"
+  /tenant/invoices/{invoiceId}/download:
+    $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1invoices~1{invoiceId}~1download"
   /tenant/subscription:
     $ref: "./openapi/tenant/subscription/subscription.yaml#/paths/~1tenant~1subscription"
   /tenant/subscription/usage:
