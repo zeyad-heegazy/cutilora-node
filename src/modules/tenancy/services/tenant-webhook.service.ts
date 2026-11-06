@@ -9,11 +9,11 @@ import { encryptIntegrationSecret, decryptIntegrationSecret } from './integratio
 const MAX_ATTEMPTS = 8;
 const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000, 12 * 60 * 60_000];
 const SAFE_EVENTS = new Set([
-  'clinic.created', 'clinic.updated', 'clinic.deactivated',
-  'branch.created', 'branch.updated', 'branch.closed',
-  'membership.invited', 'membership.accepted', 'membership.suspended', 'membership.removed',
+  'clinic.created', 'clinic.updated', 'clinic.deactivated', 'clinic.settings.overridden',
+  'branch.created', 'branch.updated', 'branch.closed', 'branch.suspended', 'branch.temporarily_closed', 'branch.permanently_closed', 'branch.holiday.created', 'branch.holiday.updated', 'branch.holiday.cancelled', 'branch.settings.overridden',
+  'membership.invited', 'membership.accepted', 'membership.suspended', 'membership.removed', 'membership.invitation.created', 'membership.invitation.revoked', 'membership.invitation.resent', 'membership.user_session.revoked', 'membership.updated',
   'role.created', 'role.updated', 'role.deactivated', 'permission.changed',
-  'organization.updated', 'configuration.updated', 'configuration.published',
+  'organization.updated', 'organization.profile.updated', 'organization.preferences.updated', 'configuration.updated', 'configuration.published', 'configuration.defaults.updated', 'configuration.defaults.applied', 'billing.profile.updated',
   'subscription.change_requested', 'integration.configuration.saved', 'integration.disabled', 'integration.enabled',
   'integration.connection_verified', 'integration.connection_failed', 'integration.credentials.rotated', 'integration.credentials.revoked',
 ]);
