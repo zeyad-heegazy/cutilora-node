@@ -100,6 +100,21 @@ describe('clinic finance source records', () => {
     )).rejects.toMatchObject({ code: 'REFUND_EXCEEDS_PAYMENT', status: 409 });
     expect(financeMocks.create).not.toHaveBeenCalled();
   });
+  it('cannot read an invoice owned by a different tenant', async () => {
+    financeMocks.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue(null) });
+
+    await expect(clinicFinanceService.recordPayment(
+      { tenantId, userId, scope: 'tenant' },
+      { invoiceId, amount: 20, currency: 'EGP' },
+    )).rejects.toMatchObject({ code: 'INVOICE_NOT_FOUND', status: 404 });
+
+    expect(financeMocks.findOne).toHaveBeenCalledWith({
+      _id: invoiceId, tenantId, type: 'invoice', status: 'issued',
+    });
+    expect(financeMocks.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(financeMocks.create).not.toHaveBeenCalled();
+  });
+
   it('reconciles tenant summary from clinic source records without exposing patient details', async () => {
     financeMocks.aggregate
       .mockResolvedValueOnce([
@@ -112,6 +127,11 @@ describe('clinic finance source records', () => {
       .mockResolvedValueOnce([{ _id: 'EGP', outstanding: 350, invoiceCount: 1 }])
       .mockResolvedValueOnce([]);
     const result = await clinicFinanceService.overview(tenantId, { from: new Date('2026-01-01T00:00:00.000Z'), to: new Date('2026-01-31T23:59:59.999Z') });
+    expect(financeMocks.aggregate).toHaveBeenCalledTimes(3);
+    for (const [pipeline] of financeMocks.aggregate.mock.calls) {
+      expect(pipeline[0].$match.tenantId).toBeDefined();
+      expect(String(pipeline[0].$match.tenantId)).toBe(tenantId);
+    }
     const egp = result.currencies.find((item: any) => item.currency === 'EGP') as any;
     expect(egp).toMatchObject({ invoiced: 1000, collected: 700, refunded: 50, expenses: 200, operatingResult: 750, netCash: 450 });
     expect(result.currencies.find((item: any) => item.currency === 'SAR')).toMatchObject({ invoiced: 300 });
