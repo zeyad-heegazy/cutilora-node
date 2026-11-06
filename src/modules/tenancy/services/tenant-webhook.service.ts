@@ -7,6 +7,7 @@ import { TenantWebhookDelivery } from '../models/tenant-webhook-delivery.model.j
 import { Clinic } from '../models/clinic.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { encryptIntegrationSecret, decryptIntegrationSecret } from './integration-secret.crypto.js';
+import { logger } from '../../../shared/logger/logger.js';
 
 export function verifyTenantWebhookSignature(
   secret: string,
@@ -203,7 +204,12 @@ export const tenantWebhookService = {
     await TenantWebhookDelivery.insertMany(endpoints.map(endpoint => ({
       tenantId: event.tenantId, endpointId: endpoint._id, eventId, eventType: event.action,
       payload, status: 'pending', attempts: 0, nextAttemptAt: new Date(),
-    })), { ordered: false }).catch(() => undefined);
+    })), { ordered: false }).catch(error => {
+      logger.error('Failed to queue tenant webhook deliveries.', {
+        tenantId: String(event.tenantId), eventType: event.action,
+        error: error instanceof Error ? error.message : 'unknown',
+      });
+    });
   },
   async deliverBatch(batchSize = 20) {
     const now = new Date();
