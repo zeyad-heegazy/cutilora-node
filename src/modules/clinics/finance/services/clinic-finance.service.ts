@@ -249,14 +249,8 @@ export const clinicFinanceService = {
     for (const item of Object.values(byCurrency) as any[]) { item.operatingResult = Math.round((item.invoiced - item.refunded - item.expenses) * 100) / 100; item.netCash = Math.round((item.collected - item.refunded - item.expenses) * 100) / 100; }
     const outstanding = await ClinicFinanceEntry.aggregate([
       { $match: { ...base, type: 'invoice', status: 'issued' } },
-      { $lookup: { from: 'clinicfinanceentries', let: { invoice: '$_id', tenant: '$tenantId' }, pipeline: [
-        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$tenant'] }, { $eq: ['$invoiceId', '$invoice'] }, { $in: ['$type', ['payment','refund']] }, { $eq: ['$status', 'posted'] }] } } },
-        ...(scope.to ? [{ $match: { occurredAt: { $lte: scope.to } } }] : []),
-        { $group: { _id: '$type', total: { $sum: '$amount' } } },
-      ], as: 'settlements' } },
-      { $addFields: { paid: { $sum: { $map: { input: '$settlements', as: 's', in: { $cond: [{ $eq: ['$$s._id','payment'] }, '$$s.total', { $multiply: ['$$s.total', -1] }] } } } } },
-      { $addFields: { balance: { $max: [0, { $subtract: ['$amount', '$paid'] }] } } },
-      { $group: { _id: '$currency', outstanding: { $sum: '$balance' }, invoiceCount: { $sum: { $cond: [{ $gt: ['$balance',0] },1,0] } } } },
+      { $addFields: { balance: { $max: [0, { $subtract: ['$amount', { $ifNull: ['$settledAmount', 0] }] }] } } },
+      { $group: { _id: '$currency', outstanding: { $sum: '$balance' }, invoiceCount: { $sum: { $cond: [{ $gt: ['$balance', 0] }, 1, 0] } } } },
     ]);
     const clinics = await ClinicFinanceEntry.aggregate([
       { $match: match },
