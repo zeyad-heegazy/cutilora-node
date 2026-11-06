@@ -26,7 +26,7 @@ function dateFilter(scope: Scope) {
   return { ...(scope.from || scope.to ? { occurredAt: { ...(scope.from ? { $gte: scope.from } : {}), ...(scope.to ? { $lte: scope.to } : {}) } } : {}) };
 }
 function scopeFilter(tenantId: string, scope: Scope) {
-  return { tenantId, ...(scope.clinicId ? { clinicId: scope.clinicId } : {}), ...(scope.branchId ? { branchId: scope.branchId } : {}), ...(scope.currency ? { currency: cleanCurrency(scope.currency) } : {}), ...dateFilter(scope) };
+  return { tenantId: new Types.ObjectId(tenantId), ...(scope.clinicId ? { clinicId: new Types.ObjectId(scope.clinicId) } : {}), ...(scope.branchId ? { branchId: new Types.ObjectId(scope.branchId) } : {}), ...(scope.currency ? { currency: cleanCurrency(scope.currency) } : {}), ...dateFilter(scope) };
 }
 function assertActorClinic(actor: Actor, clinicId: unknown, branchId: unknown) {
   if (actor.scope === 'clinic' && String(actor.clinicId) !== String(clinicId)) fail(403, 'CLINIC_ACCESS_DENIED', 'This finance record is outside your clinic scope.');
