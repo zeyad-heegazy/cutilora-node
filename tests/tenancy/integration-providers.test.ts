@@ -4,7 +4,7 @@ import { INTEGRATION_PROVIDER_CATALOG, verifyIntegrationConnection } from '../..
 describe('integration provider catalog', () => {
   it('exposes the independently replaceable provider adapters', () => {
     expect(INTEGRATION_PROVIDER_CATALOG.map(provider => provider.key)).toEqual([
-      'resend_email', 'twilio_sms', 'meta_whatsapp_cloud', 'stripe', 'paymob',
+      'resend_email', 'twilio_sms', 'meta_whatsapp_cloud', 'google_calendar', 'stripe', 'paymob',
     ]);
   });
 
