@@ -16,4 +16,5 @@ const schema = new Schema({
 }, { timestamps: true, minimize: false });
 
 schema.index({ tenantId: 1, status: 1, createdAt: -1 });
+schema.index({ tenantId: 1 }, { unique: true, partialFilterExpression: { status: 'pending' } });
 export const SubscriptionChangeRequest = (models.SubscriptionChangeRequest || model('SubscriptionChangeRequest', schema)) as Model<any>;
