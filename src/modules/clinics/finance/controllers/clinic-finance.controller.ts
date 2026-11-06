@@ -9,6 +9,7 @@ const baseScope = z.object({ clinicId: id.optional(), branchId: id.optional(), f
 const invoiceSchema = z.object({ clinicId: id, branchId: id.optional(), patientId: id.optional(), invoiceNumber: z.string().trim().min(1).max(80).optional(), currency, description: z.string().max(500).optional(), issuedAt: date, lineItems: z.array(z.object({ category: z.string().trim().max(80).optional(), description: z.string().trim().min(1).max(240), quantity: z.number().positive().multipleOf(0.0001), unitPrice: z.number().nonnegative().multipleOf(0.01) })).min(1).max(100) });
 const paymentSchema = z.object({ invoiceId: id, amount: z.number().positive().multipleOf(0.01), currency, method: z.string().trim().max(50).optional(), reference: z.string().trim().max(120).optional(), idempotencyKey: z.string().trim().min(8).max(120).optional(), paidAt: date, branchId: id.optional() });
 const refundSchema = z.object({ paymentId: id, amount: z.number().positive().multipleOf(0.01), method: z.string().trim().max(50).optional(), reference: z.string().trim().max(120).optional(), refundedAt: date });
+const voidSchema = z.object({ entryId: id, reason: z.string().trim().min(3).max(500) });
 const expenseSchema = z.object({ clinicId: id, branchId: id.optional(), amount: z.number().positive().multipleOf(0.01), currency, category: z.string().trim().min(1).max(80), description: z.string().max(500).optional(), reference: z.string().max(120).optional(), spentAt: date });
 function parseScope(query: any, context: any) {
   const value = baseScope.parse(query);
@@ -25,5 +26,6 @@ export const clinicFinanceController = {
   async createInvoice(req: Request, res: Response, next: NextFunction) { try { const input = invoiceSchema.parse(req.body); const data = await clinicFinanceService.createInvoice(actor(req), input); res.status(201).json({ success: true, data }); } catch (e) { next(e); } },
   async payment(req: Request, res: Response, next: NextFunction) { try { const input = paymentSchema.parse(req.body); const data = await clinicFinanceService.recordPayment(actor(req), input); res.status(201).json({ success: true, data }); } catch (e) { next(e); } },
   async refund(req: Request, res: Response, next: NextFunction) { try { const input = refundSchema.parse(req.body); const data = await clinicFinanceService.recordRefund(actor(req), input); res.status(201).json({ success: true, data }); } catch (e) { next(e); } },
+  async voidEntry(req: Request, res: Response, next: NextFunction) { try { const input = voidSchema.parse(req.body); const data = await clinicFinanceService.voidEntry(actor(req), input); res.json({ success: true, data }); } catch (e) { next(e); } },
   async expense(req: Request, res: Response, next: NextFunction) { try { const input = expenseSchema.parse(req.body); const data = await clinicFinanceService.createExpense(actor(req), input); res.status(201).json({ success: true, data }); } catch (e) { next(e); } },
 };
