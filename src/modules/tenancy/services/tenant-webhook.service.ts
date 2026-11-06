@@ -16,6 +16,7 @@ const SAFE_EVENTS = new Set([
   'membership.invited', 'membership.accepted', 'membership.suspended', 'membership.removed', 'membership.invitation.created', 'membership.invitation.revoked', 'membership.invitation.resent', 'membership.user_session.revoked', 'membership.updated',
   'role.created', 'role.updated', 'role.deactivated', 'permission.changed',
   'organization.updated', 'organization.profile.updated', 'organization.preferences.updated', 'configuration.updated', 'configuration.published', 'configuration.defaults.updated', 'configuration.defaults.applied', 'billing.profile.updated',
+  'finance.invoice.created', 'finance.payment.recorded', 'finance.refund.recorded', 'finance.expense.recorded', 'finance.entry.voided',
   'subscription.change_requested', 'integration.configuration.saved', 'integration.disabled', 'integration.enabled',
   'integration.connection_verified', 'integration.connection_failed', 'integration.credentials.rotated', 'integration.credentials.revoked',
   'integration.webhook.created', 'integration.webhook.updated', 'integration.webhook.secret.rotated', 'integration.webhook.disabled', 'integration.webhook.enabled',
