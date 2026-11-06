@@ -43,6 +43,44 @@ paths:
         "200": { description: Saved configuration; secret values are not returned }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/integrations/{integrationId}/rotate-credentials:
+    post:
+      tags: [Tenant Integrations]
+      summary: Rotate provider credentials
+      description: Replaces the complete encrypted credential set. Secret values are never returned.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: integrationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [secrets]
+              properties:
+                secrets: { type: object, minProperties: 1, additionalProperties: { type: string, maxLength: 4096 } }
+      responses:
+        "200": { description: Credentials replaced; only credential presence is returned }
+        "404": { description: Integration not found }
+  /tenant/integrations/{integrationId}/revoke-credentials:
+    post:
+      tags: [Tenant Integrations]
+      summary: Revoke provider credentials and disable the integration
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: integrationId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Credentials cleared and integration disabled }
+        "404": { description: Integration not found }
   /tenant/integrations/{integrationId}/test:
     post:
       tags: [Tenant Integrations]
