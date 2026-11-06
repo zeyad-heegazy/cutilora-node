@@ -179,6 +179,10 @@ paths:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1status"
   /tenant/webhooks/{endpointId}/deliveries:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1deliveries"
+  /tenant/reports/organization:
+    $ref: "./openapi/tenant/reports/reports.yaml#/paths/~1tenant~1reports~1organization"
+  /tenant/reports/organization/export:
+    $ref: "./openapi/tenant/reports/reports.yaml#/paths/~1tenant~1reports~1organization~1export"
   /tenant/audit-logs/export:
     $ref: "./openapi/tenant/governance/audit-logs.yaml#/paths/~1tenant~1audit-logs~1export"
   /tenant/audit-logs:
