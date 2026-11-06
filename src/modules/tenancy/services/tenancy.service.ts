@@ -643,7 +643,9 @@ export const tenancyService = {
     return tenant?.billingProfile ?? null;
   },
   async updateTenantBillingProfile(tenantId: string, userId: string, input: Record<string, unknown>) {
-    const tenant = await tenancyRepository.updateTenant(tenantId, { billingProfile: input, updatedBy: userId });
+    const update: Record<string, unknown> = { updatedBy: userId };
+    for (const [key, value] of Object.entries(input)) update[`billingProfile.${key}`] = value;
+    const tenant = await tenancyRepository.updateTenant(tenantId, update);
     if (!tenant) return null;
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'billing.profile.updated', targetType: 'tenant', targetId: tenantId, metadata: { changedFields: Object.keys(input) } });
     return tenant.billingProfile;
@@ -657,11 +659,16 @@ export const tenancyService = {
     if (input.type === 'reactivate' && !subscription.cancelAtPeriodEnd && subscription.status !== 'canceled') {
       throw { status: 409, code: 'SUBSCRIPTION_NOT_PENDING_CANCELLATION', message: 'There is no pending cancellation to reactivate.' };
     }
-    const pending = await tenancyRepository.listSubscriptionChangeRequests(tenantId);
-    if (pending.some((item: any) => item.status === 'pending')) {
+    if (await tenancyRepository.hasPendingSubscriptionChangeRequest(tenantId)) {
       throw { status: 409, code: 'SUBSCRIPTION_CHANGE_REQUEST_PENDING', message: 'A subscription change request is already awaiting Platform review.' };
     }
-    const request = await tenancyRepository.createSubscriptionChangeRequest({ ...input, tenantId, requestedBy: userId });
+    let request;
+    try {
+      request = await tenancyRepository.createSubscriptionChangeRequest({ ...input, tenantId, requestedBy: userId });
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'SUBSCRIPTION_CHANGE_REQUEST_PENDING', message: 'A subscription change request is already awaiting Platform review.' };
+      throw error;
+    }
     await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'subscription.change_requested', targetType: 'subscription', targetId: String(subscription._id), metadata: { requestId: String(request?._id), type: input.type, effectiveAt: input.effectiveAt } });
     return request;
   },
