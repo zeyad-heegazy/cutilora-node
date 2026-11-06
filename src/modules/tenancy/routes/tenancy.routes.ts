@@ -3,6 +3,7 @@ import { authenticate } from '../../auth/middleware/authenticate.js';
 import { resolveTenantContext, requireTenantScope } from '../middleware/tenant-context.js';
 import { requireTenantPermission, requireTenantFeature } from '../middleware/tenant-permissions.js';
 import { tenancyController } from '../controllers/tenancy.controller.js';
+import { tenantCatalogTemplateRouter } from '../catalog/tenant-catalog-template.routes.js';
 import { tenantRolesController } from '../controllers/tenant-roles.controller.js';
 import { tenantCatalogController } from '../controllers/tenant-catalog.controller.js';
 import { tenantFinanceController } from '../controllers/tenant-finance.controller.js';
@@ -44,6 +45,7 @@ tenantRouter.get('/configuration', requireTenantScope, requireTenantPermission('
 tenantRouter.patch('/configuration', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.updateTenantConfiguration);
 tenantRouter.post('/configuration/preview-apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.previewTenantConfigurationApply);
 tenantRouter.post('/configuration/apply', requireTenantScope, requireTenantPermission('configuration.manage'), tenancyController.applyTenantConfiguration);
+tenantRouter.use('/catalog-templates', tenantCatalogTemplateRouter);
 tenantRouter.get('/integrations/providers', requireTenantScope, requireTenantPermission('integrations.manage'), requireTenantFeature('integrations'), tenantIntegrationController.providers);
 tenantRouter.get('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), requireTenantFeature('integrations'), tenantIntegrationController.list);
 tenantRouter.put('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), requireTenantFeature('integrations'), tenantIntegrationController.save);

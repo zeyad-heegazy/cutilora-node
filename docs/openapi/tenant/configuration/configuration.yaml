@@ -4,12 +4,12 @@ paths:
       tags: [Tenant Configuration]
       x-apidog-folder: "Tenant/Shared Configuration"
       summary: Get organization defaults
-      description: Returns versioned tenant defaults and change history. These values are inherited by newly created clinics; existing clinics retain their own overrides until explicitly published.
+      description: Returns immutable platform defaults, versioned tenant overrides, effective values and the source of each setting. New clinics inherit the effective defaults; existing clinics retain their own overrides until explicitly published.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       responses:
-        "200": { description: Versioned tenant configuration }
+        "200": { description: Platform defaults, tenant overrides, effective values, per-setting sources, and version history }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     patch:
       tags: [Tenant Configuration]

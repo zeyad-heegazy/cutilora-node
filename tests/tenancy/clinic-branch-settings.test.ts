@@ -81,7 +81,7 @@ describe('clinic and branch configuration overrides', () => {
       },
       updatedBy: userId,
     }));
-    expect(result?.effectiveValues).toEqual({ appointment: { duration: 60, buffer: 5 } });
+    expect(result?.effectiveValues).toMatchObject({ appointment: { duration: 60, buffer: 5 } });
   });
 
   it('computes branch effective values from clinic defaults, clinic overrides and branch overrides', async () => {

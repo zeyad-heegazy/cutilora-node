@@ -104,6 +104,7 @@ function getSettingSources(layers: Array<{ source: string; values: Record<string
 
 const DEFAULT_CLINIC_PREFERENCES = { timezone: 'Africa/Cairo', locale: 'en', currency: 'EGP', dateFormat: 'YYYY-MM-DD', weekStartsOn: 6, supportedLanguages: ['en', 'ar'] };
 const DEFAULT_BOOKING_SETTINGS = { allowOnlineBooking: false, requireAppointmentConfirmation: true, defaultAppointmentDurationMinutes: 30, bufferMinutes: 0, cancellationWindowHours: 24 };
+const PLATFORM_CONFIGURATION_DEFAULTS = { preferences: DEFAULT_CLINIC_PREFERENCES, bookingSettings: DEFAULT_BOOKING_SETTINGS };
 
 function slugify(value: string, fallback = 'clinic'): string {
   const slug = value.normalize('NFKD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
@@ -499,7 +500,16 @@ export const tenancyService = {
   },
   async getTenantConfiguration(tenantId: string) {
     const configuration = await tenancyRepository.findTenantConfiguration(tenantId);
-    return configuration ?? { tenantId, version: 0, values: {}, history: [] };
+    const values = configuration?.values ?? {};
+    return {
+      ...(configuration ?? { tenantId, version: 0, values: {}, history: [] }),
+      platformDefaults: PLATFORM_CONFIGURATION_DEFAULTS,
+      effectiveValues: deepMerge(PLATFORM_CONFIGURATION_DEFAULTS, values),
+      sources: getSettingSources([
+        { source: 'platform_default', values: PLATFORM_CONFIGURATION_DEFAULTS },
+        { source: 'tenant_default', values },
+      ]),
+    };
   },
   async updateTenantConfiguration(tenantId: string, userId: string, values: Record<string, any>) {
     const current = await tenancyRepository.findTenantConfiguration(tenantId);
@@ -538,8 +548,8 @@ export const tenancyService = {
           currentVersion: settings.organizationDefaultsVersion ?? 0,
           hasOverrides: Object.keys(overrides).length > 0,
           willUpdate: (settings.organizationDefaultsVersion ?? 0) < configuration.version,
-          effectiveValues: deepMerge(configuration.values ?? {}, overrides),
-          sources: getSettingSources([{ source: 'tenant_default', values: configuration.values ?? {} }, { source: 'clinic_override', values: overrides }]),
+          effectiveValues: deepMerge(deepMerge(PLATFORM_CONFIGURATION_DEFAULTS, configuration.values ?? {}), overrides),
+          sources: getSettingSources([{ source: 'platform_default', values: PLATFORM_CONFIGURATION_DEFAULTS }, { source: 'tenant_default', values: configuration.values ?? {} }, { source: 'clinic_override', values: overrides }]),
         };
       }),
     };
@@ -942,6 +952,10 @@ export const tenancyService = {
     delete providedSettings.organizationDefaults;
     delete providedSettings.organizationDefaultsVersion;
     delete providedSettings.organizationOverrides;
+    delete providedSettings.platformDefaults;
+    delete providedSettings.effectiveValues;
+    delete providedSettings.sources;
+    const settings = deepMerge({ organizationDefaults: deepMerge(PLATFORM_CONFIGURATION_DEFAULTS, configuration?.values), organizationDefaultsVersion: configuration?.version ?? 0 }, providedSettings);
     delete providedSettings.organizationTemplates;
     const organizationTemplates = Object.fromEntries(publishedTemplates.map((template: any) => [
       template.key,
@@ -1161,10 +1175,11 @@ export const tenancyService = {
     const defaults = settings.organizationDefaults ?? {};
     const overrides = settings.organizationOverrides ?? {};
     return {
+      platformDefaults: PLATFORM_CONFIGURATION_DEFAULTS,
       defaults,
       overrides,
-      effectiveValues: deepMerge(defaults, overrides),
-      sources: getSettingSources([{ source: 'tenant_default', values: defaults }, { source: 'clinic_override', values: overrides }]),
+      effectiveValues: deepMerge(deepMerge(PLATFORM_CONFIGURATION_DEFAULTS, defaults), overrides),
+      sources: getSettingSources([{ source: 'platform_default', values: PLATFORM_CONFIGURATION_DEFAULTS }, { source: 'tenant_default', values: defaults }, { source: 'clinic_override', values: overrides }]),
       inheritedVersion: settings.organizationDefaultsVersion ?? 0,
       overrideKeys: Object.keys(overrides),
     };
@@ -1182,10 +1197,11 @@ export const tenancyService = {
     const updatedSettings = updated?.settings?.toObject?.() ?? updated?.settings ?? {};
     if (!updated) return null;
     return {
+      platformDefaults: PLATFORM_CONFIGURATION_DEFAULTS,
       defaults: updatedSettings.organizationDefaults ?? {},
       overrides: updatedSettings.organizationOverrides ?? {},
-      effectiveValues: deepMerge(updatedSettings.organizationDefaults ?? {}, updatedSettings.organizationOverrides ?? {}),
-      sources: getSettingSources([{ source: 'tenant_default', values: updatedSettings.organizationDefaults ?? {} }, { source: 'clinic_override', values: updatedSettings.organizationOverrides ?? {} }]),
+      effectiveValues: deepMerge(deepMerge(PLATFORM_CONFIGURATION_DEFAULTS, updatedSettings.organizationDefaults ?? {}), updatedSettings.organizationOverrides ?? {}),
+      sources: getSettingSources([{ source: 'platform_default', values: PLATFORM_CONFIGURATION_DEFAULTS }, { source: 'tenant_default', values: updatedSettings.organizationDefaults ?? {} }, { source: 'clinic_override', values: updatedSettings.organizationOverrides ?? {} }]),
       inheritedVersion: updatedSettings.organizationDefaultsVersion ?? 0,
       overrideKeys: Object.keys(updatedSettings.organizationOverrides ?? {}),
     };
@@ -1196,13 +1212,14 @@ export const tenancyService = {
     const clinic = await tenancyRepository.findClinicById(clinicId, tenantId);
     const clinicSettings = clinic?.settings?.toObject?.() ?? clinic?.settings ?? {};
     const branchSettings = branch.settings?.toObject?.() ?? branch.settings ?? {};
-    const inheritedValues = deepMerge(clinicSettings.organizationDefaults ?? {}, clinicSettings.organizationOverrides ?? {});
+    const inheritedValues = deepMerge(deepMerge(PLATFORM_CONFIGURATION_DEFAULTS, clinicSettings.organizationDefaults ?? {}), clinicSettings.organizationOverrides ?? {});
     const overrides = branchSettings.organizationOverrides ?? {};
     return {
       inheritedValues,
       overrides,
       effectiveValues: deepMerge(inheritedValues, overrides),
       sources: getSettingSources([
+        { source: 'platform_default', values: PLATFORM_CONFIGURATION_DEFAULTS },
         { source: 'tenant_default', values: clinicSettings.organizationDefaults ?? {} },
         { source: 'clinic_override', values: clinicSettings.organizationOverrides ?? {} },
         { source: 'branch_override', values: overrides },
