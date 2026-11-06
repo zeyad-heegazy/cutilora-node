@@ -7,10 +7,11 @@
 | Email | Resend | Tenant default or clinic override |
 | SMS | Twilio | Tenant default or clinic override |
 | WhatsApp | Meta WhatsApp Cloud API (Graph API v26.0 by default; version override is configurable) | Tenant default or clinic override |
+| Calendar | Google Calendar OAuth | Tenant default or clinic override |
 | Card gateway reference | Stripe | Clinic merchant configuration; Tenant may only view supported configuration metadata |
 | Egypt payment gateway reference | Paymob | Clinic merchant configuration; Tenant may only view supported configuration metadata |
 
-Provider identifiers are stored as stable keys and adapter code is isolated in `integration-providers.ts`. Provider selection can change without changing domain services. The current payment gateway adapters verify credentials only; they do not charge cards, settle funds or receive patient payments.
+Provider configuration routes require the `integrations` subscription feature; webhook routes additionally require the `webhooks` feature and `integrations.manage` permission. Provider identifiers are stored as stable keys and adapter code is isolated in `integration-providers.ts`. Provider selection can change without changing domain services. The current payment gateway adapters verify credentials only; they do not charge cards, settle funds or receive patient payments.
 
 ## Configuration lifecycle
 
