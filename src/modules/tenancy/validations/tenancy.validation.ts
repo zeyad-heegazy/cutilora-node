@@ -408,7 +408,7 @@ export const tenantAuditQuerySchema = z.object({
   perPage: z.coerce.number().int().min(1).max(100).default(25),
   actorId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   action: z.string().trim().min(2).max(120).optional(),
-  targetType: z.string().trim().min(2).max(80).optional(),
+  targetType: z.string().trim().min(2).max(80).optional(),\n  module: z.string().trim().min(2).max(80).optional(),\n  result: z.enum(['success', 'failure']).optional(),\n  requestId: z.string().trim().min(1).max(120).optional(),
   clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   from: z.coerce.date().optional(),
