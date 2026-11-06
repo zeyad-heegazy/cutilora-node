@@ -12,9 +12,9 @@ function required(secrets: Credentials, key: string) {
   return value;
 }
 export const INTEGRATION_PROVIDER_CATALOG = [
-  { key: 'resend_email', type: 'communication', label: 'Resend Email', credentialFields: ['apiKey'], capabilities: ['email.send'] },
-  { key: 'twilio_sms', type: 'communication', label: 'Twilio SMS', credentialFields: ['accountSid', 'authToken'], capabilities: ['sms.send'] },
-  { key: 'meta_whatsapp_cloud', type: 'communication', label: 'Meta WhatsApp Cloud API', credentialFields: ['accessToken', 'phoneNumberId'], capabilities: ['whatsapp.send'] },
+  { key: 'resend_email', type: 'communication', label: 'Resend Email', credentialFields: ['apiKey'], capabilities: ['email.connection_check'] },
+  { key: 'twilio_sms', type: 'communication', label: 'Twilio SMS', credentialFields: ['accountSid', 'authToken'], capabilities: ['sms.connection_check'] },
+  { key: 'meta_whatsapp_cloud', type: 'communication', label: 'Meta WhatsApp Cloud API', credentialFields: ['accessToken', 'phoneNumberId'], capabilities: ['whatsapp.connection_check'] },
   { key: 'stripe', type: 'payment_gateway', label: 'Stripe', credentialFields: ['secretKey'], capabilities: ['payment_gateway.connection_check'] },
   { key: 'paymob', type: 'payment_gateway', label: 'Paymob', credentialFields: ['apiKey'], capabilities: ['payment_gateway.connection_check'] },
 ] as const;
