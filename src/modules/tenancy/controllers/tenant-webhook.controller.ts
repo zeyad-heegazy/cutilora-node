@@ -46,6 +46,16 @@ export const tenantWebhookController = {
       res.json({ success: true, data: item });
     } catch (error) { next(error); }
   },
+  async retryDelivery(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenantWebhookService.retryDelivery(
+        req.tenantContext!.tenantId, req.auth!.userId,
+        String(req.params.endpointId ?? ''), String(req.params.deliveryId ?? ''),
+      );
+      if (!item) return res.status(404).json({ success: false, error: { code: 'FAILED_DELIVERY_NOT_FOUND', message: 'Failed delivery not found for this endpoint and tenant.' } });
+      res.json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
   async deliveries(req: Request, res: Response, next: NextFunction) {
     try {
       const limit = z.coerce.number().int().min(1).max(100).default(50).parse(req.query.limit);
