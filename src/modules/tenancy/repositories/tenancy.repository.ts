@@ -257,6 +257,9 @@ export const tenancyRepository = {
       .select('amount currency status method provider invoiceNumber paidAt failureReason recordedAt createdAt')
       .sort({ createdAt: -1 }).limit(100).lean();
   },
+  hasPendingSubscriptionChangeRequest(tenantId: string) {
+    return SubscriptionChangeRequest.exists({ tenantId, status: 'pending' });
+  },
   async createSubscriptionChangeRequest(data: Record<string, unknown>) {
     const subscription = await Subscription.findOne({ tenantId: data.tenantId }).select('_id');
     if (!subscription) return null;
