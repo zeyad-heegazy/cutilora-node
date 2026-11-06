@@ -28,7 +28,10 @@ import { tenancyRepository } from '../../src/modules/tenancy/repositories/tenanc
 const tenantId = '64b000000000000000000001';
 
 describe('tenant dashboard service', () => {
-  beforeEach(() => vi.resetAllMocks());
+  beforeEach(() => {
+    vi.resetAllMocks();
+    vi.mocked(tenancyRepository.getTenantStorageUsageBytes).mockResolvedValue(0);
+  });
 
   it('returns only safe organization profile fields', async () => {
     vi.mocked(tenancyRepository.findTenantById).mockResolvedValue({
