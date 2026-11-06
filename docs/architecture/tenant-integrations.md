@@ -35,3 +35,11 @@ Provider configuration routes require the `integrations` subscription feature; w
 ## Operations
 
 The API starts a bounded webhook worker after database connection and stops it during graceful shutdown. Monitor failed delivery counts and provider connection health. For high-volume deployments, move the worker to a separately deployed process using the same atomic MongoDB claims.
+
+## Runtime boundary and readiness
+
+- The Resend, Twilio, Meta WhatsApp Cloud API, Google Calendar, Stripe and Paymob adapters currently perform credential/connection checks. They do not yet send email/SMS/WhatsApp messages, synchronize calendar events, or process patient payment settlements.
+- The shared notification dispatcher remains provider-neutral and has no concrete email/SMS adapter registered. Tenant invitation channels are persisted, but invitation delivery remains manual until a separate durable notification outbox and provider adapters are implemented.
+- Google Calendar currently validates a configured OAuth access token. OAuth consent/callback handling, refresh-token rotation and calendar event synchronization are not part of this backend increment; access tokens must be rotated through the credential management API.
+- Webhook delivery retries are automatic with exponential-style backoff, capped at eight attempts. Terminal failures can be manually requeued by an authorized tenant integration manager; the original event ID and payload are retained.
+- Webhook queue creation is driven by append-only audit events. Delivery records are unique per endpoint/event, and the worker uses atomic claims. Monitor queue insert errors and failed delivery counts; a durable transactional outbox/reconciliation process remains a hardening item before high-volume production.
