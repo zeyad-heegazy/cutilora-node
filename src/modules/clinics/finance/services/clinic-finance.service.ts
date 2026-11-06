@@ -214,28 +214,43 @@ export const clinicFinanceService = {
       { new: true },
     ).lean();
     if (!updated) fail(409, 'PACKAGE_REDEMPTION_CONFLICT', 'The package has insufficient sessions or is no longer active.');
+    let event: any;
     try {
-      const event = await ClinicFinancePackageEvent.create({
+      event = await ClinicFinancePackageEvent.create({
         tenantId: actor.tenantId, clinicId: packageRecord.clinicId, branchId: packageRecord.branchId,
         packageId: packageRecord._id, eventType: 'redeemed', sessionsDelta: -input.sessions,
         reference: input.reference?.trim() || null, reason: input.reason?.trim() || null,
         idempotencyKey: input.idempotencyKey, createdBy: actor.userId,
       });
-      if (updated.sessionsRemaining === 0) {
-        await ClinicFinancePackage.updateOne({ _id: updated._id, tenantId: actor.tenantId, sessionsRemaining: 0 }, { $set: { status: 'fully_redeemed' } });
-      }
-      await audit(actor, 'finance.package.redeemed', updated, { sessions: input.sessions, packageEventId: String(event._id) });
-      return { package: updated, event };
     } catch (error: any) {
+      const rolledBack: any = await ClinicFinancePackage.findOneAndUpdate(
+        { _id: packageRecord._id, tenantId: actor.tenantId },
+        { $inc: { sessionsRemaining: input.sessions } },
+        { new: true },
+      ).lean();
       if (error?.code === 11000) {
-        await ClinicFinancePackage.updateOne({ _id: packageRecord._id, tenantId: actor.tenantId }, { $inc: { sessionsRemaining: input.sessions }, $set: { status: 'active' } });
         const duplicate = await ClinicFinancePackageEvent.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
-        if (duplicate) return duplicate;
-      } else {
-        await ClinicFinancePackage.updateOne({ _id: packageRecord._id, tenantId: actor.tenantId }, { $inc: { sessionsRemaining: input.sessions }, $set: { status: 'active' } });
+        if (duplicate) {
+          if (rolledBack) {
+            await ClinicFinancePackage.updateOne(
+              { _id: packageRecord._id, tenantId: actor.tenantId, sessionsRemaining: { $gt: 0 } },
+              { $set: { status: 'active' } },
+            );
+          }
+          return duplicate;
+        }
       }
       throw error;
     }
+    if (updated.sessionsRemaining === 0) {
+      await ClinicFinancePackage.updateOne(
+        { _id: updated._id, tenantId: actor.tenantId, status: 'active', sessionsRemaining: 0 },
+        { $set: { status: 'fully_redeemed' } },
+      );
+    }
+    await audit(actor, 'finance.package.redeemed', updated, { sessions: input.sessions, packageEventId: String(event._id) });
+    const current = await ClinicFinancePackage.findOne({ _id: updated._id, tenantId: actor.tenantId }).lean();
+    return { package: current ?? updated, event };
   },
   async refundPackage(actor: Actor, input: any) {
     if (!validId(input.packageId)) fail(400, 'INVALID_PACKAGE_ID', 'packageId must be a valid identifier.');
