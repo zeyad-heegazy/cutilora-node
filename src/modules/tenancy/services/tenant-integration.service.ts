@@ -41,7 +41,7 @@ async function audit(tenantId: string, actorId: string, action: string, item: an
 }
 export const tenantIntegrationService = {
   async list(tenantId: string) {
-    const items = await TenantIntegration.find({ tenantId }).sort({ integrationType: 1, provider: 1, clinicId: 1 }).lean();
+    const items = await TenantIntegration.find({ tenantId }).select('+encryptedSecrets').sort({ integrationType: 1, provider: 1, clinicId: 1 }).lean();
     return items.map(present);
   },
   async save(tenantId: string, actorId: string, input: IntegrationInput) {
@@ -49,6 +49,7 @@ export const tenantIntegrationService = {
     const definition = INTEGRATION_PROVIDER_CATALOG.find((item) => item.key === provider);
     if (!definition || definition.type !== input.integrationType) throw { status: 400, code: 'INTEGRATION_PROVIDER_UNSUPPORTED', message: 'Select a supported provider for this integration type.' };
     if (!/^[a-z0-9][a-z0-9._-]{1,79}$/.test(provider)) throw { status: 400, code: 'INVALID_INTEGRATION_PROVIDER', message: 'Provider must be a valid provider key.' };
+    if (input.integrationType === 'payment_gateway' && !input.clinicId) throw { status: 400, code: 'CLINIC_SCOPE_REQUIRED', message: 'Patient payment gateway credentials must be configured for a specific clinic.' };
     if (input.clinicId && !await Clinic.exists({ _id: input.clinicId, tenantId })) {
       throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'Clinic does not belong to this tenant.' };
     }
