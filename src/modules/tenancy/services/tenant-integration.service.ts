@@ -82,14 +82,6 @@ export const tenantIntegrationService = {
     const secrets = item.encryptedSecrets ? JSON.parse(decryptIntegrationSecret(item.encryptedSecrets)) : {};
     return { id: String(item._id), provider: item.provider, integrationType: item.integrationType, config: item.config ?? {}, secrets };
   },
-  async resolveForClinic(tenantId: string, clinicId: string, provider: string) {
-    if (!await Clinic.exists({ _id: clinicId, tenantId })) return null;
-    const item = await TenantIntegration.findOne({ tenantId, provider, clinicId }).select('+encryptedSecrets')
-      ?? await TenantIntegration.findOne({ tenantId, provider, clinicId: null }).select('+encryptedSecrets');
-    if (!item || item.status === 'disabled') return null;
-    const secrets = item.encryptedSecrets ? JSON.parse(decryptIntegrationSecret(item.encryptedSecrets)) : {};
-    return { id: String(item._id), provider: item.provider, integrationType: item.integrationType, config: item.config ?? {}, secrets };
-  },
 
   async testConnection(tenantId: string, actorId: string, integrationId: string) {
     const item = await TenantIntegration.findOne({ _id: integrationId, tenantId }).select('+encryptedSecrets');
