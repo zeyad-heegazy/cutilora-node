@@ -57,6 +57,7 @@ tenantRouter.patch('/webhooks/:endpointId', requireTenantScope, requireTenantPer
 tenantRouter.post('/webhooks/:endpointId/rotate-secret', requireTenantScope, requireTenantPermission('integrations.manage'), requireTenantFeature('integrations'), requireTenantFeature('webhooks'), tenantWebhookController.rotateSecret);
 tenantRouter.patch('/webhooks/:endpointId/status', requireTenantScope, requireTenantPermission('integrations.manage'), requireTenantFeature('integrations'), requireTenantFeature('webhooks'), tenantWebhookController.setStatus);
 tenantRouter.get('/webhooks/:endpointId/deliveries', requireTenantScope, requireTenantPermission('integrations.manage'), requireTenantFeature('integrations'), requireTenantFeature('webhooks'), tenantWebhookController.deliveries);
+tenantRouter.post('/webhooks/:endpointId/deliveries/:deliveryId/retry', requireTenantScope, requireTenantPermission('integrations.manage'), requireTenantFeature('integrations'), requireTenantFeature('webhooks'), tenantWebhookController.retryDelivery);
 tenantRouter.get('/reports/organization', requireTenantScope, requireTenantPermission('dashboard.read'), tenantReportsController.organizationOverview);
 tenantRouter.get('/reports/organization/export', requireTenantScope, requireTenantPermission('reports.export'), tenantReportsController.exportOrganizationOverview);
 tenantRouter.get('/audit-logs', requireTenantScope, requireTenantPermission('audit.read'), tenancyController.listTenantAuditEvents);
