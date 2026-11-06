@@ -5,7 +5,7 @@ export const TENANT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
     'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.lifecycle.manage', 'branch.read', 'branch.holidays.read', 'branch.holidays.manage',
     'documents.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'configuration.manage', 'memberships.manage', 'audit.read', 'audit.export', 'billing.read',
   ],
-  billing_admin: ['billing.read', 'billing.manage', 'finance.read', 'finance.manage'],
+  billing_admin: ['billing.read', 'finance.read', 'finance.invoices.read', 'finance.expenses.read', 'finance.receivables.read', 'finance.reports.read'],
   clinic_admin: ['clinic.settings.read', 'clinic.settings.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'branch.read', 'branch.manage', 'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.holidays.read', 'branch.holidays.manage'],
   clinic_manager: ['clinic.settings.read', 'clinic.settings.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'branch.read', 'branch.manage', 'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.holidays.read', 'branch.holidays.manage'],
   branch_manager: ['branch.read', 'branch.members.read', 'branch.activity.read', 'branch.schedule.manage', 'branch.settings.manage', 'branch.holidays.read', 'branch.holidays.manage'],
@@ -38,7 +38,8 @@ const TENANT_ROLE_LABELS: Record<string, string> = {
   receptionist: 'Receptionist',
 };
 
-export const TENANT_PERMISSION_CATALOG = [...new Set(Object.values(TENANT_ROLE_PERMISSIONS).flat().filter((permission) => permission !== '*'))].sort();
+const FINANCE_PERMISSION_CATALOG = ['finance.read', 'finance.invoices.read', 'finance.invoices.manage', 'finance.payments.manage', 'finance.refunds.manage', 'finance.expenses.read', 'finance.expenses.manage', 'finance.cash.read', 'finance.cash.manage', 'finance.cash.approve', 'finance.receivables.read', 'finance.reports.read', 'finance.credit-notes.manage'];
+export const TENANT_PERMISSION_CATALOG = [...new Set([...Object.values(TENANT_ROLE_PERMISSIONS).flat().filter((permission) => permission !== '*'), ...FINANCE_PERMISSION_CATALOG])].sort();
 
 export function getTenantRolePermissions(role: string): string[] {
   const permissions = TENANT_ROLE_PERMISSIONS[role] ?? [];
