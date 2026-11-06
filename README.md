@@ -126,10 +126,11 @@ Access tokens are currently stateless. Refresh-token rotation/revocation, member
 
 ## Tenant integrations and webhooks
 
-Tenant integrations are provider-neutral configuration records. Current connection-check adapters are:
+Tenant integrations are provider-neutral configuration records. The Platform plan must include the `integrations` feature; webhook management additionally requires `webhooks`, alongside the tenant permission. Current connection-check adapters are:
 - Email: Resend API.
 - SMS: Twilio.
-- WhatsApp: Meta WhatsApp Cloud API.
+- WhatsApp: Meta WhatsApp Cloud API (Graph API v26.0 by default).
+- Calendar: Google Calendar OAuth access token.
 - Payment gateway references: Stripe and Paymob (credential verification only; no patient settlement is performed by Tenant APIs).
 
 A provider is shown as connected only after its credential check succeeds. Configuration does not imply that messaging or payment processing is enabled. Patient payment settlement remains Clinic Finance-owned and must use clinic merchant credentials.
