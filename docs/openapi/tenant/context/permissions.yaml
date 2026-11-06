@@ -21,6 +21,7 @@ paths:
                     type: object
                     properties:
                       role: { type: string }
+                      customRoleId: { type: string, nullable: true }
                       scope: { type: string, enum: [tenant, clinic, branch] }
                       permissions: { type: array, items: { type: string } }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }

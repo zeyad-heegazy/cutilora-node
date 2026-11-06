@@ -2,7 +2,8 @@ import { createHash, randomBytes } from 'node:crypto';
 import { geoService } from '../../geo/services/geo.service.js';
 import type { GeoResource } from '../../geo/types/geo.types.js';
 import { tenancyRepository } from '../repositories/tenancy.repository.js';
-import { getTenantRolePermissions } from './tenant-access.service.js';
+import { getTenantRolePermissions, TENANT_PERMISSION_CATALOG, TENANT_ROLE_PERMISSIONS } from './tenant-access.service.js';
+import { hasPermission } from '../../../shared/authorization/permission.engine.js';
 import { storeBrandingLogo, storeBrandingCover, removeBrandingImage } from '../../../shared/storage/branding-image.storage.js';
 import { readPrivateTenantDocument, removePrivateTenantDocument, storePrivateTenantDocument } from '../../../shared/storage/private-tenant-document.storage.js';
 import { logger } from '../../../shared/logger/logger.js';
@@ -256,23 +257,132 @@ export const tenancyService = {
       delivery: 'manual',
     };
   },
+  async listCustomTenantRoles(tenantId: string, filters: { status?: string; scope?: string } = {}) {
+    return tenancyRepository.listTenantRoles(tenantId, filters);
+  },
+  async getCustomTenantRole(tenantId: string, roleId: string) {
+    if (!/^[a-f\d]{24}$/i.test(roleId)) return null;
+    const role = await tenancyRepository.findTenantRoleById(tenantId, roleId);
+    if (!role) return null;
+    return { ...role.toObject(), assignedMemberships: await tenancyRepository.countMembershipsUsingRole(tenantId, roleId) };
+  },
+  async cloneCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string, actorScope: string, input: { name: string; description?: string }) {
+    if (!/^[a-f\d]{24}$/i.test(roleId)) return null;
+    const source = await tenancyRepository.findActiveTenantRoleById(tenantId, roleId);
+    if (!source) return null;
+    return this.createCustomTenantRole(tenantId, actorUserId, actorRole, actorScope, {
+      name: input.name, description: input.description ?? source.description,
+      scope: source.scope, permissions: source.permissions ?? [],
+    });
+  },
+  async createCustomTenantRole(tenantId: string, actorUserId: string, actorRole: string, actorScope: string, input: { name: string; description?: string; scope: 'tenant' | 'clinic' | 'branch'; permissions: string[] }) {
+    if (actorScope !== 'tenant') throw { status: 403, code: 'TENANT_SCOPE_REQUIRED', message: 'Custom roles must be managed from tenant scope.' };
+    if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
+    if (actorRole !== 'tenant_owner' && input.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin can create clinic or branch scoped roles only.' };
+    const invalid = input.permissions.filter((permission) => !TENANT_PERMISSION_CATALOG.includes(permission));
+    if (invalid.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more permissions are not in the tenant permission catalog.', details: { permissions: invalid } };
+    const actorPermissions = getTenantRolePermissions(actorRole);
+    if (!input.permissions.every((permission) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
+    const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+    if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
+    if (Object.keys(TENANT_ROLE_PERMISSIONS).includes(key.replace(/-/g, '_'))) throw { status: 409, code: 'ROLE_NAME_RESERVED', message: 'This name is reserved for a built-in role.' };
+    try {
+      const role = await tenancyRepository.createTenantRole({
+        tenantId, name: input.name.trim(), key, description: input.description ?? '',
+        scope: input.scope, permissions: [...new Set(input.permissions)].sort(),
+        version: 1, status: 'active', createdBy: actorUserId, updatedBy: actorUserId,
+        history: [{ version: 1, action: 'created', name: input.name.trim(), description: input.description ?? '', scope: input.scope, permissions: [...new Set(input.permissions)].sort(), changedBy: actorUserId, changedAt: new Date() }],
+      });
+      await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.created', targetType: 'tenant_role', targetId: String(role._id), metadata: { name: role.name, scope: role.scope, permissions: role.permissions } });
+      return role;
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'ROLE_NAME_ALREADY_EXISTS', message: 'A role with this name already exists in this tenant.' };
+      throw error;
+    }
+  },
+  async updateCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string, input: { name?: string; description?: string; permissions?: string[]; version: number }) {
+    if (!/^[a-f\d]{24}$/i.test(roleId)) return null;
+    if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
+    const current = await tenancyRepository.findTenantRoleById(tenantId, roleId);
+    if (!current || current.status !== 'active') return null;
+    if (actorRole !== 'tenant_owner' && current.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin cannot manage tenant-scoped roles.' };
+    const permissions: string[] = input.permissions ?? (current.permissions as string[]);
+    const invalid = permissions.filter((permission: string) => !TENANT_PERMISSION_CATALOG.includes(permission));
+    if (invalid.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more permissions are not in the tenant permission catalog.', details: { permissions: invalid } };
+    const actorPermissions = getTenantRolePermissions(actorRole);
+    if (!permissions.every((permission: string) => hasPermission(actorPermissions, permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'A custom role cannot grant permissions the current actor does not have.' };
+    const update: Record<string, unknown> = { updatedBy: actorUserId, permissions: [...new Set(permissions)].sort() };
+    if (input.description !== undefined) update.description = input.description;
+    if (input.name !== undefined) {
+      const key = input.name.trim().normalize('NFKC').toLocaleLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-|-$/g, '');
+      if (key.length < 2) throw { status: 400, code: 'INVALID_ROLE_NAME', message: 'Role name must contain at least two letters or numbers.' };
+      if (Object.keys(TENANT_ROLE_PERMISSIONS).includes(key.replace(/-/g, '_'))) throw { status: 409, code: 'ROLE_NAME_RESERVED', message: 'This name is reserved for a built-in role.' };
+      update.name = input.name.trim(); update.key = key;
+    }
+    try {
+      const updated = await tenancyRepository.updateTenantRole(tenantId, roleId, input.version, update, {
+        version: input.version + 1, action: 'updated', name: String(update.name ?? current.name),
+        description: String(update.description ?? current.description ?? ''), scope: current.scope,
+        permissions, changedBy: actorUserId, changedAt: new Date(),
+      });
+      if (!updated) throw { status: 409, code: 'ROLE_VERSION_CONFLICT', message: 'This role changed since it was loaded. Refresh and retry.' };
+      await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.updated', targetType: 'tenant_role', targetId: roleId, metadata: { previousVersion: current.version, version: updated.version, previousPermissions: current.permissions, permissions: updated.permissions } });
+      return updated;
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'ROLE_NAME_ALREADY_EXISTS', message: 'A role with this name already exists in this tenant.' };
+      throw error;
+    }
+  },
+  async archiveCustomTenantRole(tenantId: string, roleId: string, actorUserId: string, actorRole: string) {
+    if (!/^[a-f\d]{24}$/i.test(roleId)) return null;
+    if (!['tenant_owner', 'tenant_admin'].includes(actorRole)) throw { status: 403, code: 'ROLE_MANAGEMENT_DENIED', message: 'Only Tenant Owner or Tenant Admin can manage custom roles.' };
+    const role = await tenancyRepository.findTenantRoleById(tenantId, roleId);
+    if (!role || role.status !== 'active') return null;
+    if (actorRole !== 'tenant_owner' && role.scope === 'tenant') throw { status: 403, code: 'ROLE_SCOPE_GRANT_DENIED', message: 'Tenant Admin cannot archive tenant-scoped roles.' };
+    if (await tenancyRepository.countMembershipsUsingRole(tenantId, roleId) > 0) throw { status: 409, code: 'ROLE_IN_USE', message: 'Reassign all memberships using this role before archiving it.' };
+    const archived = await tenancyRepository.archiveTenantRole(tenantId, roleId, actorUserId, {
+      version: role.version + 1, action: 'archived', name: role.name, description: role.description ?? '',
+      scope: role.scope, permissions: role.permissions ?? [], changedBy: actorUserId, changedAt: new Date(),
+    });
+    if (archived) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'authorization.role.archived', targetType: 'tenant_role', targetId: roleId, metadata: { name: role.name } });
+    return archived;
+  },
   async getTenantUserEffectiveAccess(tenantId: string, userId: string) {
     if (!/^[a-f\d]{24}$/i.test(userId)) return null;
     const memberships = await tenancyRepository.listMembershipsForUser(tenantId, userId);
     if (!memberships.length) return null;
-    return {
-      userId,
-      memberships: memberships.map((membership: any) => ({
+    const resolved = await Promise.all(memberships.map(async (membership: any) => {
+      const customRole = membership.role === 'custom' && membership.customRoleId
+        ? await tenancyRepository.findActiveTenantRoleById(tenantId, String(membership.customRoleId))
+        : null;
+      const rolePermissions = membership.role === 'custom'
+        ? (customRole?.permissions ?? [])
+        : getTenantRolePermissions(membership.role);
+      const overrides = membership.permissionOverrides ?? { allow: [], deny: [] };
+      const denied = new Set(overrides.deny ?? []);
+      const effectivePermissions = membership.status !== 'active' ? [] : [...new Set([
+        ...rolePermissions, ...(overrides.allow ?? []),
+      ])].filter((permission) => !denied.has(permission));
+      return {
         membershipId: String(membership._id),
         status: membership.status,
         role: membership.role,
         scope: membership.scope,
         clinic: membership.clinicId,
         branches: membership.branchIds ?? [],
-        permissions: membership.status === 'active' ? getTenantRolePermissions(membership.role) : [],
-        permissionSource: 'built_in_role',
-      })),
-    };
+        customRoleId: membership.customRoleId ? String(membership.customRoleId) : null,
+        customRoleName: customRole?.name ?? null,
+        permissions: effectivePermissions,
+        permissionSource: membership.role === 'custom' ? 'custom_role' : 'built_in_role',
+        permissionOverrides: overrides,
+        permissionOrigins: effectivePermissions.map((permission) => ({
+          permission,
+          source: (overrides.allow ?? []).includes(permission) && rolePermissions.includes(permission) ? 'direct_and_role' : (overrides.allow ?? []).includes(permission) ? 'direct' : 'role',
+          inheritedTo: membership.scope === 'tenant' ? ['clinic', 'branch'] : membership.scope === 'clinic' ? ['branch'] : [],
+        })),
+      };
+    }));
+    return { userId, memberships: resolved };
   },
   async recordTenantUserSessionRevoked(tenantId: string, actorUserId: string, targetUserId: string, sessionId: string) {
     await recordTenantAuditEvent({
@@ -295,13 +405,20 @@ export const tenancyService = {
     if (!membership) return null;
     return tenancyRepository.listTenantMembershipHistory(tenantId, membershipId, page, perPage);
   },
-  async updateTenantMembership(tenantId: string, membershipId: string, actorUserId: string, actorRole: string, input: Record<string, any>) {
+  async updateTenantMembership(tenantId: string, membershipId: string, actorUserId: string, actorRole: string, input: Record<string, any>, actorPermissions?: string[]) {
     const current = await tenancyRepository.findTenantMembershipById(tenantId, membershipId);
     if (!current) return null;
     if (String(current.userId) === actorUserId) throw { status: 403, code: 'SELF_MEMBERSHIP_CHANGE_DENIED', message: 'You cannot change your own membership role, scope or status.' };
     if (actorRole !== 'tenant_owner' && current.scope === 'tenant') throw { status: 403, code: 'MEMBERSHIP_MANAGEMENT_DENIED', message: 'Only the Tenant Owner can manage tenant-wide memberships.' };
     const next = {
       role: input.role ?? current.role,
+      customRoleId: input.role === 'custom' ? ((input.customRoleId ?? current.customRoleId) ? String(input.customRoleId ?? current.customRoleId) : null) : input.role ? null : (current.customRoleId ? String(current.customRoleId) : null),
+      permissionOverrides: input.permissionOverrides
+        ? {
+            allow: [...new Set(input.permissionOverrides.allow ?? current.permissionOverrides?.allow ?? [])],
+            deny: [...new Set(input.permissionOverrides.deny ?? current.permissionOverrides?.deny ?? [])],
+          }
+        : { allow: current.permissionOverrides?.allow ?? [], deny: current.permissionOverrides?.deny ?? [] },
       scope: input.scope ?? current.scope,
       clinicId: input.clinicId === undefined ? (current.clinicId ? String(current.clinicId) : null) : input.clinicId,
       branchIds: input.branchIds === undefined ? (current.branchIds ?? []).map((id: unknown) => String(id)) : input.branchIds,
@@ -311,8 +428,19 @@ export const tenancyService = {
     const tenantRoles = ['tenant_owner', 'tenant_admin', 'billing_admin'];
     const clinicRoles = ['clinic_admin', 'clinic_manager', 'staff', 'provider', 'receptionist'];
     const branchRoles = ['branch_manager', 'staff', 'provider', 'receptionist'];
+    const directAllows = next.permissionOverrides.allow as string[];
+    const directDenials = next.permissionOverrides.deny as string[];
+    const overridePermissions = [...new Set([...directAllows, ...directDenials])];
+    const unknownOverrides = overridePermissions.filter((permission) => !TENANT_PERMISSION_CATALOG.includes(permission));
+    if (unknownOverrides.length) throw { status: 400, code: 'UNKNOWN_PERMISSION', message: 'One or more direct permission overrides are unknown.', details: { permissions: unknownOverrides } };
+    if (next.role === 'tenant_owner' && overridePermissions.length) throw { status: 400, code: 'OWNER_PERMISSION_OVERRIDE_DENIED', message: 'Tenant Owner access cannot be altered through direct permission overrides.' };
+    if (!directAllows.every((permission) => hasPermission(actorPermissions ?? getTenantRolePermissions(actorRole), permission))) throw { status: 403, code: 'PERMISSION_GRANT_ESCALATION', message: 'Direct permission grants cannot exceed the current actor permissions.' };
     if (next.scope === 'tenant') {
-      if (!tenantRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at tenant scope.' };
+      if (next.role === 'custom') {
+        if (!next.customRoleId) throw { status: 400, code: 'CUSTOM_ROLE_REQUIRED', message: 'Select a custom role to assign.' };
+        const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, next.customRoleId);
+        if (!customRole || customRole.scope !== 'tenant') throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role is not available at tenant scope.' };
+      } else if (!tenantRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at tenant scope.' };
       if (actorRole !== 'tenant_owner') throw { status: 403, code: 'TENANT_OWNER_REQUIRED', message: 'Only the Tenant Owner can assign tenant-wide roles.' };
       next.clinicId = null;
       next.branchIds = [];
@@ -320,13 +448,29 @@ export const tenancyService = {
       if (!next.clinicId) throw { status: 400, code: 'CLINIC_REQUIRED', message: 'Clinic scope requires clinicId.' };
       if (!await tenancyRepository.findClinicById(next.clinicId, tenantId)) throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'Clinic not found in this tenant.' };
       if (next.scope === 'clinic') {
-        if (!clinicRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at clinic scope.' };
+        if (next.role === 'custom') {
+          if (!next.customRoleId) throw { status: 400, code: 'CUSTOM_ROLE_REQUIRED', message: 'Select a custom role to assign.' };
+          const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, next.customRoleId);
+          if (!customRole || customRole.scope !== 'clinic') throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role is not available at clinic scope.' };
+        } else if (!clinicRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at clinic scope.' };
         next.branchIds = [];
       } else {
-        if (!branchRoles.includes(next.role) || !next.branchIds.length) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'Branch scope requires a branch-compatible role and at least one branch.' };
+        if (next.role === 'custom') {
+          if (!next.customRoleId) throw { status: 400, code: 'CUSTOM_ROLE_REQUIRED', message: 'Select a custom role to assign.' };
+          const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, next.customRoleId);
+          if (!customRole || customRole.scope !== 'branch') throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role is not available at branch scope.' };
+        } else if (!branchRoles.includes(next.role)) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'This role cannot be assigned at branch scope.' };
+        if (!next.branchIds.length) throw { status: 400, code: 'BRANCH_REQUIRED', message: 'Branch scope requires at least one branch.' };
         for (const branchId of next.branchIds) {
           if (!await tenancyRepository.findBranchById(branchId, tenantId, next.clinicId)) throw { status: 404, code: 'BRANCH_NOT_FOUND', message: 'A selected branch does not belong to the selected clinic.' };
         }
+      }
+    }
+    if (next.role === 'custom') {
+      const selectedRole = await tenancyRepository.findActiveTenantRoleById(tenantId, String(next.customRoleId ?? ''));
+      if (!selectedRole || selectedRole.scope !== next.scope) throw { status: 400, code: 'INVALID_ROLE_SCOPE', message: 'The selected custom role does not match the membership scope.' };
+      if (actorRole !== 'tenant_owner' && !selectedRole.permissions.every((permission: string) => hasPermission(actorPermissions ?? getTenantRolePermissions(actorRole), permission))) {
+        throw { status: 403, code: 'ROLE_GRANT_DENIED', message: 'You cannot assign a custom role with permissions beyond your own access.' };
       }
     }
     const isDemotingLastOwner = current.scope === 'tenant' && current.role === 'tenant_owner' && current.status === 'active'
@@ -350,7 +494,7 @@ export const tenancyService = {
     } else {
       updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, ...(input.role ? { roleId: null } : {}), updatedBy: actorUserId });
     }
-    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'membership.updated', targetType: 'tenant_membership', targetId: membershipId, clinicId: next.clinicId, metadata: { role: next.role, scope: next.scope, status: next.status } });
+    if (updated) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'membership.updated', targetType: 'tenant_membership', targetId: membershipId, clinicId: next.clinicId, metadata: { previousRole: current.role, previousCustomRoleId: current.customRoleId ? String(current.customRoleId) : null, role: next.role, customRoleId: next.customRoleId, permissionOverrides: next.permissionOverrides, scope: next.scope, status: next.status } });
     return updated;
   },
   async getTenantConfiguration(tenantId: string) {

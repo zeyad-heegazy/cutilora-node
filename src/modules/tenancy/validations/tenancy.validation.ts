@@ -445,13 +445,18 @@ export const applyTenantConfigurationSchema = tenantConfigurationApplyBaseSchema
 });
 
 export const updateTenantMembershipSchema = z.object({
-  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
+  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist', 'custom']).optional(),
+  customRoleId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
   clinicId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
   branchIds: z.array(z.string().regex(/^[a-f\d]{24}$/i)).max(50).optional(),
   status: z.enum(['active', 'suspended']).optional(),
 }).refine((value) => Object.keys(value).length > 0, {
   message: 'At least one membership field must be supplied.',
+}).refine((value) => value.role !== 'custom' || Boolean(value.customRoleId), {
+  message: 'customRoleId is required when assigning a custom role.', path: ['customRoleId'],
+}).refine((value) => value.customRoleId === undefined || value.role === 'custom', {
+  message: 'customRoleId can only be supplied when role=custom.', path: ['customRoleId'],
 });
 
 export const updateBranchSettingsSchema = z.object({
@@ -499,7 +504,7 @@ export const createTenantInvitationSchema = z.object({
 export const tenantUserListQuerySchema = z.object({
   search: z.string().trim().min(1).max(100).optional(),
   status: z.enum(['active', 'invited', 'suspended']).optional(),
-  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist']).optional(),
+  role: z.enum(['tenant_owner', 'tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist', 'custom']).optional(),
   scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
   clinicId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
   branchId: z.string().regex(/^[a-f\d]{24}$/i).optional(),
@@ -519,28 +524,27 @@ export const tenantInvitationListQuerySchema = z.object({
 });
 
 
-export const tenantBillingProfileSchema = z.object({
-  legalName: optionalText(200),
-  taxNumber: optionalText(100),
-  vatNumber: optionalText(100),
-  email: z.string().trim().email().max(254).transform(value => value.toLowerCase()).optional(),
-  phone: optionalText(40),
-  address: optionalText(500),
-  city: optionalText(120),
-  countryCode: z.string().trim().length(2).transform(value => value.toUpperCase()).optional(),
-}).refine(value => Object.keys(value).length > 0, 'At least one billing profile field is required.');
+export const createTenantRoleSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(500).optional(),
+  scope: z.enum(['tenant', 'clinic', 'branch']),
+  permissions: z.array(z.string().trim().min(1).max(100)).max(100).default([]),
+});
+export const updateTenantRoleSchema = z.object({
+  name: z.string().trim().min(2).max(80).optional(),
+  description: z.string().trim().max(500).optional(),
+  permissions: z.array(z.string().trim().min(1).max(100)).max(100).optional(),
+  version: z.number().int().min(1),
+}).refine((value) => value.name !== undefined || value.description !== undefined || value.permissions !== undefined, {
+  message: 'At least one role field must be supplied.',
+});
+export const tenantRoleListQuerySchema = z.object({
+  status: z.enum(['active', 'archived']).optional(),
+  scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
+});
 
-export const tenantSubscriptionChangeRequestSchema = z.object({
-  type: z.enum(['upgrade', 'downgrade', 'cancel', 'reactivate']),
-  targetPlanCode: z.string().trim().min(1).max(60).toLowerCase().optional(),
-  targetBillingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
-  effectiveAt: z.enum(['immediate', 'period_end']).default('period_end'),
-  reason: optionalText(1000),
-}).superRefine((value, ctx) => {
-  if (['upgrade', 'downgrade'].includes(value.type) && !value.targetPlanCode) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetPlanCode'], message: 'A targetPlanCode is required for plan changes.' });
-  }
-  if (['cancel', 'reactivate'].includes(value.type) && (value.targetPlanCode || value.targetBillingCycle)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetPlanCode'], message: 'Plan details are not accepted for cancel/reactivate requests.' });
-  }
+
+export const cloneTenantRoleSchema = z.object({
+  name: z.string().trim().min(2).max(80),
+  description: z.string().trim().max(500).optional(),
 });

@@ -38,6 +38,8 @@ const TENANT_ROLE_LABELS: Record<string, string> = {
   receptionist: 'Receptionist',
 };
 
+export const TENANT_PERMISSION_CATALOG = [...new Set(Object.values(TENANT_ROLE_PERMISSIONS).flat().filter((permission) => permission !== '*'))].sort();
+
 export function getTenantRolePermissions(role: string): string[] {
   const permissions = TENANT_ROLE_PERMISSIONS[role] ?? [];
   return permissions.includes('*') ? ['*'] : [...permissions];
@@ -55,4 +57,27 @@ export function getTenantRoleCatalog(actorRole: string) {
     assignableByCurrentUser: grantable.includes(role),
     customizable: false,
   }));
+}
+
+
+export function getTenantRoleGrants(
+  role: string,
+  context: { scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string | null; branchId?: string | null; customPermissions?: string[]; permissionOverrides?: { allow?: string[]; deny?: string[] } },
+) {
+  const denied = new Set(context.permissionOverrides?.deny ?? []);
+  const permissions = [...new Set([
+    ...(context.customPermissions ?? getTenantRolePermissions(role)),
+    ...(context.permissionOverrides?.allow ?? []),
+  ])].filter((permission) => !denied.has(permission));
+  return permissions.map((permission) => ({
+    permission,
+    scope: context.scope,
+    ...(context.clinicId ? { clinicId: context.clinicId } : {}),
+    ...(context.branchId ? { branchId: context.branchId } : {}),
+  })) as Array<{
+    permission: string;
+    scope: 'tenant' | 'clinic' | 'branch';
+    clinicId?: string;
+    branchId?: string;
+  }>;
 }

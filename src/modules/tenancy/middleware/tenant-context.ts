@@ -49,7 +49,20 @@ export async function resolveTenantContext(req: Request, res: Response, next: Ne
       }
     }
 
-    req.tenantContext = { tenantId, clinicId, branchId, role: membership.role, scope: membership.scope };
+    let customPermissions: string[] | undefined;
+    if (membership.role === 'custom') {
+      if (!membership.customRoleId) return deny(res, 403, 'CUSTOM_ROLE_UNAVAILABLE', 'The assigned custom role is unavailable.');
+      const customRole = await tenancyRepository.findActiveTenantRoleById(tenantId, String(membership.customRoleId));
+      if (!customRole || customRole.scope !== membership.scope) return deny(res, 403, 'CUSTOM_ROLE_UNAVAILABLE', 'The assigned custom role is unavailable for this membership scope.');
+      customPermissions = customRole.permissions ?? [];
+    }
+    req.tenantContext = {
+      tenantId, clinicId, branchId, role: membership.role, scope: membership.scope,
+      membershipId: String(membership._id),
+      customRoleId: membership.customRoleId ? String(membership.customRoleId) : null,
+      ...(customPermissions ? { customPermissions } : {}),
+      permissionOverrides: { allow: membership.permissionOverrides?.allow ?? [], deny: membership.permissionOverrides?.deny ?? [] },
+    };
     req.tenantId = tenantId;
     req.auth.activeClinicId = clinicId;
     req.auth.clinicRole = membership.role;

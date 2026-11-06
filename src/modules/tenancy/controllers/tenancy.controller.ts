@@ -127,7 +127,7 @@ export const tenancyController = {
     try {
       const input = updateTenantMembershipSchema.parse(req.body);
       const context = req.tenantContext!;
-      const item = await tenancyService.updateTenantMembership(context.tenantId, String(req.params.membershipId ?? ''), req.auth!.userId, context.role, input);
+      const item = await tenancyService.updateTenantMembership(context.tenantId, String(req.params.membershipId ?? ''), req.auth!.userId, context.role, input, getTenantRoleGrants(context.role, context).map((grant) => grant.permission));
       if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Membership not found.' } });
       res.json({ success: true, data: item });
     } catch (e) { next(e); }
@@ -488,12 +488,113 @@ export const tenancyController = {
       res.json({ success: true, ...await tenancyService.listGeo(resource, query) });
     } catch (e) { next(e); }
   },
-  async listTenantRoles(req: Request, res: Response) {
-    res.json({ success: true, data: getTenantRoleCatalog(req.tenantContext!.role) });
+  async listTenantRoles(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = tenantRoleListQuerySchema.parse(req.query);
+      const context = req.tenantContext!;
+      const customRoles = await tenancyService.listCustomTenantRoles(context.tenantId, query);
+      const actorPermissions = getTenantRoleGrants(context.role, context).map((grant) => grant.permission);
+      const builtInRoles = getTenantRoleCatalog(context.role)
+        .filter((role) => !query.scope || role.scopes.includes(query.scope))
+        .map((role) => ({
+          ...role,
+          assignableByCurrentUser: role.assignableByCurrentUser
+            && (context.role === 'tenant_owner' || !role.scopes.includes('tenant'))
+            && role.permissions.every((permission) => actorPermissions.includes('*') || actorPermissions.includes(permission)),
+        }));
+      res.json({ success: true, data: [
+        ...builtInRoles,
+        ...customRoles.map((role: any) => ({
+          id: String(role._id), role: 'custom', label: role.name, description: role.description,
+          scopes: [role.scope], permissions: role.permissions, version: role.version,
+          status: role.status, customizable: true,
+          assignableByCurrentUser: (context.role === 'tenant_owner' || role.scope !== 'tenant') && role.permissions.every((permission: string) => actorPermissions.includes('*') || actorPermissions.includes(permission)),
+        })),
+      ] });
+    } catch (e) { next(e); }
+  },
+  async getTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getCustomTenantRole(req.tenantContext!.tenantId, String(req.params.roleId ?? ''));
+      if (!item) return res.status(404).json({ success: false, error: { code: 'ROLE_NOT_FOUND', message: 'Custom role not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async cloneTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = cloneTenantRoleSchema.parse(req.body);
+      const context = req.tenantContext!;
+      const item = await tenancyService.cloneCustomTenantRole(context.tenantId, String(req.params.roleId ?? ''), req.auth!.userId, context.role, context.scope, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'ROLE_NOT_FOUND', message: 'Active custom role not found.' } });
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async getMyTenantAccess(req: Request, res: Response) {
+    const context = req.tenantContext!;
+    const grants = getTenantRoleGrants(context.role, context);
+    const activeScope = context.branchId ? 'branch' : context.clinicId ? 'clinic' : 'tenant';
+    const direct = new Set(context.permissionOverrides?.allow ?? []);
+    const rolePermissions = new Set(context.customPermissions ?? getTenantRolePermissions(context.role));
+    res.json({ success: true, data: {
+      membershipId: context.membershipId,
+      role: context.role,
+      customRoleId: context.customRoleId ?? null,
+      scope: context.scope,
+      clinicId: context.clinicId,
+      branchId: context.branchId,
+      permissions: grants.map((grant) => grant.permission),
+      grants: grants.map((grant) => ({
+        ...grant,
+        source: direct.has(grant.permission) && rolePermissions.has(grant.permission) ? 'direct_and_role' : direct.has(grant.permission) ? 'direct' : 'role',
+        inherited: grant.scope === 'tenant' ? activeScope !== 'tenant' : grant.scope === 'clinic' && activeScope === 'branch',
+      })),
+    } });
+  },
+  async getTenantPermissionCatalog(req: Request, res: Response) {
+    const context = req.tenantContext!;
+    const actorPermissions = getTenantRoleGrants(context.role, context).map((grant) => grant.permission);
+    const assignable = context.role === 'tenant_owner'
+      ? TENANT_PERMISSION_CATALOG
+      : TENANT_PERMISSION_CATALOG.filter((permission) => actorPermissions.includes(permission));
+    const grouped = assignable.reduce((groups: Record<string, string[]>, permission) => {
+      const [module] = permission.split('.');
+      (groups[module!] ??= []).push(permission);
+      return groups;
+    }, {});
+    const groups = Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b)).map(([module, permissions]) => ({
+      module,
+      permissions: permissions.map((key) => ({ key, action: key.split('.').slice(1).join('.') })),
+    }));
+    res.json({ success: true, data: { groups, permissions: TENANT_PERMISSION_CATALOG, assignable } });
+  },
+  async createTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = createTenantRoleSchema.parse(req.body);
+      const context = req.tenantContext!;
+      const item = await tenancyService.createCustomTenantRole(context.tenantId, req.auth!.userId, context.role, context.scope, input);
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async updateTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = updateTenantRoleSchema.parse(req.body);
+      const context = req.tenantContext!;
+      const item = await tenancyService.updateCustomTenantRole(context.tenantId, String(req.params.roleId ?? ''), req.auth!.userId, context.role, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'ROLE_NOT_FOUND', message: 'Active custom role not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async archiveTenantRole(req: Request, res: Response, next: NextFunction) {
+    try {
+      const context = req.tenantContext!;
+      const item = await tenancyService.archiveCustomTenantRole(context.tenantId, String(req.params.roleId ?? ''), req.auth!.userId, context.role);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'ROLE_NOT_FOUND', message: 'Active custom role not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
   },
   async getPermissions(req: Request, res: Response) {
     const context = req.tenantContext!;
-    res.json({ success: true, data: { role: context.role, scope: context.scope, permissions: getTenantRolePermissions(context.role) } });
+    res.json({ success: true, data: { role: context.role, scope: context.scope, permissions: getTenantRoleGrants(context.role, context).map((grant) => grant.permission), customRoleId: context.customRoleId ?? null } });
   },
   async context(req: Request, res: Response, next: NextFunction) {
     try {

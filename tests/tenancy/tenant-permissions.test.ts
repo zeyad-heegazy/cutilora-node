@@ -13,17 +13,9 @@ vi.mock('../../src/modules/tenancy/models/branch.model.js', () => ({
 
 import { getTenantRoleCatalog, getTenantRolePermissions, requireTenantPermission } from '../../src/modules/tenancy/middleware/tenant-permissions.js';
 
-function query(value: any) {
-  const chain: any = { sort: () => chain, select: () => chain, lean: async () => value };
-  return chain;
-}
-async function run(role: string, permission: string, options: { roleId?: string; clinicId?: string | null; branchId?: string | null; membershipScope?: string; membershipClinicId?: string | null; resourceClinicId?: string } = {}) {
-  membershipFindOne.mockReturnValue(query({ role, roleId: options.roleId ?? null, scope: options.membershipScope ?? 'tenant', clinicId: options.membershipClinicId ?? null }));
-  branchFindOne.mockReturnValue(query({ clinicId: 'clinic-a' }));
-  roleFindOne.mockReturnValue(query(options.roleId ? {
-    permissions: [{ permission: 'branch.holidays.read', scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }],
-  } : null));
-  const req = { auth: { userId: 'user-a' }, params: options.resourceClinicId ? { clinicId: options.resourceClinicId } : {}, query: {}, tenantContext: { tenantId: 'tenant-a', clinicId: options.clinicId ?? null, branchId: options.branchId ?? null, role } } as any;
+function runPermission(role: string, permission: string, context: Record<string, unknown> = {}) {
+  const defaultScope = ['tenant_owner', 'tenant_admin', 'billing_admin'].includes(role) ? 'tenant' : ['clinic_admin', 'clinic_manager'].includes(role) ? 'clinic' : 'branch';
+  const req = { tenantContext: { role, scope: defaultScope, clinicId: defaultScope === 'tenant' ? null : 'clinic-a', branchId: defaultScope === 'branch' ? 'branch-a' : null, ...context } } as any;
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
   const next = vi.fn();
   await requireTenantPermission(permission)(req, res, next);
@@ -51,7 +43,28 @@ describe('tenant permission matrix and scoped custom roles', () => {
     expect((await run('branch_manager', 'branch.update')).next).not.toHaveBeenCalled();
   });
 
-  it('denies unknown roles by default', async () => {
+  it('evaluates grants against the active tenant, clinic, and branch scope', () => {
+    expect(runPermission('clinic_manager', 'branch.read', { scope: 'clinic', clinicId: 'clinic-a', branchId: 'branch-a' }).next).toHaveBeenCalledOnce();
+    expect(runPermission('branch_manager', 'branch.read', { scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }).next).toHaveBeenCalledOnce();
+    expect(runPermission('branch_manager', 'clinic.settings.manage', { scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }).next).not.toHaveBeenCalled();
+  });
+
+  it('uses tenant custom-role permissions and enforces their declared scope', () => {
+    expect(runPermission('custom', 'branch.read', { scope: 'branch', customPermissions: ['branch.read'] }).next).toHaveBeenCalledOnce();
+    expect(runPermission('custom', 'clinic.settings.manage', { scope: 'branch', customPermissions: ['branch.read'] }).next).not.toHaveBeenCalled();
+    expect(runPermission('custom', 'branch.read', { scope: 'branch', customPermissions: [] }).next).not.toHaveBeenCalled();
+  });
+
+  it('applies direct grants and denials without escaping the membership scope', () => {
+    expect(runPermission('staff', 'branch.schedule.manage', {
+      scope: 'branch', permissionOverrides: { allow: ['branch.schedule.manage'], deny: [] },
+    }).next).toHaveBeenCalledOnce();
+    expect(runPermission('branch_manager', 'branch.read', {
+      scope: 'branch', permissionOverrides: { allow: [], deny: ['branch.read'] },
+    }).next).not.toHaveBeenCalled();
+  });
+
+  it('does not grant permissions to unknown roles', () => {
     expect(getTenantRolePermissions('custom_unknown_role')).toEqual([]);
     expect((await run('custom_unknown_role', 'organization.manage')).next).not.toHaveBeenCalled();
   });

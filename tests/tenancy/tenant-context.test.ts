@@ -6,6 +6,7 @@ vi.mock('../../src/modules/tenancy/repositories/tenancy.repository.js', () => ({
     findActiveTenant: vi.fn(),
     findActiveClinic: vi.fn(),
     findActiveBranch: vi.fn(),
+    findActiveTenantRoleById: vi.fn(),
   },
 }));
 
@@ -107,6 +108,48 @@ describe('resolveTenantContext scope enforcement', () => {
     await context.run();
     expect(context.response.statusCode).toBe(403);
     expect(context.response.body.error.code).toBe('CLINIC_ACCESS_DENIED');
+  });
+
+  it('resolves tenant-owned custom roles only inside the active tenant', async () => {
+    const roleId = '64b000000000000000000006';
+    vi.mocked(tenancyRepository.findMembership).mockResolvedValue({
+      _id: '64b000000000000000000007', scope: 'clinic', clinicId: ids.clinic, branchIds: [],
+      role: 'custom', customRoleId: roleId, permissionOverrides: { allow: ['branch.read'], deny: [] },
+    } as any);
+    vi.mocked(tenancyRepository.findActiveTenantRoleById).mockResolvedValue({
+      _id: roleId, scope: 'clinic', permissions: ['clinic.settings.read'],
+    } as any);
+    const context = invoke({ 'x-tenant-id': ids.tenant, 'x-clinic-id': ids.clinic });
+    await context.run();
+    expect(tenancyRepository.findActiveTenantRoleById).toHaveBeenCalledWith(ids.tenant, roleId);
+    expect(context.req.tenantContext).toMatchObject({
+      role: 'custom', customRoleId: roleId,
+      customPermissions: ['clinic.settings.read'],
+      permissionOverrides: { allow: ['branch.read'], deny: [] },
+    });
+  });
+
+  it('rejects custom roles that do not belong to the active tenant or scope', async () => {
+    const roleId = '64b000000000000000000006';
+    vi.mocked(tenancyRepository.findMembership).mockResolvedValue({
+      _id: '64b000000000000000000007', scope: 'clinic', clinicId: ids.clinic, branchIds: [],
+      role: 'custom', customRoleId: roleId,
+    } as any);
+    vi.mocked(tenancyRepository.findActiveTenantRoleById).mockResolvedValue(null as any);
+    const context = invoke({ 'x-tenant-id': ids.tenant, 'x-clinic-id': ids.clinic });
+    await context.run();
+    expect(context.response.statusCode).toBe(403);
+    expect(context.response.body.error.code).toBe('CUSTOM_ROLE_UNAVAILABLE');
+    expect(context.next).not.toHaveBeenCalled();
+  });
+
+  it('does not resolve a membership from a different tenant', async () => {
+    vi.mocked(tenancyRepository.findMembership).mockResolvedValue(null as any);
+    const context = invoke({ 'x-tenant-id': ids.tenant });
+    await context.run();
+    expect(tenancyRepository.findMembership).toHaveBeenCalledWith('64b000000000000000000099', ids.tenant, null);
+    expect(context.response.statusCode).toBe(403);
+    expect(context.response.body.error.code).toBe('TENANT_ACCESS_DENIED');
   });
 
   it('allows tenant-scoped memberships to select an active clinic', async () => {

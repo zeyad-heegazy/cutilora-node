@@ -201,6 +201,8 @@ paths:
     $ref: "./openapi/tenant/profile/profile.yaml#/paths/~1tenant~1preferences"
   /tenant/permissions:
     $ref: "./openapi/tenant/context/permissions.yaml#/paths/~1tenant~1permissions"
+  /tenant/permissions/catalog:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1permissions~1catalog"
   /tenant/context:
     $ref: "./openapi/tenant/context/context.yaml#/paths/~1tenant~1context"
   /tenant/clinics:

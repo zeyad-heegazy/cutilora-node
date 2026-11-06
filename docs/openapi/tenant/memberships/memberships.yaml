@@ -44,7 +44,7 @@ paths:
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
       responses:
-        "200": { description: Built-in tenant role catalog and permission matrix }
+        "200": { description: Effective access for the authenticated membership and selected context }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /tenant/roles/{roleId}:
     get:
@@ -197,7 +197,7 @@ paths:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
         - { name: search, in: query, schema: { type: string, maxLength: 100 } }
         - { name: status, in: query, schema: { type: string, enum: [active, invited, suspended] } }
-        - { name: role, in: query, schema: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] } }
+        - { name: role, in: query, schema: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist, custom] } }
         - { name: scope, in: query, schema: { type: string, enum: [tenant, clinic, branch] } }
         - { name: clinicId, in: query, schema: { type: string } }
         - { name: lastLoginFrom, in: query, schema: { type: string, format: date-time } }
@@ -330,7 +330,13 @@ paths:
             schema:
               type: object
               properties:
-                role: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist] }
+                role: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist, custom] }
+                customRoleId: { type: string, nullable: true }
+                permissionOverrides:
+                  type: object
+                  properties:
+                    allow: { type: array, items: { type: string } }
+                    deny: { type: array, items: { type: string } }
                 scope: { type: string, enum: [tenant, clinic, branch] }
                 clinicId: { type: string, nullable: true }
                 branchIds: { type: array, items: { type: string }, maxItems: 50 }
