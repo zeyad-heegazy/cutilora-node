@@ -63,7 +63,7 @@ export const clinicFinanceService = {
     const currency = cleanCurrency(input.currency);
     if (!/^[A-Z]{3}$/.test(currency)) fail(400, 'INVALID_CURRENCY', 'currency must be a three-letter ISO currency code.');
     assertActorClinic(actor, input.clinicId, input.branchId || null);
-    const data = { tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null, type: 'invoice', status: input.status === 'draft' ? 'draft' : 'issued', currency, amount, patientId: input.patientId && validId(input.patientId) ? input.patientId : null, invoiceNumber: input.invoiceNumber?.trim() || null, description: input.description?.trim() || '', lineItems, occurredAt: input.issuedAt ? new Date(input.issuedAt) : new Date(), createdBy: actor.userId };
+    const data = { tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null, type: 'invoice', status: 'issued', currency, amount, patientId: input.patientId && validId(input.patientId) ? input.patientId : null, invoiceNumber: input.invoiceNumber?.trim() || null, description: input.description?.trim() || '', lineItems, occurredAt: input.issuedAt ? new Date(input.issuedAt) : new Date(), createdBy: actor.userId };
     if (input.patientId && !validId(input.patientId)) fail(400, 'INVALID_PATIENT_ID', 'patientId must be a valid identifier.');
     if (input.invoiceNumber && await ClinicFinanceEntry.exists({ tenantId: actor.tenantId, invoiceNumber: input.invoiceNumber.trim() })) fail(409, 'INVOICE_NUMBER_EXISTS', 'Invoice number already exists for this tenant.');
     try { const created = await ClinicFinanceEntry.create(data); await audit(actor, 'finance.invoice.created', created); return normalizeEntry(created); }
@@ -110,13 +110,23 @@ export const clinicFinanceService = {
       { $inc: { refundedAmount: input.amount } }, { new: true },
     ).lean();
     if (!reservedPayment) fail(409, 'REFUND_EXCEEDS_PAYMENT', 'Refund exceeds the unrefunded payment amount.');
+    const invoiceReservation = await ClinicFinanceEntry.findOneAndUpdate(
+      { _id: payment.invoiceId, tenantId: actor.tenantId, type: 'invoice', settledAmount: { $gte: input.amount } },
+      { $inc: { settledAmount: -input.amount } }, { new: true },
+    ).lean();
+    if (!invoiceReservation) {
+      await ClinicFinanceEntry.updateOne({ _id: payment._id, tenantId: actor.tenantId }, { $inc: { refundedAmount: -input.amount } });
+      fail(409, 'REFUND_INVOICE_BALANCE_CONFLICT', 'The invoice balance changed while processing the refund. Retry after refreshing.');
+    }
     try {
       const refund = await ClinicFinanceEntry.create({ tenantId: actor.tenantId, clinicId: payment.clinicId, branchId: payment.branchId, type: 'refund', status: 'posted', currency: payment.currency, amount: input.amount, patientId: payment.patientId, invoiceId: payment.invoiceId, paymentId: payment._id, method: input.method?.trim() || payment.method, reference: input.reference?.trim() || null, occurredAt: input.refundedAt ? new Date(input.refundedAt) : new Date(), createdBy: actor.userId });
-      await ClinicFinanceEntry.updateOne({ _id: payment.invoiceId, tenantId: actor.tenantId, type: 'invoice' }, { $inc: { settledAmount: -input.amount } });
       await audit(actor, 'finance.refund.recorded', refund, { paymentId: String(payment._id) });
       return normalizeEntry(refund);
     } catch (error) {
-      await ClinicFinanceEntry.updateOne({ _id: payment._id, tenantId: actor.tenantId }, { $inc: { refundedAmount: -input.amount } });
+      await Promise.all([
+        ClinicFinanceEntry.updateOne({ _id: payment._id, tenantId: actor.tenantId }, { $inc: { refundedAmount: -input.amount } }),
+        ClinicFinanceEntry.updateOne({ _id: payment.invoiceId, tenantId: actor.tenantId }, { $inc: { settledAmount: input.amount } }),
+      ]);
       throw error;
     }
   },
