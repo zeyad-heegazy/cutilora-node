@@ -12,7 +12,7 @@ const schema = z.object({
 }).strict();
 
 export const tenantIntegrationController = {
-  async list(req: Request, res: Response, next: NextFunction) {
+  async providers(_req: Request, res: Response) { res.json({ success: true, data: tenantIntegrationService.listProviders() }); },\n  async list(req: Request, res: Response, next: NextFunction) {
     try { res.json({ success: true, data: await tenantIntegrationService.list(req.tenantContext!.tenantId) }); }
     catch (error) { next(error); }
   },
@@ -21,6 +21,13 @@ export const tenantIntegrationController = {
       const input = schema.parse(req.body);
       const item = await tenantIntegrationService.save(req.tenantContext!.tenantId, req.auth!.userId, input);
       res.status(200).json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
+  async testConnection(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenantIntegrationService.testConnection(req.tenantContext!.tenantId, req.auth!.userId, String(req.params.integrationId ?? ''));
+      if (!item) return res.status(404).json({ success: false, error: { code: 'INTEGRATION_NOT_FOUND', message: 'Integration not found in this tenant.' } });
+      res.json({ success: true, data: item });
     } catch (error) { next(error); }
   },
   async updateStatus(req: Request, res: Response, next: NextFunction) {
