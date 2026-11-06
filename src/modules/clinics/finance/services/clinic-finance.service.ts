@@ -160,7 +160,7 @@ export const clinicFinanceService = {
     const payment: any = await ClinicFinanceEntry.findOne({ _id: input.paymentId, tenantId: actor.tenantId, type: 'payment', status: 'posted', invoiceId: invoice._id }).lean();
     if (!payment) fail(404, 'PAYMENT_NOT_FOUND', 'A posted payment for the package invoice is required.');
     assertActorClinic(actor, payment.clinicId, payment.branchId);
-    if (invoice.settledAmount < invoice.amount || payment.amount < input.saleAmount || !money(input.saleAmount) || input.saleAmount <= 0 || input.saleAmount !== invoice.amount) {
+    if (!invoice.patientId || payment.currency !== invoice.currency || (payment.refundedAmount ?? 0) > 0 || invoice.settledAmount < invoice.amount || payment.amount < input.saleAmount || !money(input.saleAmount) || input.saleAmount <= 0 || input.saleAmount !== invoice.amount) {
       fail(409, 'PACKAGE_NOT_PAID', 'The package invoice must be fully settled and the linked payment must cover the package sale amount.');
     }
     const packageRecord = await ClinicFinancePackage.create({
@@ -289,6 +289,25 @@ export const clinicFinanceService = {
       });
     }
     return { package: updated, refund };
+  },
+  async listPackages(actor: Actor, scope: Scope & { status?: string }) {
+    const page = Math.max(1, scope.page || 1), perPage = Math.min(100, Math.max(1, scope.perPage || 25));
+    const filter: Record<string, any> = {
+      tenantId: new Types.ObjectId(actor.tenantId),
+      ...(scope.clinicId ? { clinicId: new Types.ObjectId(scope.clinicId) } : {}),
+      ...(scope.branchId ? { branchId: new Types.ObjectId(scope.branchId) } : {}),
+      ...(scope.status ? { status: scope.status } : {}),
+    };
+    if (actor.scope === 'clinic') filter.clinicId = new Types.ObjectId(actor.clinicId!);
+    if (actor.scope === 'branch') {
+      filter.clinicId = new Types.ObjectId(actor.clinicId!);
+      filter.branchId = new Types.ObjectId(actor.branchId!);
+    }
+    const [items, total] = await Promise.all([
+      ClinicFinancePackage.find(filter).sort({ createdAt: -1, _id: -1 }).skip((page - 1) * perPage).limit(perPage).lean(),
+      ClinicFinancePackage.countDocuments(filter),
+    ]);
+    return { items, pagination: { page, perPage, total, pages: Math.ceil(total / perPage) } };
   },
   async listPackageEvents(actor: Actor, packageId: string) {
     if (!validId(packageId)) fail(400, 'INVALID_PACKAGE_ID', 'packageId must be a valid identifier.');
