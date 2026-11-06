@@ -21,7 +21,8 @@ describe('integration secret encryption', () => {
   it('rejects tampered ciphertext', () => {
     const encrypted = encryptIntegrationSecret('sensitive');
     const parts = encrypted.split('.');
-    const tag = parts[2] ?? '';\n    parts[2] = (tag.startsWith('A') ? 'B' : 'A') + tag.slice(1);
+    const tag = parts[2] ?? '';
+    parts[2] = (tag.startsWith('A') ? 'B' : 'A') + tag.slice(1);
     expect(() => decryptIntegrationSecret(parts.join('.'))).toThrow();
   });
 });
