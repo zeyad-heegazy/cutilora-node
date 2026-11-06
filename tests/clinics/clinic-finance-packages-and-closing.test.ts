@@ -57,10 +57,15 @@ describe('clinic prepaid packages and daily cash close', () => {
   });
 
   it('rejects package creation when the source invoice is not fully settled', async () => {
-    mocks.entry.findOne.mockReturnValueOnce(query({
-      _id: invoiceId, tenantId, clinicId, branchId: null, type: 'invoice', status: 'issued',
-      amount: 500, settledAmount: 300, patientId: '64b000000000000000000007', currency: 'EGP',
-    }));
+    mocks.entry.findOne
+      .mockReturnValueOnce(query({
+        _id: invoiceId, tenantId, clinicId, branchId: null, type: 'invoice', status: 'issued',
+        amount: 500, settledAmount: 300, patientId: '64b000000000000000000007', currency: 'EGP',
+      }))
+      .mockReturnValueOnce(query({
+        _id: paymentId, tenantId, clinicId, branchId: null, type: 'payment', status: 'posted',
+        invoiceId, amount: 500, currency: 'EGP',
+      }));
 
     await expect(clinicFinanceService.createPackage(actor, {
       invoiceId, paymentId, name: 'Laser 5 sessions', saleAmount: 500, sessionsPurchased: 5,
