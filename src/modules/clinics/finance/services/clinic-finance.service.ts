@@ -239,18 +239,19 @@ export const clinicFinanceService = {
     const byCurrency: Record<string, any> = {};
     for (const row of grouped) {
       const currency = row._id.currency;
-      byCurrency[currency] ||= { currency, invoiced: 0, collected: 0, refunded: 0, expenses: 0, netCash: 0, invoiceCount: 0, paymentCount: 0, refundCount: 0, expenseCount: 0 };
+      byCurrency[currency] ||= { currency, invoiced: 0, collected: 0, refunded: 0, expenses: 0, operatingResult: 0, netCash: 0, invoiceCount: 0, paymentCount: 0, refundCount: 0, expenseCount: 0 };
       const item = byCurrency[currency];
       if (row._id.type === 'invoice') { item.invoiced += row.total; item.invoiceCount += row.count; }
       if (row._id.type === 'payment') { item.collected += row.total; item.paymentCount += row.count; }
       if (row._id.type === 'refund') { item.refunded += row.total; item.refundCount += row.count; }
       if (row._id.type === 'expense') { item.expenses += row.total; item.expenseCount += row.count; }
     }
-    for (const item of Object.values(byCurrency) as any[]) item.netCash = Math.round((item.collected - item.refunded - item.expenses) * 100) / 100;
+    for (const item of Object.values(byCurrency) as any[]) { item.operatingResult = Math.round((item.invoiced - item.refunded - item.expenses) * 100) / 100; item.netCash = Math.round((item.collected - item.refunded - item.expenses) * 100) / 100; }
     const outstanding = await ClinicFinanceEntry.aggregate([
       { $match: { ...base, type: 'invoice', status: 'issued' } },
       { $lookup: { from: 'clinicfinanceentries', let: { invoice: '$_id', tenant: '$tenantId' }, pipeline: [
-        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$$tenant'] }, { $eq: ['$invoiceId', '$$invoice'] }, { $in: ['$type', ['payment','refund']] }, { $eq: ['$status', 'posted'] }] } } },
+        { $match: { $expr: { $and: [{ $eq: ['$tenantId', '$tenant'] }, { $eq: ['$invoiceId', '$invoice'] }, { $in: ['$type', ['payment','refund']] }, { $eq: ['$status', 'posted'] }] } } },
+        ...(scope.to ? [{ $match: { occurredAt: { $lte: scope.to } } }] : []),
         { $group: { _id: '$type', total: { $sum: '$amount' } } },
       ], as: 'settlements' } },
       { $addFields: { paid: { $sum: { $map: { input: '$settlements', as: 's', in: { $cond: [{ $eq: ['$$s._id','payment'] }, '$$s.total', { $multiply: ['$$s.total', -1] }] } } } } },
@@ -265,13 +266,13 @@ export const clinicFinanceService = {
     for (const row of clinics) {
       const id = String(row._id.clinicId), currency = row._id.currency;
       byClinic[id] ||= { clinicId: id, currencies: {} };
-      byClinic[id].currencies[currency] ||= { invoiced: 0, collected: 0, refunded: 0, expenses: 0, netCash: 0 };
+      byClinic[id].currencies[currency] ||= { invoiced: 0, collected: 0, refunded: 0, expenses: 0, operatingResult: 0, netCash: 0 };
       const v = byClinic[id].currencies[currency];
       if (row._id.type === 'invoice') v.invoiced += row.total;
       if (row._id.type === 'payment') v.collected += row.total;
       if (row._id.type === 'refund') v.refunded += row.total;
       if (row._id.type === 'expense') v.expenses += row.total;
-      v.netCash = Math.round((v.collected - v.refunded - v.expenses) * 100) / 100;
+      v.operatingResult = Math.round((v.invoiced - v.refunded - v.expenses) * 100) / 100; v.netCash = Math.round((v.collected - v.refunded - v.expenses) * 100) / 100;
     }
     return { period: { from: scope.from || null, to: scope.to || null }, filters: { clinicId: scope.clinicId || null, branchId: scope.branchId || null }, currencies: Object.values(byCurrency), outstanding: outstanding.map((x: any) => ({ currency: x._id, amount: x.outstanding, invoiceCount: x.invoiceCount })), clinics: Object.values(byClinic), generatedAt: new Date().toISOString(), currencyConversion: 'not_performed' };
   },
