@@ -79,7 +79,7 @@ export const tenantIntegrationService = {
     if (!await Clinic.exists({ _id: clinicId, tenantId })) return null;
     const clinicOverride = await TenantIntegration.findOne({ tenantId, provider, clinicId }).select('+encryptedSecrets');
     const item = clinicOverride ?? await TenantIntegration.findOne({ tenantId, provider, clinicId: null }).select('+encryptedSecrets');
-    if (!item || item.status === 'disabled') return null;
+    if (!item || item.status !== 'connected') return null;
     const secrets = item.encryptedSecrets ? JSON.parse(decryptIntegrationSecret(item.encryptedSecrets)) : {};
     return { id: String(item._id), provider: item.provider, integrationType: item.integrationType, config: item.config ?? {}, secrets };
   },
