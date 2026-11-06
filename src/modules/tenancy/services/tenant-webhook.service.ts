@@ -37,7 +37,7 @@ function privateAddress(address: string) {
 async function validateWebhookUrl(value: string) {
   let url: URL;
   try { url = new URL(value); } catch { throw { status: 400, code: 'WEBHOOK_URL_INVALID', message: 'Webhook URL must be a valid HTTPS URL.' }; }
-  if (url.protocol !== 'https:' || url.username || url.password || !url.hostname
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || !url.hostname
     || url.hostname === 'localhost' || url.hostname.endsWith('.localhost') || url.hostname.endsWith('.local')
     || isIP(url.hostname)) {
     throw { status: 400, code: 'WEBHOOK_URL_UNSAFE', message: 'Webhook endpoints must use public HTTPS hostnames without embedded credentials.' };
@@ -70,7 +70,7 @@ async function sendWebhook(urlValue: string, body: string, headers: Record<strin
       response.resume();
       response.on('end', () => resolve(status));
     });
-    request.on('timeout', () => request.destroy(new Error('Webhook request timed out.')));
+    request.on('timeout', () => { const error = new Error('Webhook request timed out.'); error.name = 'TimeoutError'; request.destroy(error); });
     request.on('error', reject);
     request.end(body);
   });
