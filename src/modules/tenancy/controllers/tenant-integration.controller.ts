@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { tenantIntegrationService } from '../services/tenant-integration.service.js';
 
 const schema = z.object({
-  clinicId: z.string().regex(/^[a-f\\d]{24}$/i).nullable().optional(),
+  clinicId: z.string().regex(/^[a-f\d]{24}$/i).nullable().optional(),
   provider: z.string().trim().min(2).max(80),
   integrationType: z.enum(['communication', 'payment_gateway', 'calendar', 'other']),
   displayName: z.string().trim().min(2).max(120),
