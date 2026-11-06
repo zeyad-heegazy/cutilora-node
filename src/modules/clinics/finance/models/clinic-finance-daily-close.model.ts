@@ -4,7 +4,7 @@ const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, immutable: true },
   clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', required: true, immutable: true },
   branchId: { type: Schema.Types.ObjectId, ref: 'Branch', default: null, immutable: true },
-  businessDate: { type: String, required: true, match: /^\\d{4}-\\d{2}-\\d{2}$/, immutable: true },
+  businessDate: { type: String, required: true, match: /^\d{4}-\\d{2}-\\d{2}$/, immutable: true },
   timezone: { type: String, required: true, maxlength: 80, immutable: true },
   currency: { type: String, required: true, uppercase: true, minlength: 3, maxlength: 3, immutable: true },
   periodStartAt: { type: Date, required: true, immutable: true },
