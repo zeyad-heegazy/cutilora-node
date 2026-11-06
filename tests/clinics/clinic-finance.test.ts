@@ -141,7 +141,11 @@ describe('clinic finance source records', () => {
       { tenantId, userId, scope: 'tenant' },
       { entryId: invoiceId, reason: 'Incorrect' },
     )).rejects.toMatchObject({ code: 'FINANCE_ENTRY_VOID_CONFLICT', status: 409 });
-    expect(financeMocks.findOneAndUpdate).not.toHaveBeenCalled();
+    expect(financeMocks.findOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ settledAmount: { $lte: 0 } }),
+      expect.objectContaining({ $set: expect.objectContaining({ status: 'void' }) }),
+      { new: true },
+    );
   });
 
   it('reconciles tenant summary from clinic source records without exposing patient details', async () => {
