@@ -1,0 +1,38 @@
+paths:
+  /tenant/reports/organization:
+    get:
+      tags: [Tenant Reports]
+      summary: Get organization operations and access overview
+      description: Returns live tenant-scoped clinic, branch, membership, invitation and audit aggregates. Appointment and patient-growth metrics are excluded until their source domains expose governed aggregate contracts.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200": { description: Report with definitions, UTC timezone and generation timestamp }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/reports/organization/export:
+    get:
+      tags: [Tenant Reports]
+      summary: Export organization report as CSV
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: from
+          in: query
+          schema: { type: string, format: date-time }
+        - name: to
+          in: query
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: CSV report with generation timestamp, timezone and freshness headers
+          content:
+            text/csv:
+              schema: { type: string }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
