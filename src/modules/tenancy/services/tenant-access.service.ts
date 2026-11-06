@@ -1,7 +1,7 @@
 export const TENANT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   tenant_owner: ['*'],
   tenant_admin: [
-    'organization.manage', 'dashboard.read', 'clinic.manage', 'clinic.settings.read', 'clinic.settings.manage', 'branch.manage',
+    'organization.manage', 'integrations.manage', 'dashboard.read', 'reports.export', 'clinic.manage', 'clinic.settings.read', 'clinic.settings.manage', 'branch.manage',
     'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.lifecycle.manage', 'branch.read', 'branch.holidays.read', 'branch.holidays.manage',
     'documents.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'configuration.manage', 'memberships.manage', 'audit.read', 'audit.export', 'billing.read',
   ],

@@ -45,7 +45,7 @@ app.use(`${env.API_PREFIX}/platform/monitoring`, monitoringRouter);
 app.use(`${env.API_PREFIX}/platform/tenants`, platformTenantRouter);
 app.use(`${env.API_PREFIX}/platform/geo`, platformGeoRouter);
 app.use(`${env.API_PREFIX}/tenant`, tenantRouter);
-app.use(`${env.API_PREFIX}/clinic`, clinicFinanceRouter);
+app.use(`${env.API_PREFIX}/clinic/finance`, clinicFinanceRouter);
 
 app.use((_req, res) =>
   res.status(404).json({

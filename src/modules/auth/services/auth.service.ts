@@ -1,4 +1,4 @@
-import { createHash } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { authRepository } from '../repositories/auth.repository.js';
 import { tenancyRepository } from '../../tenancy/repositories/tenancy.repository.js';
 import { hashPassword } from './auth.security.js';
@@ -19,7 +19,7 @@ export class AuthError extends Error {
   }
 }
 export const authService = {
-  async login(email: string, password: string) {
+  async login(email: string, password: string, client: { userAgent?: string | null } = {}) {
     const user = await authRepository.findUserByEmail(email.toLowerCase());
     if (
       !user ||
@@ -39,9 +39,20 @@ export const authService = {
       });
     });
     const memberships = await authRepository.findActiveMemberships(user.id);
+    const sessionId = randomUUID();
+    const issuedAt = new Date();
+    const expiresAt = new Date(issuedAt.getTime() + 1000 * Number(process.env.ACCESS_TOKEN_TTL_SECONDS ?? 3600));
+    await authRepository.createUserSession({
+      sessionId,
+      userId: user.id,
+      userAgent: client.userAgent?.slice(0, 512) ?? null,
+      lastSeenAt: issuedAt,
+      expiresAt,
+    });
     return {
-      access_token: signAccessToken(user.id, 'user'),
+      access_token: signAccessToken(user.id, 'user', sessionId),
       token_type: 'Bearer',
+      session: { id: sessionId, expiresAt },
       user: { id: user.id, name: user.name, email: user.email },
       memberships: memberships
         .filter((m: any) => m.tenantId)
@@ -196,6 +207,9 @@ export const authService = {
         'INVALID_TOKEN_TYPE',
         'A regular user access token is required.',
       );
+    if (payload.sessionId) {
+      await authRepository.revokeUserSession(payload.sub, payload.sessionId, new Date());
+    }
     await tokenRevocationService.revoke(token, payload.exp);
   },
   async me(userId: string) {

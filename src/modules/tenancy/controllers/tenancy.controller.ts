@@ -1,9 +1,9 @@
 import type { Request, Response, NextFunction } from 'express';
 import { tenancyService } from '../services/tenancy.service.js';
-import { getTenantRoleCatalog, getTenantRolePermissions, getTenantRoleGrants } from '../middleware/tenant-permissions.js';
-import { TENANT_PERMISSION_CATALOG } from '../services/tenant-access.service.js';
-import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema, createTenantRoleSchema, updateTenantRoleSchema, tenantRoleListQuerySchema, cloneTenantRoleSchema } from '../validations/tenancy.validation.js';
+import { getTenantRoleCatalog, getTenantRolePermissions } from '../middleware/tenant-permissions.js';
+import { createBranchSchema, createClinicSchema, updateBranchSchema, updateClinicSchema, updateTenantSchema, updateTenantPreferencesSchema, createTenantDocumentSchema, createBranchHolidaySchema, tenantAuditQuerySchema, updateTenantConfigurationSchema, previewTenantConfigurationApplySchema, applyTenantConfigurationSchema, updateTenantMembershipSchema, updateBranchSettingsSchema, updateClinicSettingsSchema, clinicListQuerySchema, branchListQuerySchema, replaceTenantDocumentSchema, createTenantInvitationSchema, tenantUserListQuerySchema, tenantInvitationListQuerySchema, updateBranchOperatingHoursSchema, branchLifecycleReasonSchema, tenantBillingProfileSchema, tenantSubscriptionChangeRequestSchema } from '../validations/tenancy.validation.js';
 import { clinicGeoListSchema, geoResourceSchema } from '../../geo/validations/geo.validation.js';
+import { userSessionService } from '../../auth/services/user-session.service.js';
 
 export const tenancyController = {
   async getProfile(req: Request, res: Response, next: NextFunction) {
@@ -93,7 +93,20 @@ export const tenancyController = {
         String(req.params.userId ?? ''),
       );
       if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_USER_NOT_FOUND', message: 'User not found in this tenant.' } });
-      res.json({ success: true, data: item });
+      const sessions = await userSessionService.listSummaries(String(req.params.userId ?? ''));
+      res.json({ success: true, data: { ...item, sessions } });
+    } catch (e) { next(e); }
+  },
+  async revokeTenantUserSession(req: Request, res: Response, next: NextFunction) {
+    try {
+      const userId = String(req.params.userId ?? '');
+      const sessionId = String(req.params.sessionId ?? '');
+      const item = await tenancyService.getTenantUserDetails(req.tenantContext!.tenantId, userId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_USER_NOT_FOUND', message: 'User not found in this tenant.' } });
+      const revoked = await userSessionService.revoke(userId, sessionId);
+      if (!revoked) return res.status(404).json({ success: false, error: { code: 'SESSION_NOT_FOUND', message: 'Active user session not found.' } });
+      await tenancyService.recordTenantUserSessionRevoked(req.tenantContext!.tenantId, req.auth!.userId, userId, sessionId);
+      res.json({ success: true, data: { sessionId: revoked.sessionId, revokedAt: revoked.revokedAt } });
     } catch (e) { next(e); }
   },
   async listTenantMembershipHistory(req: Request, res: Response, next: NextFunction) {
@@ -153,6 +166,8 @@ export const tenancyController = {
       res.setHeader('Content-Disposition', 'attachment; filename="tenant-audit-logs.csv"');
       res.setHeader('X-Export-Truncated', String(result.truncated));
       res.setHeader('X-Exported-Rows', String(result.exported));
+      res.setHeader('X-Report-Generated-At', new Date().toISOString());
+      res.setHeader('X-Report-Timezone', 'UTC');
       res.send(result.csv);
     } catch (e) { next(e); }
   },
@@ -161,6 +176,49 @@ export const tenancyController = {
       const query = tenantAuditQuerySchema.parse(req.query);
       const result = await tenancyService.listTenantAuditEvents(req.tenantContext!.tenantId, query);
       res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (e) { next(e); }
+  },
+  async getTenantBillingProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getTenantBillingProfile(req.tenantContext!.tenantId);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async updateTenantBillingProfile(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = tenantBillingProfileSchema.parse(req.body);
+      const item = await tenancyService.updateTenantBillingProfile(req.tenantContext!.tenantId, req.auth!.userId, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'TENANT_NOT_FOUND', message: 'Tenant not found.' } });
+      res.json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async createTenantSubscriptionChangeRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = tenantSubscriptionChangeRequestSchema.parse(req.body);
+      const item = await tenancyService.createTenantSubscriptionChangeRequest(req.tenantContext!.tenantId, req.auth!.userId, input);
+      if (!item) return res.status(404).json({ success: false, error: { code: 'SUBSCRIPTION_NOT_FOUND', message: 'No subscription is configured for this tenant.' } });
+      res.status(201).json({ success: true, data: item });
+    } catch (e) { next(e); }
+  },
+  async listTenantSubscriptionChangeRequests(req: Request, res: Response, next: NextFunction) {
+    try { res.json({ success: true, data: await tenancyService.listTenantSubscriptionChangeRequests(req.tenantContext!.tenantId) }); }
+    catch (e) { next(e); }
+  },
+  async listTenantBillingPayments(req: Request, res: Response, next: NextFunction) {
+    try { res.json({ success: true, data: await tenancyService.listTenantBillingPayments(req.tenantContext!.tenantId) }); }
+    catch (e) { next(e); }
+  },
+  async downloadTenantInvoice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenancyService.getTenantInvoice(req.tenantContext!.tenantId, String(req.params.invoiceId ?? ''));
+      if (!item) return res.status(404).json({ success: false, error: { code: 'NOT_FOUND', message: 'Invoice not found.' } });
+      const invoiceUrl = String((item as any).invoiceUrl ?? '');
+      if (!invoiceUrl) return res.status(404).json({ success: false, error: { code: 'INVOICE_DOCUMENT_UNAVAILABLE', message: 'No invoice document is available.' } });
+      let parsed: URL;
+      try { parsed = new URL(invoiceUrl); } catch { return res.status(409).json({ success: false, error: { code: 'INVALID_INVOICE_DOCUMENT_URL', message: 'The invoice document URL is invalid.' } }); }
+      if (parsed.protocol !== 'https:') return res.status(409).json({ success: false, error: { code: 'INVALID_INVOICE_DOCUMENT_URL', message: 'Invoice documents must use HTTPS.' } });
+      return res.redirect(302, invoiceUrl);
     } catch (e) { next(e); }
   },
   async getTenantSubscription(req: Request, res: Response, next: NextFunction) {

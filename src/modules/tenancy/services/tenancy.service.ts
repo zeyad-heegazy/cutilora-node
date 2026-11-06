@@ -16,6 +16,18 @@ async function assertTenantLimit(tenantId: string, key: 'maxClinics' | 'maxBranc
   }
 }
 
+async function assertTenantStorageLimit(tenantId: string, incomingBytes: number, excludeDocumentId?: string) {
+  const [subscription, currentUsage] = await Promise.all([
+    tenancyRepository.findSubscriptionByTenantId(tenantId),
+    tenancyRepository.getTenantStorageUsageBytes(tenantId, excludeDocumentId),
+  ]);
+  const limit = subscription?.plan?.limits?.maxStorageBytes;
+  const nextUsage = currentUsage + incomingBytes;
+  if (typeof limit === 'number' && nextUsage > limit) {
+    throw { status: 403, code: 'SUBSCRIPTION_LIMIT_REACHED', message: 'The tenant has reached its subscription storage limit.', details: { resource: 'maxStorageBytes', limit, currentUsage, requestedBytes: incomingBytes } };
+  }
+}
+
 async function withBranchHolidayMutationLock<T>(tenantId: string, clinicId: string, branchId: string, work: () => Promise<T>): Promise<T> {
   const token = randomBytes(24).toString('hex');
   const now = new Date();
@@ -47,11 +59,26 @@ function deepMerge(defaults: Record<string, any>, provided?: Record<string, any>
   return result;
 }
 
+function sanitizeAuditValue(value: any, depth = 0): any {
+  if (depth > 5) return '[TRUNCATED]';
+  if (Array.isArray(value)) return value.slice(0, 100).map(item => sanitizeAuditValue(item, depth + 1));
+  if (!value || typeof value !== 'object') return typeof value === 'string' ? value.slice(0, 2000) : value;
+  return Object.fromEntries(Object.entries(value).slice(0, 100).map(([key, item]) => [
+    key,
+    /password|secret|token|credential|authorization|api.?key|card|cvv/i.test(key)
+      ? '[REDACTED]'
+      : sanitizeAuditValue(item, depth + 1),
+  ]));
+}
+
 function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
   const filter: Record<string, any> = { tenantId };
   if (query.actorId) filter.actorUserId = query.actorId;
   if (query.action) filter.action = query.action;
   if (query.targetType) filter.targetType = query.targetType;
+  if (query.module) filter.action = new RegExp('^' + String(query.module) + '\\.');
+  if (query.result) filter.result = query.result;
+  if (query.requestId) filter.requestId = query.requestId;
   if (query.clinicId) filter.clinicId = query.clinicId;
   if (query.branchId) filter.branchId = query.branchId;
   if (query.from || query.to) filter.createdAt = {
@@ -60,7 +87,6 @@ function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
   };
   return filter;
 }
-
 function getSettingSources(layers: Array<{ source: string; values: Record<string, unknown> }>) {
   const result: Record<string, string> = {};
   const visit = (value: unknown, source: string, path: string) => {
@@ -135,7 +161,7 @@ async function recordTenantAuditEvent(input: Record<string, unknown>): Promise<v
 }
 
 export const tenancyService = {
-  async createTenantInvitation(tenantId: string, userId: string, actorRole: string, input: { email: string; role: string; scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string; branchIds?: string[]; expiresInDays?: number }) {
+  async createTenantInvitation(tenantId: string, userId: string, actorRole: string, input: { email: string; phone?: string; channels: ('email' | 'sms')[]; role: string; scope: 'tenant' | 'clinic' | 'branch'; clinicId?: string; branchIds?: string[]; expiresInDays?: number }) {
     const grantableByOwner = ['tenant_admin', 'billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'];
     const grantableByAdmin = ['billing_admin', 'clinic_admin', 'clinic_manager', 'branch_manager', 'staff', 'provider', 'receptionist'];
     const grantable = actorRole === 'tenant_owner' ? grantableByOwner : actorRole === 'tenant_admin' ? grantableByAdmin : [];
@@ -167,7 +193,7 @@ export const tenancyService = {
         const counts = await tenancyRepository.getDashboardCounts(tenantId);
         await assertTenantLimit(tenantId, 'maxUsers', counts.activeMembers + counts.pendingInvitations + 1);
         return tenancyRepository.createTenantInvitation({
-          tenantId, email, role: input.role, scope: input.scope, clinicId: input.clinicId ?? null,
+          tenantId, email, phone: input.phone ?? null, channels: input.channels, role: input.role, scope: input.scope, clinicId: input.clinicId ?? null,
           branchIds: input.branchIds ?? [], invitedBy: userId, tokenHash, status: 'pending', expiresAt,
         });
       });
@@ -179,9 +205,9 @@ export const tenancyService = {
       }
       throw error;
     }
-    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.created', targetType: 'tenant_invitation', targetId: String(invitation._id), clinicId: input.clinicId, metadata: { email, role: input.role, scope: input.scope } });
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.created', targetType: 'tenant_invitation', targetId: String(invitation._id), clinicId: input.clinicId, metadata: { email, channels: input.channels, role: input.role, scope: input.scope } });
     return {
-      invitation: { id: String(invitation._id), email, role: invitation.role, scope: invitation.scope, clinicId: invitation.clinicId, branchIds: invitation.branchIds, status: invitation.status, expiresAt: invitation.expiresAt },
+      invitation: { id: String(invitation._id), email, phone: invitation.phone ?? null, channels: invitation.channels ?? ['email'], role: invitation.role, scope: invitation.scope, clinicId: invitation.clinicId, branchIds: invitation.branchIds, status: invitation.status, expiresAt: invitation.expiresAt },
       invitationToken: token,
       acceptanceEndpoint: '/auth/invitations/accept',
       delivery: 'manual',
@@ -206,9 +232,31 @@ export const tenancyService = {
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const updated = await tenancyRepository.rotateTenantInvitationIfAvailable(tenantId, invitationId, new Date(), tokenHash);
     if (!updated) throw { status: 409, code: 'INVITATION_PROCESSING', message: 'This invitation is currently being accepted or has already changed. Refresh and retry.' };
-    if (!updated) return null;
-    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'membership.invitation.resent', targetType: 'tenant_invitation', targetId: invitationId, metadata: { email: invitation.email } });
-    return { invitation: updated, invitationToken: token, acceptanceEndpoint: '/auth/invitations/accept', delivery: 'manual' };
+    await recordTenantAuditEvent({
+      tenantId,
+      actorUserId: userId,
+      action: 'membership.invitation.resent',
+      targetType: 'tenant_invitation',
+      targetId: invitationId,
+      metadata: { email: invitation.email, channels: updated.channels ?? invitation.channels ?? ['email'] },
+    });
+    return {
+      invitation: {
+        id: String(updated._id),
+        email: updated.email,
+        phone: updated.phone ?? null,
+        channels: updated.channels ?? ['email'],
+        role: updated.role,
+        scope: updated.scope,
+        clinicId: updated.clinicId,
+        branchIds: updated.branchIds,
+        status: updated.status,
+        expiresAt: updated.expiresAt,
+      },
+      invitationToken: token,
+      acceptanceEndpoint: '/auth/invitations/accept',
+      delivery: 'manual',
+    };
   },
   async listCustomTenantRoles(tenantId: string, filters: { status?: string; scope?: string } = {}) {
     return tenancyRepository.listTenantRoles(tenantId, filters);
@@ -337,6 +385,16 @@ export const tenancyService = {
     }));
     return { userId, memberships: resolved };
   },
+  async recordTenantUserSessionRevoked(tenantId: string, actorUserId: string, targetUserId: string, sessionId: string) {
+    await recordTenantAuditEvent({
+      tenantId,
+      actorUserId,
+      action: 'membership.user_session.revoked',
+      targetType: 'user_session',
+      targetId: sessionId,
+      metadata: { targetUserId },
+    });
+  },
   listTenantMemberships(tenantId: string, query: { search?: string; status?: string; role?: string; scope?: string; clinicId?: string; branchId?: string; lastLoginFrom?: Date; lastLoginTo?: Date; page: number; perPage: number }) {
     return tenancyRepository.listTenantMemberships(tenantId, query);
   },
@@ -430,12 +488,12 @@ export const tenancyService = {
         if (await tenancyRepository.countActiveTenantOwners(tenantId) <= 1) {
           throw { status: 409, code: 'LAST_TENANT_OWNER_REQUIRED', message: 'The last active Tenant Owner cannot be demoted or suspended.' };
         }
-        updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
+        updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, ...(input.role ? { roleId: null } : {}), updatedBy: actorUserId });
       } finally {
         await tenancyRepository.releaseTenantOwnerMutationLock(tenantId).catch(() => null);
       }
     } else {
-      updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, updatedBy: actorUserId });
+      updated = await tenancyRepository.updateTenantMembership(tenantId, membershipId, { ...next, ...(input.role ? { roleId: null } : {}), updatedBy: actorUserId });
     }
     if (updated) await recordTenantAuditEvent({ tenantId, actorUserId, action: 'membership.updated', targetType: 'tenant_membership', targetId: membershipId, clinicId: next.clinicId, metadata: { previousRole: current.role, previousCustomRoleId: current.customRoleId ? String(current.customRoleId) : null, role: next.role, customRoleId: next.customRoleId, permissionOverrides: next.permissionOverrides, scope: next.scope, status: next.status } });
     return updated;
@@ -519,14 +577,15 @@ export const tenancyService = {
   countExpiringTenantDocuments(tenantId: string, from: Date, to: Date) {
     return tenancyRepository.countExpiringTenantDocuments(tenantId, from, to);
   },
-  listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
-    return tenancyRepository.listTenantAuditEvents(buildTenantAuditFilter(tenantId, query), query.page, query.perPage);
+  async listTenantAuditEvents(tenantId: string, query: Record<string, any>) {
+    const result = await tenancyRepository.listTenantAuditEvents(buildTenantAuditFilter(tenantId, query), query.page, query.perPage);
+    return { ...result, items: result.items.map((item: any) => ({ ...item, metadata: sanitizeAuditValue(item.metadata), changes: sanitizeAuditValue(item.changes) })) };
   },
   async exportTenantAuditEvents(tenantId: string, query: Record<string, any>) {
     const limit = 5000;
     const rows = await tenancyRepository.exportTenantAuditEvents(buildTenantAuditFilter(tenantId, query), limit + 1);
     const truncated = rows.length > limit;
-    const columns = ['createdAt', 'actorUserId', 'action', 'targetType', 'targetId', 'clinicId', 'branchId', 'result', 'requestId'];
+    const columns = ['createdAt', 'actorUserId', 'action', 'targetType', 'targetId', 'clinicId', 'branchId', 'result', 'requestId', 'metadata', 'changes'];
     const escape = (value: unknown) => {
       let text = String(value ?? '');
       if (/^[=+\-@\t\r]/.test(text)) text = "'" + text;
@@ -534,66 +593,61 @@ export const tenancyService = {
     };
     const csv = [
       columns.join(','),
-      ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(row[column])).join(',')),
+      ...rows.slice(0, limit).map((row: any) => columns.map((column) => escape(['metadata', 'changes'].includes(column) ? JSON.stringify(sanitizeAuditValue(row[column] ?? null)) : row[column])).join(',')),
     ].join('\r\n');
     return { csv, truncated, exported: Math.min(rows.length, limit) };
   },
   async replaceTenantDocument(tenantId: string, documentId: string, userId: string, input: Record<string, any>, clinicId: string | null = null) {
     if (clinicId && !await tenancyRepository.findClinicById(clinicId, tenantId)) return null;
-    const existing = await tenancyRepository.findTenantDocument(tenantId, documentId, clinicId);
-    if (!existing) return null;
-    const decoded = decodeTenantDocument(input.fileBase64);
-    const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
-    let replacement;
-    try {
-      replacement = await tenancyRepository.createTenantDocument({
-        tenantId,
-        clinicId,
-        uploadedBy: userId,
-        category: existing.category,
-        name: String(input.name ?? existing.name).trim().split('/').join('_').split(String.fromCharCode(92)).join('_').replaceAll('"', '_').replaceAll(String.fromCharCode(10), '_').replaceAll(String.fromCharCode(13), '_'),
-        mimeType: decoded.mimeType,
-        sizeBytes: decoded.content.length,
-        storageKey,
-        expiresAt: Object.prototype.hasOwnProperty.call(input, 'expiresAt') ? input.expiresAt : existing.expiresAt ?? null,
-        version: (existing.version ?? 1) + 1,
-        replacesDocumentId: existing._id,
-      });
-    } catch (error) {
-      await removePrivateTenantDocument(storageKey).catch(() => null);
-      throw error;
-    }
-    const archived = await tenancyRepository.archiveTenantDocument(tenantId, documentId, userId, clinicId);
-    if (!archived) {
-      await tenancyRepository.archiveTenantDocument(tenantId, String(replacement._id), userId, clinicId).catch(() => null);
-      await removePrivateTenantDocument(storageKey).catch(() => null);
-      throw { status: 409, code: 'DOCUMENT_REPLACEMENT_CONFLICT', message: 'The original document changed while the replacement was being saved.' };
-    }
-    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: clinicId ? 'clinic.document.replaced' : 'organization.document.replaced', targetType: 'tenant_document', targetId: documentId, clinicId, metadata: { replacementDocumentId: String(replacement._id), version: replacement.version } });
-    return replacement;
+    return withTenantEntitlementLock(tenantId, async () => {
+      const existing = await tenancyRepository.findTenantDocument(tenantId, documentId, clinicId);
+      if (!existing) return null;
+      const decoded = decodeTenantDocument(input.fileBase64);
+      await assertTenantStorageLimit(tenantId, decoded.content.length, documentId);
+      const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
+      let replacement;
+      try {
+        replacement = await tenancyRepository.createTenantDocument({
+          tenantId, clinicId, uploadedBy: userId, category: existing.category,
+          name: String(input.name ?? existing.name).trim().split('/').join('_').split(String.fromCharCode(92)).join('_').replaceAll('"', '_').replaceAll(String.fromCharCode(10), '_').replaceAll(String.fromCharCode(13), '_'),
+          mimeType: decoded.mimeType, sizeBytes: decoded.content.length, storageKey,
+          expiresAt: Object.prototype.hasOwnProperty.call(input, 'expiresAt') ? input.expiresAt : existing.expiresAt ?? null,
+          version: (existing.version ?? 1) + 1, replacesDocumentId: existing._id,
+        });
+      } catch (error) {
+        await removePrivateTenantDocument(storageKey).catch(() => null);
+        throw error;
+      }
+      const archived = await tenancyRepository.archiveTenantDocument(tenantId, documentId, userId, clinicId);
+      if (!archived) {
+        await tenancyRepository.archiveTenantDocument(tenantId, String(replacement._id), userId, clinicId).catch(() => null);
+        await removePrivateTenantDocument(storageKey).catch(() => null);
+        throw { status: 409, code: 'DOCUMENT_REPLACEMENT_CONFLICT', message: 'The original document changed while the replacement was being saved.' };
+      }
+      await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: clinicId ? 'clinic.document.replaced' : 'organization.document.replaced', targetType: 'tenant_document', targetId: documentId, clinicId, metadata: { replacementDocumentId: String(replacement._id), version: replacement.version } });
+      return replacement;
+    });
   },
   async createTenantDocument(tenantId: string, userId: string, input: Record<string, any>, clinicId: string | null = null) {
     if (clinicId && !await tenancyRepository.findClinicById(clinicId, tenantId)) return null;
-    const decoded = decodeTenantDocument(input.fileBase64);
-    const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
-    try {
-      const document = await tenancyRepository.createTenantDocument({
-        tenantId,
-        clinicId,
-        uploadedBy: userId,
-        category: input.category,
-        name: String(input.name).trim().split('/').join('_').split(String.fromCharCode(92)).join('_').replaceAll('"', '_').replaceAll(String.fromCharCode(10), '_').replaceAll(String.fromCharCode(13), '_'),
-        mimeType: decoded.mimeType,
-        sizeBytes: decoded.content.length,
-        storageKey,
-        expiresAt: input.expiresAt ?? null,
-      });
-      await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: clinicId ? 'clinic.document.uploaded' : 'organization.document.uploaded', targetType: 'tenant_document', targetId: String(document._id), clinicId, metadata: { category: input.category, mimeType: decoded.mimeType, sizeBytes: decoded.content.length } });
-      return document;
-    } catch (error) {
-      await removePrivateTenantDocument(storageKey).catch(() => null);
-      throw error;
-    }
+    return withTenantEntitlementLock(tenantId, async () => {
+      const decoded = decodeTenantDocument(input.fileBase64);
+      await assertTenantStorageLimit(tenantId, decoded.content.length);
+      const storageKey = await storePrivateTenantDocument(tenantId, decoded.extension, decoded.content);
+      try {
+        const document = await tenancyRepository.createTenantDocument({
+          tenantId, clinicId, uploadedBy: userId, category: input.category,
+          name: String(input.name).trim().split('/').join('_').split(String.fromCharCode(92)).join('_').replaceAll('"', '_').replaceAll(String.fromCharCode(10), '_').replaceAll(String.fromCharCode(13), '_'),
+          mimeType: decoded.mimeType, sizeBytes: decoded.content.length, storageKey,
+          expiresAt: input.expiresAt ?? null,
+        });
+        await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: clinicId ? 'clinic.document.uploaded' : 'organization.document.uploaded', targetType: 'tenant_document', targetId: String(document._id), clinicId, metadata: { category: input.category, mimeType: decoded.mimeType, sizeBytes: decoded.content.length } });
+        return document;
+      } catch (error) {
+        await removePrivateTenantDocument(storageKey).catch(() => null);
+        throw error;
+      }
+    });
   },
   listTenantDocuments(tenantId: string, clinicId: string | null = null) {
     return tenancyRepository.listTenantDocuments(tenantId, clinicId);
@@ -760,6 +814,46 @@ export const tenancyService = {
       cancelAtPeriodEnd: subscription.cancelAtPeriodEnd,
     };
   },
+  async getTenantBillingProfile(tenantId: string) {
+    const tenant = await tenancyRepository.findTenantById(tenantId);
+    return tenant?.billingProfile ?? null;
+  },
+  async updateTenantBillingProfile(tenantId: string, userId: string, input: Record<string, unknown>) {
+    const update: Record<string, unknown> = { updatedBy: userId };
+    for (const [key, value] of Object.entries(input)) update[`billingProfile.${key}`] = value;
+    const tenant = await tenancyRepository.updateTenant(tenantId, update);
+    if (!tenant) return null;
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'billing.profile.updated', targetType: 'tenant', targetId: tenantId, metadata: { changedFields: Object.keys(input) } });
+    return tenant.billingProfile;
+  },
+  async createTenantSubscriptionChangeRequest(tenantId: string, userId: string, input: Record<string, any>) {
+    const subscription = await tenancyRepository.findSubscriptionByTenantId(tenantId);
+    if (!subscription) return null;
+    if (input.type === 'cancel' && ['canceled', 'expired'].includes(subscription.status)) {
+      throw { status: 409, code: 'SUBSCRIPTION_ALREADY_ENDED', message: 'This subscription is already ended.' };
+    }
+    if (input.type === 'reactivate' && !subscription.cancelAtPeriodEnd && subscription.status !== 'canceled') {
+      throw { status: 409, code: 'SUBSCRIPTION_NOT_PENDING_CANCELLATION', message: 'There is no pending cancellation to reactivate.' };
+    }
+    if (await tenancyRepository.hasPendingSubscriptionChangeRequest(tenantId)) {
+      throw { status: 409, code: 'SUBSCRIPTION_CHANGE_REQUEST_PENDING', message: 'A subscription change request is already awaiting Platform review.' };
+    }
+    let request;
+    try {
+      request = await tenancyRepository.createSubscriptionChangeRequest({ ...input, tenantId, requestedBy: userId });
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'SUBSCRIPTION_CHANGE_REQUEST_PENDING', message: 'A subscription change request is already awaiting Platform review.' };
+      throw error;
+    }
+    await recordTenantAuditEvent({ tenantId, actorUserId: userId, action: 'subscription.change_requested', targetType: 'subscription', targetId: String(subscription._id), metadata: { requestId: String(request?._id), type: input.type, effectiveAt: input.effectiveAt } });
+    return request;
+  },
+  listTenantSubscriptionChangeRequests(tenantId: string) {
+    return tenancyRepository.listSubscriptionChangeRequests(tenantId);
+  },
+  listTenantBillingPayments(tenantId: string) {
+    return tenancyRepository.listTenantBillingPayments(tenantId);
+  },
   async getTenantSubscription(tenantId: string) {
     const item = await tenancyRepository.findSubscriptionByTenantId(tenantId);
     if (!item) return null;
@@ -775,25 +869,50 @@ export const tenancyService = {
       nextBillingAt: item.nextBillingAt,
       cancelAtPeriodEnd: item.cancelAtPeriodEnd,
       canceledAt: item.canceledAt,
+      paymentMethod: item.paymentMethod ? {
+        provider: item.paymentMethod.provider || '',
+        type: item.paymentMethod.type || '',
+        brand: item.paymentMethod.brand || '',
+        last4: item.paymentMethod.last4 || '',
+        expiryMonth: item.paymentMethod.expiryMonth ?? null,
+        expiryYear: item.paymentMethod.expiryYear ?? null,
+        updatedAt: item.paymentMethod.updatedAt ?? null,
+      } : null,
+      paymentRecovery: item.paymentRecovery ? {
+        failedAt: item.paymentRecovery.failedAt ?? null,
+        failureCode: item.paymentRecovery.failureCode || '',
+        retryAt: item.paymentRecovery.retryAt ?? null,
+        retryCount: item.paymentRecovery.retryCount ?? 0,
+        gracePeriodEndsAt: item.paymentRecovery.gracePeriodEndsAt ?? null,
+        suspensionAt: item.paymentRecovery.suspensionAt ?? null,
+      } : null,
     };
   },
   async getTenantSubscriptionUsage(tenantId: string) {
-    const [counts, subscription] = await Promise.all([
+    const [counts, subscription, storageBytes] = await Promise.all([
       tenancyRepository.getDashboardCounts(tenantId),
       tenancyRepository.findSubscriptionByTenantId(tenantId),
+      tenancyRepository.getTenantStorageUsageBytes(tenantId),
     ]);
     const limits = subscription?.plan?.limits ?? null;
     const limitsAvailable = Boolean(limits && Object.values(limits).some((value) => typeof value === 'number'));
+    const usage = {
+      clinics: counts.clinics.total,
+      branches: counts.branches.total,
+      activeMembers: counts.activeMembers,
+      pendingInvitations: counts.pendingInvitations,
+      storageBytes,
+    };
+    const warnings = limits ? Object.entries({ clinics: limits.maxClinics, branches: limits.maxBranches, activeMembers: limits.maxUsers, storageBytes: limits.maxStorageBytes })
+      .filter(([key, limit]) => typeof limit === 'number' && (usage as any)[key] >= Number(limit) * 0.8)
+      .map(([key, limit]) => ({ resource: key, limit, currentUsage: (usage as any)[key], exceeded: (usage as any)[key] > Number(limit), approaching: (usage as any)[key] <= Number(limit) }))
+      : [];
     return {
       plan: subscription ? { code: subscription.plan?.code, name: subscription.plan?.name, features: subscription.plan?.features ?? [] } : null,
-      usage: {
-        clinics: counts.clinics.total,
-        branches: counts.branches.total,
-        activeMembers: counts.activeMembers,
-        pendingInvitations: counts.pendingInvitations,
-      },
+      usage,
       limits,
       limitsAvailable,
+      warnings,
       limitsMessage: limitsAvailable ? null : 'No usage limits are configured for this subscription.',
     };
   },
@@ -824,8 +943,12 @@ export const tenancyService = {
     const slug = await generateUniqueClinicSlug(tenantId, name);
     const address = { ...(input.address ?? {}), ...location };
     const { logoBase64, coverImageBase64, ...branding } = input.branding ?? {};
-    const configuration = await tenancyRepository.findTenantConfiguration(tenantId);
+    const [configuration, publishedTemplates] = await Promise.all([
+      tenancyRepository.findTenantConfiguration(tenantId),
+      tenancyRepository.listPublishedTenantCatalogTemplates(tenantId),
+    ]);
     const providedSettings = { ...(input.settings ?? {}) };
+    // Inherited values are always derived from tenant-owned records, never client input.
     delete providedSettings.organizationDefaults;
     delete providedSettings.organizationDefaultsVersion;
     delete providedSettings.organizationOverrides;
@@ -833,6 +956,16 @@ export const tenancyService = {
     delete providedSettings.effectiveValues;
     delete providedSettings.sources;
     const settings = deepMerge({ organizationDefaults: deepMerge(PLATFORM_CONFIGURATION_DEFAULTS, configuration?.values), organizationDefaultsVersion: configuration?.version ?? 0 }, providedSettings);
+    delete providedSettings.organizationTemplates;
+    const organizationTemplates = Object.fromEntries(publishedTemplates.map((template: any) => [
+      template.key,
+      { templateId: String(template._id), type: template.type, version: template.version, content: template.content, appliedAt: new Date() },
+    ]));
+    const settings = deepMerge({
+      organizationDefaults: configuration?.values ?? {},
+      organizationDefaultsVersion: configuration?.version ?? 0,
+      organizationTemplates,
+    }, providedSettings);
     const clinic = await withTenantEntitlementLock(tenantId, async () => {
       const counts = await tenancyRepository.getDashboardCounts(tenantId);
       await assertTenantLimit(tenantId, 'maxClinics', counts.clinics.total + 1);
