@@ -78,7 +78,7 @@ export const clinicFinanceService = {
     if (cleanCurrency(input.currency) !== invoice.currency) fail(409, 'CURRENCY_MISMATCH', 'Payment currency must match the invoice currency.');
     if (input.branchId && String(input.branchId) !== String(invoice.branchId || '')) fail(400, 'BRANCH_SCOPE_MISMATCH', 'Payment branch must match the invoice branch.');
     if (input.idempotencyKey) {
-      const existing = await ClinicFinanceEntry.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
+      const existing: any = await ClinicFinanceEntry.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
       if (existing) { if (existing.type !== 'payment' || String(existing.invoiceId) !== String(input.invoiceId) || existing.amount !== input.amount || existing.currency !== invoice.currency) fail(409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used for a different payment.'); return existing; }
     }
     const reserved: any = await ClinicFinanceEntry.findOneAndUpdate(
@@ -93,7 +93,7 @@ export const clinicFinanceService = {
     } catch (error: any) {
       await ClinicFinanceEntry.updateOne({ _id: invoice._id, tenantId: actor.tenantId }, { $inc: { settledAmount: -input.amount } });
       if (error?.code === 11000 && input.idempotencyKey) {
-        const existing = await ClinicFinanceEntry.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
+        const existing: any = await ClinicFinanceEntry.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
         if (existing) return existing;
       }
       throw error;
