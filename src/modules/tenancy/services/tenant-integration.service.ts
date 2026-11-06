@@ -83,6 +83,29 @@ export const tenantIntegrationService = {
     return { id: String(item._id), provider: item.provider, integrationType: item.integrationType, config: item.config ?? {}, secrets };
   },
 
+  async rotateCredentials(tenantId: string, actorId: string, integrationId: string, secrets: Record<string, string>) {
+    if (!Object.keys(secrets).length || Object.keys(secrets).length > 30 || Object.values(secrets).some(value => typeof value !== 'string' || value.length > 4096)) {
+      throw { status: 400, code: 'INVALID_INTEGRATION_CREDENTIALS', message: 'Provide valid replacement credentials.' };
+    }
+    const item = await TenantIntegration.findOneAndUpdate(
+      { _id: integrationId, tenantId },
+      { $set: { encryptedSecrets: encryptIntegrationSecret(JSON.stringify(secrets)), status: 'configured', lastError: '', updatedBy: actorId } },
+      { new: true, runValidators: true },
+    ).select('+encryptedSecrets');
+    if (!item) return null;
+    await audit(tenantId, actorId, 'integration.credentials.rotated', item);
+    return present(item);
+  },
+  async revokeCredentials(tenantId: string, actorId: string, integrationId: string) {
+    const item = await TenantIntegration.findOneAndUpdate(
+      { _id: integrationId, tenantId },
+      { $set: { encryptedSecrets: '', status: 'disabled', lastError: 'Credentials revoked.', updatedBy: actorId } },
+      { new: true, runValidators: true },
+    ).select('+encryptedSecrets');
+    if (!item) return null;
+    await audit(tenantId, actorId, 'integration.credentials.revoked', item);
+    return present(item);
+  },
   async testConnection(tenantId: string, actorId: string, integrationId: string) {
     const item = await TenantIntegration.findOne({ _id: integrationId, tenantId }).select('+encryptedSecrets');
     if (!item) return null;
