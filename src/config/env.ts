@@ -28,4 +28,5 @@ if (!parsed.success) {
 
 export const env = {
   ...parsed.data,
+  INTEGRATION_ENCRYPTION_KEY: parsed.data.INTEGRATION_ENCRYPTION_KEY ?? parsed.data.JWT_SECRET,
 };
