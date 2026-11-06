@@ -514,3 +514,30 @@ export const tenantInvitationListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
 });
+
+
+export const tenantBillingProfileSchema = z.object({
+  legalName: optionalText(200),
+  taxNumber: optionalText(100),
+  vatNumber: optionalText(100),
+  email: z.string().trim().email().max(254).transform(value => value.toLowerCase()).optional(),
+  phone: optionalText(40),
+  address: optionalText(500),
+  city: optionalText(120),
+  countryCode: z.string().trim().length(2).transform(value => value.toUpperCase()).optional(),
+}).refine(value => Object.keys(value).length > 0, 'At least one billing profile field is required.');
+
+export const tenantSubscriptionChangeRequestSchema = z.object({
+  type: z.enum(['upgrade', 'downgrade', 'cancel', 'reactivate']),
+  targetPlanCode: z.string().trim().min(1).max(60).toLowerCase().optional(),
+  targetBillingCycle: z.enum(['monthly', 'quarterly', 'yearly']).optional(),
+  effectiveAt: z.enum(['immediate', 'period_end']).default('period_end'),
+  reason: optionalText(1000),
+}).superRefine((value, ctx) => {
+  if (['upgrade', 'downgrade'].includes(value.type) && !value.targetPlanCode) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetPlanCode'], message: 'A targetPlanCode is required for plan changes.' });
+  }
+  if (['cancel', 'reactivate'].includes(value.type) && (value.targetPlanCode || value.targetBillingCycle)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ['targetPlanCode'], message: 'Plan details are not accepted for cancel/reactivate requests.' });
+  }
+});
