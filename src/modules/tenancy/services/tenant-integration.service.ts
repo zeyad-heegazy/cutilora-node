@@ -22,7 +22,8 @@ function present(item: any) {
     id: String(item._id), provider: item.provider, integrationType: item.integrationType,
     displayName: item.displayName, clinicId: item.clinicId ? String(item.clinicId) : null,
     scope: item.clinicId ? 'clinic' : 'tenant', config: safeRecord(item.config),
-    hasCredentials: Boolean(item.encryptedSecrets), status: item.status,\n    lastCheckedAt: item.lastCheckedAt ?? null, lastError: item.lastError ?? '',
+    hasCredentials: Boolean(item.encryptedSecrets), status: item.status,
+    lastCheckedAt: item.lastCheckedAt ?? null, lastError: item.lastError ?? '',
     createdAt: item.createdAt, updatedAt: item.updatedAt,
   };
 }
@@ -55,7 +56,8 @@ export const tenantIntegrationService = {
         displayName: input.displayName.trim(),
         config: safeRecord(input.config),
         updatedBy: actorId,
-        status: 'configured',\n        lastError: '',
+        status: 'configured',
+        lastError: '',
       },
       $setOnInsert: { tenantId, provider, clinicId: input.clinicId ?? null, createdBy: actorId },
     };
