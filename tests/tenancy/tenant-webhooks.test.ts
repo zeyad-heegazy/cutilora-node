@@ -11,7 +11,8 @@ vi.mock('../../src/modules/tenancy/models/tenant-webhook-delivery.model.js', () 
 }));
 vi.mock('../../src/modules/tenancy/models/clinic.model.js', () => ({ Clinic: { exists: vi.fn() } }));
 
-import { tenantWebhookService } from '../../src/modules/tenancy/services/tenant-webhook.service.js';
+import { createHmac } from 'node:crypto';
+import { tenantWebhookService, verifyTenantWebhookSignature } from '../../src/modules/tenancy/services/tenant-webhook.service.js';
 
 describe('tenant webhook service', () => {
   beforeEach(() => vi.resetAllMocks());
