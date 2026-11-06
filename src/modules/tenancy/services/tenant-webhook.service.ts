@@ -1,4 +1,4 @@
-import { createHmac, randomBytes, randomUUID } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { lookup } from 'node:dns/promises';
 import { isIP } from 'node:net';
 import { request as httpsRequest } from 'node:https';
@@ -7,6 +7,22 @@ import { TenantWebhookDelivery } from '../models/tenant-webhook-delivery.model.j
 import { Clinic } from '../models/clinic.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 import { encryptIntegrationSecret, decryptIntegrationSecret } from './integration-secret.crypto.js';
+
+export function verifyTenantWebhookSignature(
+  secret: string,
+  timestamp: string,
+  rawBody: string | Buffer,
+  signature: string,
+  nowMs = Date.now(),
+  toleranceSeconds = 300,
+) {
+  if (!/^\\d{10}$/.test(timestamp) || !/^v1=[a-f0-9]{64}$/i.test(signature)) return false;
+  const timestampMs = Number(timestamp) * 1000;
+  if (!Number.isFinite(timestampMs) || Math.abs(nowMs - timestampMs) > toleranceSeconds * 1000) return false;
+  const expected = createHmac('sha256', secret).update(timestamp + '.').update(rawBody).digest();
+  const received = Buffer.from(signature.slice(3), 'hex');
+  return received.length === expected.length && timingSafeEqual(received, expected);
+}
 
 const MAX_ATTEMPTS = 8;
 const RETRY_DELAYS_MS = [60_000, 5 * 60_000, 30 * 60_000, 2 * 60 * 60_000, 12 * 60 * 60_000];
@@ -19,7 +35,7 @@ const SAFE_EVENTS = new Set([
   'finance.invoice.created', 'finance.payment.recorded', 'finance.refund.recorded', 'finance.expense.recorded', 'finance.entry.voided', 'finance.package.sold', 'finance.package.redeemed', 'finance.package.refunded', 'finance.package.expired', 'finance.daily_close.opened', 'finance.daily_close.closed', 'finance.daily_close.approved',
   'subscription.change_requested', 'integration.configuration.saved', 'integration.disabled', 'integration.enabled',
   'integration.connection_verified', 'integration.connection_failed', 'integration.credentials.rotated', 'integration.credentials.revoked',
-  'integration.webhook.created', 'integration.webhook.updated', 'integration.webhook.secret.rotated', 'integration.webhook.disabled', 'integration.webhook.enabled',
+  'integration.webhook.created', 'integration.webhook.updated', 'integration.webhook.secret.rotated', 'integration.webhook.disabled', 'integration.webhook.enabled', 'integration.webhook.delivery.retried',
 ]);
 
 function privateIpv6(address: string) {
@@ -138,7 +154,21 @@ export const tenantWebhookService = {
   },
   async setStatus(tenantId: string, actorId: string, endpointId: string, status: 'active' | 'disabled') {
     const endpoint = await TenantWebhookEndpoint.findOneAndUpdate({ _id: endpointId, tenantId }, { $set: { status, updatedBy: actorId } }, { new: true });
-    return endpoint ? safeEndpoint(endpoint) : null;
+    if (!endpoint) return null;
+    await auditWebhook(tenantId, actorId, status === 'active' ? 'integration.webhook.enabled' : 'integration.webhook.disabled', endpoint);
+    return safeEndpoint(endpoint);
+  },
+  async retryDelivery(tenantId: string, actorId: string, endpointId: string, deliveryId: string) {
+    const endpoint = await TenantWebhookEndpoint.findOne({ _id: endpointId, tenantId });
+    if (!endpoint) return null;
+    const delivery = await TenantWebhookDelivery.findOneAndUpdate(
+      { _id: deliveryId, tenantId, endpointId, status: 'failed' },
+      { $set: { status: 'pending', attempts: 0, nextAttemptAt: new Date(), lockedUntil: null, responseStatus: null, responseExcerpt: '', lastErrorCode: '' } },
+      { new: true },
+    );
+    if (!delivery) return null;
+    await auditWebhook(tenantId, actorId, 'integration.webhook.delivery.retried', endpoint);
+    return { id: String(delivery._id), eventId: delivery.eventId, status: delivery.status, attempts: delivery.attempts, nextAttemptAt: delivery.nextAttemptAt };
   },
   async listDeliveries(tenantId: string, endpointId: string, limit = 50) {
     const endpoint = await TenantWebhookEndpoint.exists({ _id: endpointId, tenantId });
