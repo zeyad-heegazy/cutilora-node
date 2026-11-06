@@ -4,7 +4,7 @@ const mocks = vi.hoisted(() => ({
   entry: { findOne: vi.fn(), create: vi.fn(), findOneAndUpdate: vi.fn(), aggregate: vi.fn(), updateOne: vi.fn() },
   clinic: { findOne: vi.fn() },
   branch: { findOne: vi.fn() },
-  package: { create: vi.fn(), findOne: vi.fn(), findOneAndUpdate: vi.fn(), updateOne: vi.fn(), deleteOne: vi.fn() },
+  package: { create: vi.fn(), findOne: vi.fn(), findOneAndUpdate: vi.fn(), updateOne: vi.fn(), deleteOne: vi.fn(), find: vi.fn(), countDocuments: vi.fn() },
   packageEvent: { create: vi.fn(), findOne: vi.fn(), find: vi.fn() },
   dailyClose: { create: vi.fn(), findOne: vi.fn(), findOneAndUpdate: vi.fn(), find: vi.fn() },
   audit: { create: vi.fn() },
