@@ -15,6 +15,7 @@ export const INTEGRATION_PROVIDER_CATALOG = [
   { key: 'resend_email', type: 'communication', label: 'Resend Email', credentialFields: ['apiKey'], capabilities: ['email.connection_check'] },
   { key: 'twilio_sms', type: 'communication', label: 'Twilio SMS', credentialFields: ['accountSid', 'authToken'], capabilities: ['sms.connection_check'] },
   { key: 'meta_whatsapp_cloud', type: 'communication', label: 'Meta WhatsApp Cloud API', credentialFields: ['accessToken', 'phoneNumberId'], capabilities: ['whatsapp.connection_check'] },
+  { key: 'google_calendar', type: 'calendar', label: 'Google Calendar', credentialFields: ['accessToken'], capabilities: ['calendar.connection_check'] },
   { key: 'stripe', type: 'payment_gateway', label: 'Stripe', credentialFields: ['secretKey'], capabilities: ['payment_gateway.connection_check'] },
   { key: 'paymob', type: 'payment_gateway', label: 'Paymob', credentialFields: ['apiKey'], capabilities: ['payment_gateway.connection_check'] },
 ] as const;
@@ -41,6 +42,10 @@ export async function verifyIntegrationConnection(provider: string, config: Conf
         if (!/^v\\d+\\.\\d+$/.test(version) || !/^\\d{5,30}$/.test(phoneNumberId)) throw new Error('WhatsApp API version or phone number ID is invalid.');
         await request(`https://graph.facebook.com/${version}/${phoneNumberId}?fields=id,display_phone_number,verified_name`, { headers: { authorization: `Bearer ${token}` } });
         return { connected: true, message: 'WhatsApp Cloud API credentials are valid.' };
+      }
+      case 'google_calendar': {
+        await request('https://www.googleapis.com/calendar/v3/users/me/calendarList?maxResults=1', { headers: { authorization: `Bearer ${required(secrets, 'accessToken')}` } });
+        return { connected: true, message: 'Google Calendar access token is valid.' };
       }
       case 'stripe': {
         await request('https://api.stripe.com/v1/account', { headers: { authorization: `Bearer ${required(secrets, 'secretKey')}` } });
