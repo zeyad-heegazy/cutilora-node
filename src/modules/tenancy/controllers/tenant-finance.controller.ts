@@ -9,7 +9,7 @@ const querySchema = z.object({
   from: z.string().datetime({ offset: true }).optional(),
   to: z.string().datetime({ offset: true }).optional(),
   currency: currency.optional(),
-}).refine(v => !v.from || !v.to || new Date(v.from) <= new Date(v.to), { message: 'from must be before or equal to to', path: ['from'] });
+}).refine(v => !v.branchId || !!v.clinicId, { message: 'clinicId is required with branchId', path: ['clinicId'] }).refine(v => !v.from || !v.to || new Date(v.from) <= new Date(v.to), { message: 'from must be before or equal to to', path: ['from'] });
 function scope(req: Request) {
   const context = req.tenantContext!;
   const query = { ...req.query } as Record<string, unknown>;
