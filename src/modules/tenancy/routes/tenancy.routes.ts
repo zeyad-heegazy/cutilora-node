@@ -53,6 +53,7 @@ tenantRouter.post('/integrations/:integrationId/test', requireTenantScope, requi
 tenantRouter.patch('/integrations/:integrationId/status', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.updateStatus);
 tenantRouter.get('/webhooks', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.list);
 tenantRouter.post('/webhooks', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.create);
+tenantRouter.patch('/webhooks/:endpointId', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.update);
 tenantRouter.post('/webhooks/:endpointId/rotate-secret', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.rotateSecret);
 tenantRouter.patch('/webhooks/:endpointId/status', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.setStatus);
 tenantRouter.get('/webhooks/:endpointId/deliveries', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.deliveries);
