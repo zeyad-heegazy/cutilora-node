@@ -399,6 +399,7 @@ export const clinicFinanceService = {
   },
   async createExpense(actor: Actor, input: any) {
     await assertClinicScope(actor.tenantId, input.clinicId, input.branchId);
+    assertActorClinic(actor, input.clinicId, input.branchId || null);
     if (!money(input.amount) || input.amount <= 0) fail(400, 'INVALID_AMOUNT', 'Expense amount must be greater than zero with at most two decimal places.');
     const currency = cleanCurrency(input.currency);
     if (!/^[A-Z]{3}$/.test(currency)) fail(400, 'INVALID_CURRENCY', 'currency must be a three-letter ISO currency code.');
