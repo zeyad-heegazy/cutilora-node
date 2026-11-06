@@ -12,7 +12,8 @@ const schema = z.object({
 }).strict();
 
 export const tenantIntegrationController = {
-  async providers(_req: Request, res: Response) { res.json({ success: true, data: tenantIntegrationService.listProviders() }); },\n  async list(req: Request, res: Response, next: NextFunction) {
+  async providers(_req: Request, res: Response) { res.json({ success: true, data: tenantIntegrationService.listProviders() }); },
+  async list(req: Request, res: Response, next: NextFunction) {
     try { res.json({ success: true, data: await tenantIntegrationService.list(req.tenantContext!.tenantId) }); }
     catch (error) { next(error); }
   },
