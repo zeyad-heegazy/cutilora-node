@@ -9,9 +9,10 @@ const financeMocks = vi.hoisted(() => ({
   countDocuments: vi.fn(),
   exists: vi.fn(),
   updateOne: vi.fn(),
+  clinicFindOne: vi.fn(),
 }));
 vi.mock('../../src/modules/clinics/finance/models/clinic-finance-entry.model.js', () => ({ ClinicFinanceEntry: financeMocks }));
-vi.mock('../../src/modules/tenancy/models/clinic.model.js', () => ({ Clinic: { findOne: vi.fn() } }));
+vi.mock('../../src/modules/tenancy/models/clinic.model.js', () => ({ Clinic: { findOne: financeMocks.clinicFindOne } }));
 vi.mock('../../src/modules/tenancy/models/branch.model.js', () => ({ Branch: { findOne: vi.fn() } }));
 vi.mock('../../src/modules/tenancy/models/tenant-audit-event.model.js', () => ({ TenantAuditEvent: { create: vi.fn().mockResolvedValue({}) } }));
 
