@@ -15,7 +15,7 @@ export const TENANT_PERMISSION_CATALOG = [
   { module: 'settings', actions: ['organization.manage', 'configuration.manage'] },
   { module: 'documents', actions: ['documents.manage'] },
   { module: 'finance', actions: ['billing.read', 'finance.read', 'finance.manage'] },
-  { module: 'reports', actions: ['dashboard.read', 'audit.read', 'audit.export'] },
+  { module: 'reports', actions: ['dashboard.read', 'reports.export', 'audit.read', 'audit.export'] },
   { module: 'integrations', actions: ['integrations.manage'] },
 ] as const;
 
