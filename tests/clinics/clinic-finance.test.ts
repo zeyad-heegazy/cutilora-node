@@ -115,6 +115,34 @@ describe('clinic finance source records', () => {
     expect(financeMocks.create).not.toHaveBeenCalled();
   });
 
+  it('voids an unpaid invoice with an immutable reason and tenant audit event', async () => {
+    const unpaid = { ...invoice, settledAmount: 0 };
+    const voided = { ...unpaid, status: 'void', voidReason: 'Duplicate invoice' };
+    financeMocks.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue(unpaid) });
+    financeMocks.findOneAndUpdate.mockReturnValue({ lean: vi.fn().mockResolvedValue(voided) });
+
+    const result = await clinicFinanceService.voidEntry(
+      { tenantId, userId, scope: 'tenant' },
+      { entryId: invoiceId, reason: 'Duplicate invoice' },
+    );
+
+    expect(financeMocks.findOneAndUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ _id: invoiceId, tenantId, status: { $in: ['draft', 'issued'] }, settledAmount: { $lte: 0 } }),
+      expect.objectContaining({ $set: expect.objectContaining({ status: 'void', voidReason: 'Duplicate invoice', voidedBy: userId }) }),
+      { new: true },
+    );
+    expect(result).toMatchObject({ status: 'void', voidReason: 'Duplicate invoice' });
+  });
+
+  it('does not void settled invoices or posted payments', async () => {
+    financeMocks.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue({ ...invoice, settledAmount: 20 }) });
+    await expect(clinicFinanceService.voidEntry(
+      { tenantId, userId, scope: 'tenant' },
+      { entryId: invoiceId, reason: 'Incorrect' },
+    )).rejects.toMatchObject({ code: 'FINANCE_ENTRY_VOID_CONFLICT', status: 409 });
+    expect(financeMocks.findOneAndUpdate).not.toHaveBeenCalled();
+  });
+
   it('reconciles tenant summary from clinic source records without exposing patient details', async () => {
     financeMocks.aggregate
       .mockResolvedValueOnce([
