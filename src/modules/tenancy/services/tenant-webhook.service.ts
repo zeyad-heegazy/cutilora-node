@@ -159,7 +159,7 @@ export const tenantWebhookService = {
     };
     const endpoints = await TenantWebhookEndpoint.find(endpointFilter).select('_id tenantId').lean();
     if (!endpoints.length) return;
-    const eventId = randomUUID();
+    const eventId = String(event._id ?? randomUUID());
     const payload = {
       id: eventId, type: event.action, occurredAt: event.createdAt ?? new Date(),
       tenantId: String(event.tenantId), actorId: String(event.actorUserId),
