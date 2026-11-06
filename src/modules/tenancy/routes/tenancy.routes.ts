@@ -47,6 +47,8 @@ tenantRouter.post('/configuration/apply', requireTenantScope, requireTenantPermi
 tenantRouter.get('/integrations/providers', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.providers);
 tenantRouter.get('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.list);
 tenantRouter.put('/integrations', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.save);
+tenantRouter.post('/integrations/:integrationId/rotate-credentials', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.rotateCredentials);
+tenantRouter.post('/integrations/:integrationId/revoke-credentials', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.revokeCredentials);
 tenantRouter.post('/integrations/:integrationId/test', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.testConnection);
 tenantRouter.patch('/integrations/:integrationId/status', requireTenantScope, requireTenantPermission('integrations.manage'), tenantIntegrationController.updateStatus);
 tenantRouter.get('/webhooks', requireTenantScope, requireTenantPermission('integrations.manage'), tenantWebhookController.list);
