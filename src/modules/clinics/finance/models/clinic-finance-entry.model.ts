@@ -28,7 +28,7 @@ const schema = new Schema({
   voidReason: { type: String, trim: true, maxlength: 500, default: null },
 }, { timestamps: true, minimize: false });
 schema.index({ tenantId: 1, clinicId: 1, branchId: 1, type: 1, status: 1, occurredAt: -1 });
-schema.index({ tenantId: 1, invoiceNumber: 1 }, { unique: true, partialFilterExpression: { invoiceNumber: { $type: 'string' } } });
+schema.index({ tenantId: 1, clinicId: 1, invoiceNumber: 1 }, { unique: true, partialFilterExpression: { invoiceNumber: { $type: 'string' } } });
 schema.index({ tenantId: 1, idempotencyKey: 1 }, { unique: true, partialFilterExpression: { idempotencyKey: { $type: 'string' } } });
 schema.index({ tenantId: 1, invoiceId: 1, type: 1, status: 1 });
 export const ClinicFinanceEntry = (models.ClinicFinanceEntry || model('ClinicFinanceEntry', schema)) as Model<any>;
