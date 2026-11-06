@@ -22,7 +22,7 @@ function present(item: any) {
     id: String(item._id), provider: item.provider, integrationType: item.integrationType,
     displayName: item.displayName, clinicId: item.clinicId ? String(item.clinicId) : null,
     scope: item.clinicId ? 'clinic' : 'tenant', config: safeRecord(item.config),
-    hasCredentials: Boolean(item.encryptedSecrets), status: item.status,
+    hasCredentials: Boolean(item.encryptedSecrets), status: item.status,\n    lastCheckedAt: item.lastCheckedAt ?? null, lastError: item.lastError ?? '',
     createdAt: item.createdAt, updatedAt: item.updatedAt,
   };
 }
