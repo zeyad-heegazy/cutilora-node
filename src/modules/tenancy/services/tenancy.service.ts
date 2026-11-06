@@ -63,7 +63,7 @@ function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
   if (query.actorId) filter.actorUserId = query.actorId;
   if (query.action) filter.action = query.action;
   if (query.targetType) filter.targetType = query.targetType;
-  if (query.module) filter.action = new RegExp('^' + String(query.module).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&') + '\\.');
+  if (query.module) filter.action = new RegExp('^' + String(query.module) + '\\.');
   if (query.result) filter.result = query.result;
   if (query.requestId) filter.requestId = query.requestId;
   if (query.clinicId) filter.clinicId = query.clinicId;
