@@ -39,7 +39,7 @@ export async function verifyIntegrationConnection(provider: string, config: Conf
         const token = required(secrets, 'accessToken');
         const phoneNumberId = required(secrets, 'phoneNumberId');
         const version = String(config.apiVersion ?? 'v26.0');
-        if (!/^v\\d+\\.\\d+$/.test(version) || !/^\\d{5,30}$/.test(phoneNumberId)) throw new Error('WhatsApp API version or phone number ID is invalid.');
+        if (!/^v\d+\.\d+$/.test(version) || !/^\d{5,30}$/.test(phoneNumberId)) throw new Error('WhatsApp API version or phone number ID is invalid.');
         await request(`https://graph.facebook.com/${version}/${phoneNumberId}?fields=id,display_phone_number,verified_name`, { headers: { authorization: `Bearer ${token}` } });
         return { connected: true, message: 'WhatsApp Cloud API credentials are valid.' };
       }
