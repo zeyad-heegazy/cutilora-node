@@ -167,6 +167,10 @@ paths:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1providers"
   /tenant/integrations:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations"
+  /tenant/integrations/{integrationId}/rotate-credentials:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1rotate-credentials"
+  /tenant/integrations/{integrationId}/revoke-credentials:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1revoke-credentials"
   /tenant/integrations/{integrationId}/test:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1{integrationId}~1test"
   /tenant/integrations/{integrationId}/status:
