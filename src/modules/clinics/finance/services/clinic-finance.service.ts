@@ -65,7 +65,7 @@ export const clinicFinanceService = {
     assertActorClinic(actor, input.clinicId, input.branchId || null);
     const data = { tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null, type: 'invoice', status: 'issued', currency, amount, patientId: input.patientId && validId(input.patientId) ? input.patientId : null, invoiceNumber: input.invoiceNumber?.trim() || null, description: input.description?.trim() || '', lineItems, occurredAt: input.issuedAt ? new Date(input.issuedAt) : new Date(), createdBy: actor.userId };
     if (input.patientId && !validId(input.patientId)) fail(400, 'INVALID_PATIENT_ID', 'patientId must be a valid identifier.');
-    if (input.invoiceNumber && await ClinicFinanceEntry.exists({ tenantId: actor.tenantId, invoiceNumber: input.invoiceNumber.trim() })) fail(409, 'INVOICE_NUMBER_EXISTS', 'Invoice number already exists for this tenant.');
+    if (input.invoiceNumber && await ClinicFinanceEntry.exists({ tenantId: actor.tenantId, clinicId: input.clinicId, invoiceNumber: input.invoiceNumber.trim() })) fail(409, 'INVOICE_NUMBER_EXISTS', 'Invoice number already exists for this tenant.');
     try { const created = await ClinicFinanceEntry.create(data); await audit(actor, 'finance.invoice.created', created); return normalizeEntry(created); }
     catch (error: any) { if (error?.code === 11000) fail(409, 'INVOICE_NUMBER_EXISTS', 'Invoice number already exists for this tenant.'); throw error; }
   },
