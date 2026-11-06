@@ -46,6 +46,8 @@ export const tenantIntegrationService = {
   },
   async save(tenantId: string, actorId: string, input: IntegrationInput) {
     const provider = input.provider.trim().toLowerCase();
+    const definition = INTEGRATION_PROVIDER_CATALOG.find((item) => item.key === provider);
+    if (!definition || definition.type !== input.integrationType) throw { status: 400, code: 'INTEGRATION_PROVIDER_UNSUPPORTED', message: 'Select a supported provider for this integration type.' };
     if (!/^[a-z0-9][a-z0-9._-]{1,79}$/.test(provider)) throw { status: 400, code: 'INVALID_INTEGRATION_PROVIDER', message: 'Provider must be a valid provider key.' };
     if (input.clinicId && !await Clinic.exists({ _id: input.clinicId, tenantId })) {
       throw { status: 404, code: 'CLINIC_NOT_FOUND', message: 'Clinic does not belong to this tenant.' };
@@ -72,6 +74,14 @@ export const tenantIntegrationService = {
     return present(item);
   },
   listProviders() { return INTEGRATION_PROVIDER_CATALOG; },
+  async resolveForClinic(tenantId: string, clinicId: string, provider: string) {
+    if (!await Clinic.exists({ _id: clinicId, tenantId })) return null;
+    const clinicOverride = await TenantIntegration.findOne({ tenantId, provider, clinicId }).select('+encryptedSecrets');
+    const item = clinicOverride ?? await TenantIntegration.findOne({ tenantId, provider, clinicId: null }).select('+encryptedSecrets');
+    if (!item || item.status === 'disabled') return null;
+    const secrets = item.encryptedSecrets ? JSON.parse(decryptIntegrationSecret(item.encryptedSecrets)) : {};
+    return { id: String(item._id), provider: item.provider, integrationType: item.integrationType, config: item.config ?? {}, secrets };
+  },
   async resolveForClinic(tenantId: string, clinicId: string, provider: string) {
     if (!await Clinic.exists({ _id: clinicId, tenantId })) return null;
     const item = await TenantIntegration.findOne({ tenantId, provider, clinicId }).select('+encryptedSecrets')
