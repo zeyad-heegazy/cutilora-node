@@ -11,6 +11,7 @@ clinicFinanceRouter.post('/payments', requireTenantPermission('finance.manage'),
 clinicFinanceRouter.post('/refunds', requireTenantPermission('finance.manage'), clinicFinanceController.refund);
 clinicFinanceRouter.post('/expenses', requireTenantPermission('finance.manage'), clinicFinanceController.expense);
 clinicFinanceRouter.post('/entries/void', requireTenantPermission('finance.manage'), clinicFinanceController.voidEntry);
+clinicFinanceRouter.get('/packages', requireTenantPermission('finance.read'), clinicFinanceController.listPackages);
 clinicFinanceRouter.post('/packages', requireTenantPermission('finance.manage'), clinicFinanceController.createPackage);
 clinicFinanceRouter.post('/packages/:packageId/redeem', requireTenantPermission('finance.manage'), clinicFinanceController.redeemPackage);
 clinicFinanceRouter.post('/packages/:packageId/refund', requireTenantPermission('finance.manage'), clinicFinanceController.refundPackage);
