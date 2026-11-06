@@ -62,7 +62,10 @@ function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
   const filter: Record<string, any> = { tenantId };
   if (query.actorId) filter.actorUserId = query.actorId;
   if (query.action) filter.action = query.action;
-  if (query.targetType) filter.targetType = query.targetType;\n  if (query.module) filter.action = new RegExp('^' + String(query.module).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\  if (query.targetType) filter.targetType = query.targetType;') + '\\\\.');\n  if (query.result) filter.result = query.result;\n  if (query.requestId) filter.requestId = query.requestId;
+  if (query.targetType) filter.targetType = query.targetType;
+  if (query.module) filter.action = new RegExp('^' + String(query.module).replace(/[.*+?^${}()|[\\]\\\\]/g, '\\$&') + '\\.');
+  if (query.result) filter.result = query.result;
+  if (query.requestId) filter.requestId = query.requestId;
   if (query.clinicId) filter.clinicId = query.clinicId;
   if (query.branchId) filter.branchId = query.branchId;
   if (query.from || query.to) filter.createdAt = {
@@ -71,7 +74,6 @@ function buildTenantAuditFilter(tenantId: string, query: Record<string, any>) {
   };
   return filter;
 }
-
 function getSettingSources(layers: Array<{ source: string; values: Record<string, unknown> }>) {
   const result: Record<string, string> = {};
   const visit = (value: unknown, source: string, path: string) => {
