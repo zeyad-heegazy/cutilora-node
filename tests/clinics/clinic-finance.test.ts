@@ -100,4 +100,23 @@ describe('clinic finance source records', () => {
     )).rejects.toMatchObject({ code: 'REFUND_EXCEEDS_PAYMENT', status: 409 });
     expect(financeMocks.create).not.toHaveBeenCalled();
   });
+  it('reconciles tenant summary from clinic source records without exposing patient details', async () => {
+    financeMocks.aggregate
+      .mockResolvedValueOnce([
+        { _id: { type: 'invoice', currency: 'EGP' }, total: 1000, count: 2 },
+        { _id: { type: 'payment', currency: 'EGP' }, total: 700, count: 2 },
+        { _id: { type: 'refund', currency: 'EGP' }, total: 50, count: 1 },
+        { _id: { type: 'expense', currency: 'EGP' }, total: 200, count: 1 },
+        { _id: { type: 'invoice', currency: 'SAR' }, total: 300, count: 1 },
+      ])
+      .mockResolvedValueOnce([{ _id: 'EGP', outstanding: 350, invoiceCount: 1 }])
+      .mockResolvedValueOnce([]);
+    const result = await clinicFinanceService.overview(tenantId, { from: new Date('2026-01-01T00:00:00.000Z'), to: new Date('2026-01-31T23:59:59.999Z') });
+    const egp = result.currencies.find((item: any) => item.currency === 'EGP') as any;
+    expect(egp).toMatchObject({ invoiced: 1000, collected: 700, refunded: 50, expenses: 200, operatingResult: 750, netCash: 450 });
+    expect(result.currencies.find((item: any) => item.currency === 'SAR')).toMatchObject({ invoiced: 300 });
+    expect(result.outstanding).toEqual([{ currency: 'EGP', amount: 350, invoiceCount: 1 }]);
+    expect(JSON.stringify(result)).not.toContain('patientId');
+  });
+
 });
