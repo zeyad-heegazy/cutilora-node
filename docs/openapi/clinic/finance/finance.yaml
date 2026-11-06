@@ -118,3 +118,177 @@ paths:
         "200": { description: Entry voided and audit event recorded }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "409": { description: Entry is settled, unsupported or changed concurrently }
+
+  /clinic/finance/packages:
+    post:
+      tags: [Clinic Finance]
+      summary: Create a prepaid package from a fully paid clinic invoice
+      description: The package is linked to one issued invoice and a posted payment. Package creation does not create a second financial transaction.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "../../../openapi.yaml#/components/parameters/TenantId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [invoiceId, paymentId, name, saleAmount, sessionsPurchased]
+              properties:
+                invoiceId: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+                paymentId: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+                name: { type: string, minLength: 2, maxLength: 120 }
+                saleAmount: { type: number, exclusiveMinimum: 0 }
+                sessionsPurchased: { type: integer, minimum: 1, maximum: 1000 }
+                expiresAt: { type: string, format: date-time }
+      responses:
+        "201": { description: Package created and sold event recorded }
+        "404": { description: Invoice or payment not found in this tenant }
+        "409": { description: Invoice is not fully paid or package already exists for invoice }
+  /clinic/finance/packages/{packageId}/redeem:
+    post:
+      tags: [Clinic Finance]
+      summary: Redeem package sessions
+      description: Uses an atomic session balance decrement and a required idempotency key. The package event is append-only.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: packageId
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sessions, idempotencyKey]
+              properties:
+                sessions: { type: integer, minimum: 1, maximum: 100 }
+                idempotencyKey: { type: string, minLength: 8, maxLength: 120 }
+                reference: { type: string, maxLength: 120 }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "200": { description: Redemption result and package event }
+        "409": { description: Insufficient sessions, expired package or idempotency conflict }
+  /clinic/finance/packages/{packageId}/refund:
+    post:
+      tags: [Clinic Finance]
+      summary: Refund an unused prepaid package
+      description: Only an active package with all sessions unused is refundable. The refund is recorded in the Clinic Finance ledger; the package is marked refunded.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: packageId
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, minLength: 3, maxLength: 500 }
+                method: { type: string, maxLength: 50 }
+                reference: { type: string, maxLength: 120 }
+                refundedAt: { type: string, format: date-time }
+      responses:
+        "200": { description: Refund ledger entry and package state }
+        "409": { description: Package has been used or its state changed }
+  /clinic/finance/packages/{packageId}/events:
+    get:
+      tags: [Clinic Finance]
+      summary: List immutable package lifecycle events
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: packageId
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      responses:
+        "200": { description: Package event history }
+        "404": { description: Package not found in this tenant }
+  /clinic/finance/daily-closes:
+    get:
+      tags: [Clinic Finance]
+      summary: List daily cash closes
+      description: A clinic-wide close aggregates all branches for that clinic; a branch-scoped close includes only its branch. Results are tenant and membership scoped.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: clinicId, in: query, schema: { type: string } }
+        - { name: branchId, in: query, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+      responses:
+        "200": { description: Daily close records }
+    post:
+      tags: [Clinic Finance]
+      summary: Open a daily cash close period
+      description: The period is explicitly defined by timestamps and an IANA timezone. One close per tenant, clinic, branch, business date and currency is allowed.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "../../../openapi.yaml#/components/parameters/TenantId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clinicId, businessDate, timezone, currency, periodStartAt, periodEndAt, openingCash]
+              properties:
+                clinicId: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+                branchId: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+                businessDate: { type: string, format: date, example: "2026-11-06" }
+                timezone: { type: string, example: "Africa/Cairo" }
+                currency: { type: string, pattern: "^[A-Za-z]{3}$" }
+                periodStartAt: { type: string, format: date-time }
+                periodEndAt: { type: string, format: date-time }
+                openingCash: { type: number, minimum: 0 }
+      responses:
+        "201": { description: Daily close opened }
+        "409": { description: A close already exists for this period }
+  /clinic/finance/daily-closes/{closeId}/close:
+    post:
+      tags: [Clinic Finance]
+      summary: Close a completed cash period
+      description: Expected cash is opening cash plus posted cash payments minus posted cash refunds and cash expenses. A variance requires a reason.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: closeId
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [countedCash]
+              properties:
+                countedCash: { type: number, minimum: 0 }
+                varianceReason: { type: string, maxLength: 500 }
+      responses:
+        "200": { description: Close locked with expected cash, counted cash and variance }
+        "409": { description: Period has not ended or close changed concurrently }
+  /clinic/finance/daily-closes/{closeId}/approve:
+    post:
+      tags: [Clinic Finance]
+      summary: Approve a closed daily cash period
+      description: Separation of duties is enforced; the user who closed the period cannot approve it.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: closeId
+          in: path
+          required: true
+          schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+      responses:
+        "200": { description: Daily close approved }
+        "403": { description: Approver must differ from the closer }
+        "409": { description: Close is not awaiting approval }
