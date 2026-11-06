@@ -151,6 +151,197 @@ export const clinicFinanceService = {
     await audit(actor, 'finance.entry.voided', updated, { reason: input.reason.trim() });
     return normalizeEntry(updated);
   },
+  async createPackage(actor: Actor, input: any) {
+    if (!validId(input.invoiceId) || !validId(input.paymentId)) fail(400, 'INVALID_PACKAGE_SOURCE', 'A valid invoiceId and paymentId are required.');
+    if (!Number.isInteger(input.sessionsPurchased) || input.sessionsPurchased < 1 || input.sessionsPurchased > 1000) fail(400, 'INVALID_PACKAGE_SESSIONS', 'sessionsPurchased must be an integer between 1 and 1000.');
+    const invoice: any = await ClinicFinanceEntry.findOne({ _id: input.invoiceId, tenantId: actor.tenantId, type: 'invoice', status: 'issued' }).lean();
+    if (!invoice) fail(404, 'INVOICE_NOT_FOUND', 'Issued package invoice not found in this tenant.');
+    assertActorClinic(actor, invoice.clinicId, invoice.branchId);
+    const payment: any = await ClinicFinanceEntry.findOne({ _id: input.paymentId, tenantId: actor.tenantId, type: 'payment', status: 'posted', invoiceId: invoice._id }).lean();
+    if (!payment) fail(404, 'PAYMENT_NOT_FOUND', 'A posted payment for the package invoice is required.');
+    assertActorClinic(actor, payment.clinicId, payment.branchId);
+    if (invoice.settledAmount < invoice.amount || payment.amount < input.saleAmount || !money(input.saleAmount) || input.saleAmount <= 0) {
+      fail(409, 'PACKAGE_NOT_PAID', 'The package invoice must be fully settled and the linked payment must cover the package sale amount.');
+    }
+    const packageRecord = await ClinicFinancePackage.create({
+      tenantId: actor.tenantId, clinicId: invoice.clinicId, branchId: invoice.branchId || null,
+      patientId: invoice.patientId, invoiceId: invoice._id, paymentId: payment._id,
+      name: String(input.name).trim(), currency: invoice.currency, saleAmount: input.saleAmount,
+      sessionsPurchased: input.sessionsPurchased, sessionsRemaining: input.sessionsPurchased,
+      status: 'active', expiresAt: input.expiresAt ? new Date(input.expiresAt) : null,
+      createdBy: actor.userId, updatedBy: actor.userId,
+    });
+    try {
+      await ClinicFinancePackageEvent.create({
+        tenantId: actor.tenantId, clinicId: invoice.clinicId, branchId: invoice.branchId || null,
+        packageId: packageRecord._id, eventType: 'sold', sessionsDelta: input.sessionsPurchased,
+        amount: input.saleAmount, currency: invoice.currency, reference: String(invoice._id),
+        createdBy: actor.userId,
+      });
+    } catch (error) {
+      await ClinicFinancePackage.deleteOne({ _id: packageRecord._id, tenantId: actor.tenantId });
+      throw error;
+    }
+    await audit(actor, 'finance.package.sold', packageRecord, { sessionsPurchased: input.sessionsPurchased, invoiceId: String(invoice._id) });
+    return normalizeEntry(packageRecord);
+  },
+  async redeemPackage(actor: Actor, input: any) {
+    if (!validId(input.packageId)) fail(400, 'INVALID_PACKAGE_ID', 'packageId must be a valid identifier.');
+    if (!Number.isInteger(input.sessions) || input.sessions < 1 || input.sessions > 100) fail(400, 'INVALID_REDEMPTION_SESSIONS', 'sessions must be an integer between 1 and 100.');
+    if (!input.idempotencyKey || String(input.idempotencyKey).length < 8 || String(input.idempotencyKey).length > 120) fail(400, 'IDEMPOTENCY_KEY_REQUIRED', 'A valid idempotencyKey is required for package redemption.');
+    const existingEvent: any = await ClinicFinancePackageEvent.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
+    if (existingEvent) {
+      if (String(existingEvent.packageId) !== String(input.packageId) || existingEvent.eventType !== 'redeemed' || existingEvent.sessionsDelta !== -input.sessions) fail(409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used for a different package redemption.');
+      return existingEvent;
+    }
+    const packageRecord: any = await ClinicFinancePackage.findOne({ _id: input.packageId, tenantId: actor.tenantId }).lean();
+    if (!packageRecord) fail(404, 'PACKAGE_NOT_FOUND', 'Package not found in this tenant.');
+    assertActorClinic(actor, packageRecord.clinicId, packageRecord.branchId);
+    const now = new Date();
+    if (packageRecord.expiresAt && new Date(packageRecord.expiresAt) <= now) {
+      await ClinicFinancePackage.updateOne({ _id: packageRecord._id, tenantId: actor.tenantId, status: 'active' }, { $set: { status: 'expired', updatedBy: actor.userId } });
+      await ClinicFinancePackageEvent.create({
+        tenantId: actor.tenantId, clinicId: packageRecord.clinicId, branchId: packageRecord.branchId,
+        packageId: packageRecord._id, eventType: 'expired', sessionsDelta: 0,
+        reason: 'Package expiry reached.', createdBy: actor.userId,
+      });
+      await audit(actor, 'finance.package.expired', packageRecord);
+      fail(409, 'PACKAGE_EXPIRED', 'This package has expired and cannot be redeemed.');
+    }
+    const updated: any = await ClinicFinancePackage.findOneAndUpdate(
+      { _id: packageRecord._id, tenantId: actor.tenantId, status: 'active', sessionsRemaining: { $gte: input.sessions }, $or: [{ expiresAt: null }, { expiresAt: { $gt: now } }] },
+      { $inc: { sessionsRemaining: -input.sessions }, $set: { updatedBy: actor.userId } },
+      { new: true },
+    ).lean();
+    if (!updated) fail(409, 'PACKAGE_REDEMPTION_CONFLICT', 'The package has insufficient sessions or is no longer active.');
+    try {
+      const event = await ClinicFinancePackageEvent.create({
+        tenantId: actor.tenantId, clinicId: packageRecord.clinicId, branchId: packageRecord.branchId,
+        packageId: packageRecord._id, eventType: 'redeemed', sessionsDelta: -input.sessions,
+        reference: input.reference?.trim() || null, reason: input.reason?.trim() || null,
+        idempotencyKey: input.idempotencyKey, createdBy: actor.userId,
+      });
+      if (updated.sessionsRemaining === 0) {
+        await ClinicFinancePackage.updateOne({ _id: updated._id, tenantId: actor.tenantId, sessionsRemaining: 0 }, { $set: { status: 'fully_redeemed' } });
+      }
+      await audit(actor, 'finance.package.redeemed', updated, { sessions: input.sessions, packageEventId: String(event._id) });
+      return { package: updated, event };
+    } catch (error: any) {
+      if (error?.code === 11000) {
+        await ClinicFinancePackage.updateOne({ _id: packageRecord._id, tenantId: actor.tenantId }, { $inc: { sessionsRemaining: input.sessions }, $set: { status: 'active' } });
+        const duplicate = await ClinicFinancePackageEvent.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
+        if (duplicate) return duplicate;
+      } else {
+        await ClinicFinancePackage.updateOne({ _id: packageRecord._id, tenantId: actor.tenantId }, { $inc: { sessionsRemaining: input.sessions }, $set: { status: 'active' } });
+      }
+      throw error;
+    }
+  },
+  async refundPackage(actor: Actor, input: any) {
+    if (!validId(input.packageId)) fail(400, 'INVALID_PACKAGE_ID', 'packageId must be a valid identifier.');
+    const packageRecord: any = await ClinicFinancePackage.findOne({ _id: input.packageId, tenantId: actor.tenantId }).lean();
+    if (!packageRecord) fail(404, 'PACKAGE_NOT_FOUND', 'Package not found in this tenant.');
+    assertActorClinic(actor, packageRecord.clinicId, packageRecord.branchId);
+    if (packageRecord.status !== 'active' || packageRecord.sessionsRemaining !== packageRecord.sessionsPurchased) fail(409, 'PACKAGE_NOT_REFUNDABLE', 'Only unused active packages can be refunded.');
+    const reserved = await ClinicFinancePackage.findOneAndUpdate(
+      { _id: packageRecord._id, tenantId: actor.tenantId, status: 'active', sessionsRemaining: packageRecord.sessionsPurchased },
+      { $set: { status: 'refund_pending', updatedBy: actor.userId } }, { new: true },
+    ).lean();
+    if (!reserved) fail(409, 'PACKAGE_REFUND_CONFLICT', 'Package state changed while processing the refund.');
+    try {
+      const refund = await this.recordRefund(actor, { paymentId: String(packageRecord.paymentId), amount: packageRecord.saleAmount, method: input.method, reference: input.reference, refundedAt: input.refundedAt });
+      const updated = await ClinicFinancePackage.findOneAndUpdate({ _id: packageRecord._id, tenantId: actor.tenantId, status: 'refund_pending' }, { $set: { status: 'refunded', updatedBy: actor.userId } }, { new: true }).lean();
+      const event = await ClinicFinancePackageEvent.create({
+        tenantId: actor.tenantId, clinicId: packageRecord.clinicId, branchId: packageRecord.branchId,
+        packageId: packageRecord._id, eventType: 'refunded', sessionsDelta: 0,
+        amount: packageRecord.saleAmount, currency: packageRecord.currency,
+        reference: String(refund._id), reason: input.reason?.trim() || null, createdBy: actor.userId,
+      });
+      await audit(actor, 'finance.package.refunded', updated, { refundId: String(refund._id), packageEventId: String(event._id) });
+      return { package: updated, refund, event };
+    } catch (error) {
+      await ClinicFinancePackage.updateOne({ _id: packageRecord._id, tenantId: actor.tenantId, status: 'refund_pending' }, { $set: { status: 'active', updatedBy: actor.userId } });
+      throw error;
+    }
+  },
+  async listPackageEvents(actor: Actor, packageId: string) {
+    if (!validId(packageId)) fail(400, 'INVALID_PACKAGE_ID', 'packageId must be a valid identifier.');
+    const packageRecord: any = await ClinicFinancePackage.findOne({ _id: packageId, tenantId: actor.tenantId }).lean();
+    if (!packageRecord) return null;
+    assertActorClinic(actor, packageRecord.clinicId, packageRecord.branchId);
+    return ClinicFinancePackageEvent.find({ tenantId: actor.tenantId, packageId: packageRecord._id }).sort({ createdAt: -1 }).lean();
+  },
+  async openDailyClose(actor: Actor, input: any) {
+    await assertClinicScope(actor.tenantId, input.clinicId, input.branchId);
+    assertActorClinic(actor, input.clinicId, input.branchId || null);
+    if (!money(input.openingCash)) fail(400, 'INVALID_OPENING_CASH', 'openingCash must be a non-negative amount with at most two decimal places.');
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(input.businessDate)) fail(400, 'INVALID_BUSINESS_DATE', 'businessDate must use YYYY-MM-DD.');
+    try { new Intl.DateTimeFormat('en', { timeZone: input.timezone }).format(new Date()); }
+    catch { fail(400, 'INVALID_TIMEZONE', 'timezone must be a valid IANA timezone.'); }
+    const periodStartAt = new Date(input.periodStartAt), periodEndAt = new Date(input.periodEndAt);
+    if (!Number.isFinite(periodStartAt.getTime()) || !Number.isFinite(periodEndAt.getTime()) || periodStartAt >= periodEndAt) fail(400, 'INVALID_CLOSE_PERIOD', 'periodStartAt must be before periodEndAt.');
+    try {
+      const close = await ClinicFinanceDailyClose.create({
+        tenantId: actor.tenantId, clinicId: input.clinicId, branchId: input.branchId || null,
+        businessDate: input.businessDate, timezone: input.timezone, currency: cleanCurrency(input.currency),
+        periodStartAt, periodEndAt, openingCash: input.openingCash, status: 'open', openedBy: actor.userId,
+      });
+      await audit(actor, 'finance.daily_close.opened', close, { businessDate: input.businessDate, timezone: input.timezone });
+      return normalizeEntry(close);
+    } catch (error: any) {
+      if (error?.code === 11000) fail(409, 'DAILY_CLOSE_ALREADY_EXISTS', 'A daily close already exists for this clinic/branch, date and currency.');
+      throw error;
+    }
+  },
+  async closeDailyClose(actor: Actor, input: any) {
+    if (!validId(input.closeId)) fail(400, 'INVALID_DAILY_CLOSE_ID', 'closeId must be a valid identifier.');
+    if (!money(input.countedCash)) fail(400, 'INVALID_COUNTED_CASH', 'countedCash must be a non-negative amount with at most two decimal places.');
+    const close: any = await ClinicFinanceDailyClose.findOne({ _id: input.closeId, tenantId: actor.tenantId, status: 'open' }).lean();
+    if (!close) fail(404, 'OPEN_DAILY_CLOSE_NOT_FOUND', 'Open daily close not found in this tenant.');
+    assertActorClinic(actor, close.clinicId, close.branchId);
+    if (new Date(close.periodEndAt) > new Date()) fail(409, 'DAILY_CLOSE_PERIOD_NOT_ENDED', 'The cash period cannot be closed before its end time.');
+    const match: Record<string, any> = {
+      tenantId: new Types.ObjectId(actor.tenantId), clinicId: close.clinicId,
+      currency: close.currency, status: 'posted',
+      type: { $in: ['payment', 'refund', 'expense'] }, method: 'cash',
+      occurredAt: { $gte: close.periodStartAt, $lt: close.periodEndAt },
+      ...(close.branchId ? { branchId: close.branchId } : {}),
+    };
+    const grouped = await ClinicFinanceEntry.aggregate([{ $match: match }, { $group: { _id: '$type', total: { $sum: '$amount' } } }]);
+    const totals = Object.fromEntries(grouped.map((row: any) => [row._id, row.total]));
+    const cashPayments = totals.payment ?? 0, cashRefunds = totals.refund ?? 0, cashExpenses = totals.expense ?? 0;
+    const expectedCash = Math.round((close.openingCash + cashPayments - cashRefunds - cashExpenses) * 100) / 100;
+    const variance = Math.round((input.countedCash - expectedCash) * 100) / 100;
+    if (variance !== 0 && !input.varianceReason?.trim()) fail(400, 'CASH_VARIANCE_REASON_REQUIRED', 'A reason is required when counted cash differs from expected cash.');
+    const updated = await ClinicFinanceDailyClose.findOneAndUpdate(
+      { _id: close._id, tenantId: actor.tenantId, status: 'open' },
+      { $set: { status: 'closed', expectedCash, countedCash: input.countedCash, variance, varianceReason: input.varianceReason?.trim() || null, cashPayments, cashRefunds, cashExpenses, closedBy: actor.userId, closedAt: new Date() } },
+      { new: true },
+    ).lean();
+    if (!updated) fail(409, 'DAILY_CLOSE_CONFLICT', 'The daily close was modified by another user.');
+    await audit(actor, 'finance.daily_close.closed', updated, { expectedCash, countedCash: input.countedCash, variance });
+    return updated;
+  },
+  async approveDailyClose(actor: Actor, closeId: string) {
+    if (!validId(closeId)) fail(400, 'INVALID_DAILY_CLOSE_ID', 'closeId must be a valid identifier.');
+    const close: any = await ClinicFinanceDailyClose.findOne({ _id: closeId, tenantId: actor.tenantId, status: 'closed' }).lean();
+    if (!close) fail(404, 'CLOSED_DAILY_CLOSE_NOT_FOUND', 'Closed daily close not found in this tenant.');
+    assertActorClinic(actor, close.clinicId, close.branchId);
+    if (String(close.closedBy) === actor.userId) fail(403, 'DAILY_CLOSE_SEPARATION_REQUIRED', 'The user who closed the cash period cannot approve it.');
+    const updated = await ClinicFinanceDailyClose.findOneAndUpdate(
+      { _id: close._id, tenantId: actor.tenantId, status: 'closed', closedBy: { $ne: actor.userId } },
+      { $set: { status: 'approved', approvedBy: actor.userId, approvedAt: new Date() } },
+      { new: true },
+    ).lean();
+    if (!updated) fail(409, 'DAILY_CLOSE_APPROVAL_CONFLICT', 'The daily close changed before approval.');
+    await audit(actor, 'finance.daily_close.approved', updated);
+    return updated;
+  },
+  async listDailyCloses(tenantId: string, scope: Scope) {
+    const filter = { ...scopeFilter(tenantId, scope), ...(scope.clinicId ? { clinicId: scope.clinicId } : {}) };
+    const items = await ClinicFinanceDailyClose.find(filter).sort({ periodStartAt: -1 }).limit(100).lean();
+    return items;
+  },
   async createExpense(actor: Actor, input: any) {
     await assertClinicScope(actor.tenantId, input.clinicId, input.branchId);
     if (!money(input.amount) || input.amount <= 0) fail(400, 'INVALID_AMOUNT', 'Expense amount must be greater than zero with at most two decimal places.');
