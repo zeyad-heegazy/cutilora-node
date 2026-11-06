@@ -10,7 +10,17 @@ const invoiceSchema = z.object({ clinicId: id, branchId: id.optional(), patientI
 const paymentSchema = z.object({ invoiceId: id, amount: z.number().positive().multipleOf(0.01), currency, method: z.string().trim().max(50).optional(), reference: z.string().trim().max(120).optional(), idempotencyKey: z.string().trim().min(8).max(120).optional(), paidAt: date, branchId: id.optional() });
 const refundSchema = z.object({ paymentId: id, amount: z.number().positive().multipleOf(0.01), method: z.string().trim().max(50).optional(), reference: z.string().trim().max(120).optional(), refundedAt: date });
 const voidSchema = z.object({ entryId: id, reason: z.string().trim().min(3).max(500) });
-const expenseSchema = z.object({ clinicId: id, branchId: id.optional(), amount: z.number().positive().multipleOf(0.01), currency, category: z.string().trim().min(1).max(80), description: z.string().max(500).optional(), reference: z.string().max(120).optional(), spentAt: date });
+const expenseSchema = z.object({ clinicId: id, branchId: id.optional(), amount: z.number().positive().multipleOf(0.01), currency, category: z.string().trim().min(1).max(80), description: z.string().max(500).optional(), reference: z.string().max(120).optional(), method: z.string().trim().max(50).optional(), spentAt: date });
+const packageSchema = z.object({ invoiceId: id, paymentId: id, name: z.string().trim().min(2).max(120), saleAmount: z.number().positive().multipleOf(0.01), sessionsPurchased: z.number().int().min(1).max(1000), expiresAt: date });
+const packageRedeemSchema = z.object({ sessions: z.number().int().min(1).max(100), idempotencyKey: z.string().trim().min(8).max(120), reference: z.string().trim().max(120).optional(), reason: z.string().trim().max(500).optional() });
+const packageRefundSchema = z.object({ reason: z.string().trim().min(3).max(500), method: z.string().trim().max(50).optional(), reference: z.string().trim().max(120).optional(), refundedAt: date });
+const dailyCloseOpenSchema = z.object({
+  clinicId: id, branchId: id.optional(), businessDate: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/),
+  timezone: z.string().trim().min(1).max(80), currency,
+  periodStartAt: z.string().datetime({ offset: true }), periodEndAt: z.string().datetime({ offset: true }),
+  openingCash: z.number().nonnegative().multipleOf(0.01),
+});
+const dailyCloseSchema = z.object({ countedCash: z.number().nonnegative().multipleOf(0.01), varianceReason: z.string().trim().max(500).optional() });
 function parseScope(query: any, context: any) {
   const value = baseScope.parse(query);
   if (context.scope === 'clinic' && value.clinicId && value.clinicId !== context.clinicId) throw { status: 403, code: 'CLINIC_ACCESS_DENIED', message: 'The requested clinic is outside your membership scope.' };
@@ -28,4 +38,13 @@ export const clinicFinanceController = {
   async refund(req: Request, res: Response, next: NextFunction) { try { const input = refundSchema.parse(req.body); const data = await clinicFinanceService.recordRefund(actor(req), input); res.status(201).json({ success: true, data }); } catch (e) { next(e); } },
   async voidEntry(req: Request, res: Response, next: NextFunction) { try { const input = voidSchema.parse(req.body); const data = await clinicFinanceService.voidEntry(actor(req), input); res.json({ success: true, data }); } catch (e) { next(e); } },
   async expense(req: Request, res: Response, next: NextFunction) { try { const input = expenseSchema.parse(req.body); const data = await clinicFinanceService.createExpense(actor(req), input); res.status(201).json({ success: true, data }); } catch (e) { next(e); } },
+  async createPackage(req: Request, res: Response, next: NextFunction) { try { const input = packageSchema.parse(req.body); const data = await clinicFinanceService.createPackage(actor(req), input); res.status(201).json({ success: true, data }); } catch (e) { next(e); } },
+  async redeemPackage(req: Request, res: Response, next: NextFunction) { try { const input = packageRedeemSchema.parse(req.body); const data = await clinicFinanceService.redeemPackage(actor(req), { ...input, packageId: req.params.packageId }); res.json({ success: true, data }); } catch (e) { next(e); } },
+  async refundPackage(req: Request, res: Response, next: NextFunction) { try { const input = packageRefundSchema.parse(req.body); const data = await clinicFinanceService.refundPackage(actor(req), { ...input, packageId: req.params.packageId }); res.json({ success: true, data }); } catch (e) { next(e); } },
+  async packageEvents(req: Request, res: Response, next: NextFunction) { try { const data = await clinicFinanceService.listPackageEvents(actor(req), String(req.params.packageId ?? '')); if (!data) return res.status(404).json({ success: false, error: { code: 'PACKAGE_NOT_FOUND', message: 'Package not found.' } }); res.json({ success: true, data }); } catch (e) { next(e); } },
+  async openDailyClose(req: Request, res: Response, next: NextFunction) { try { const input = dailyCloseOpenSchema.parse(req.body); const data = await clinicFinanceService.openDailyClose(actor(req), input); res.status(201).json({ success: true, data }); } catch (e) { next(e); } },
+  async listDailyCloses(req: Request, res: Response, next: NextFunction) { try { const q = parseScope(req.query, req.tenantContext!); const data = await clinicFinanceService.listDailyCloses(req.tenantContext!.tenantId, q); res.json({ success: true, data }); } catch (e) { next(e); } },
+  async closeDailyClose(req: Request, res: Response, next: NextFunction) { try { const input = dailyCloseSchema.parse(req.body); const data = await clinicFinanceService.closeDailyClose(actor(req), { ...input, closeId: req.params.closeId }); res.json({ success: true, data }); } catch (e) { next(e); } },
+  async approveDailyClose(req: Request, res: Response, next: NextFunction) { try { const data = await clinicFinanceService.approveDailyClose(actor(req), String(req.params.closeId ?? '')); res.json({ success: true, data }); } catch (e) { next(e); } },
+
 };
