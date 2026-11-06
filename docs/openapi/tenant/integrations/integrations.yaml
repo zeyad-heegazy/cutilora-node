@@ -150,6 +150,34 @@ paths:
       responses:
         "201": { description: Endpoint and one-time signing secret }
         "400": { description: Invalid or unsafe URL or event list }
+  /tenant/webhooks/{endpointId}:
+    patch:
+      tags: [Tenant Webhooks]
+      summary: Update webhook endpoint configuration
+      description: Updates name, public HTTPS URL, clinic scope or subscribed events.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name: { type: string, maxLength: 120 }
+                url: { type: string, format: uri }
+                clinicId: { type: string, nullable: true }
+                events: { type: array, minItems: 1, maxItems: 100, items: { type: string } }
+      responses:
+        "200": { description: Updated endpoint metadata }
+        "400": { description: Invalid or unsafe URL or event list }
+        "404": { description: Endpoint not found }
   /tenant/webhooks/{endpointId}/rotate-secret:
     post:
       tags: [Tenant Webhooks]
