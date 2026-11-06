@@ -6,7 +6,7 @@
 |---|---|---|
 | Email | Resend | Tenant default or clinic override |
 | SMS | Twilio | Tenant default or clinic override |
-| WhatsApp | Meta WhatsApp Cloud API | Tenant default or clinic override |
+| WhatsApp | Meta WhatsApp Cloud API (Graph API v26.0 by default; version override is configurable) | Tenant default or clinic override |
 | Card gateway reference | Stripe | Clinic merchant configuration; Tenant may only view supported configuration metadata |
 | Egypt payment gateway reference | Paymob | Clinic merchant configuration; Tenant may only view supported configuration metadata |
 
