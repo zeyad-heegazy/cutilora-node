@@ -96,3 +96,25 @@ paths:
                 description: { type: string }
       responses:
         "201": { description: Expense recorded }
+
+  /clinic/finance/entries/void:
+    post:
+      tags: [Clinic Finance]
+      summary: Void an eligible unpaid invoice or posted expense
+      description: Voids are non-destructive and require a reason. Settled invoices and payment/refund entries cannot be voided; payments must use the refund workflow.
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "../../../openapi.yaml#/components/parameters/TenantId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entryId, reason]
+              properties:
+                entryId: { type: string }
+                reason: { type: string, minLength: 3, maxLength: 500 }
+      responses:
+        "200": { description: Entry voided and audit event recorded }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "409": { description: Entry is settled, unsupported or changed concurrently }
