@@ -136,6 +136,7 @@ describe('clinic finance source records', () => {
 
   it('does not void settled invoices or posted payments', async () => {
     financeMocks.findOne.mockReturnValue({ lean: vi.fn().mockResolvedValue({ ...invoice, settledAmount: 20 }) });
+    financeMocks.findOneAndUpdate.mockReturnValue({ lean: vi.fn().mockResolvedValue(null) });
     await expect(clinicFinanceService.voidEntry(
       { tenantId, userId, scope: 'tenant' },
       { entryId: invoiceId, reason: 'Incorrect' },
