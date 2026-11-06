@@ -1,5 +1,5 @@
-import { createCipheriv, createHash, randomBytes } from 'node:crypto';
-import { env } from '../../../config/env.js';
+import { encryptIntegrationSecret, decryptIntegrationSecret } from './integration-secret.crypto.js';
+import { verifyIntegrationConnection, INTEGRATION_PROVIDER_CATALOG } from './integration-providers.js';
 import { Clinic } from '../models/clinic.model.js';
 import { TenantIntegration } from '../models/tenant-integration.model.js';
 import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
@@ -13,15 +13,6 @@ type IntegrationInput = {
   secrets?: Record<string, string>;
 };
 
-function encryptionKey() {
-  return createHash('sha256').update('cutilora:tenant-integrations:v1:').update(env.JWT_SECRET).digest();
-}
-function encryptSecrets(secrets: Record<string, string>) {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', encryptionKey(), iv);
-  const encrypted = Buffer.concat([cipher.update(JSON.stringify(secrets), 'utf8'), cipher.final()]);
-  return ['v1', iv.toString('base64url'), cipher.getAuthTag().toString('base64url'), encrypted.toString('base64url')].join('.');
-}
 function safeRecord(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
   return Object.fromEntries(Object.entries(value as Record<string, unknown>).filter(([key]) => !/secret|token|password|credential|api.?key/i.test(key)));
@@ -64,14 +55,34 @@ export const tenantIntegrationService = {
         displayName: input.displayName.trim(),
         config: safeRecord(input.config),
         updatedBy: actorId,
-        status: 'configured',
+        status: 'configured',\n        lastError: '',
       },
       $setOnInsert: { tenantId, provider, clinicId: input.clinicId ?? null, createdBy: actorId },
     };
-    if (secrets && Object.keys(secrets).length) (update.$set as Record<string, unknown>).encryptedSecrets = encryptSecrets(secrets);
+    if (secrets && Object.keys(secrets).length) (update.$set as Record<string, unknown>).encryptedSecrets = encryptIntegrationSecret(JSON.stringify(secrets));
     const item = await TenantIntegration.findOneAndUpdate(filter, update, { new: true, upsert: true, runValidators: true }).select('+encryptedSecrets');
     await audit(tenantId, actorId, 'integration.configuration.saved', item);
     return present(item);
+  },
+  listProviders() { return INTEGRATION_PROVIDER_CATALOG; },
+  async testConnection(tenantId: string, actorId: string, integrationId: string) {
+    const item = await TenantIntegration.findOne({ _id: integrationId, tenantId }).select('+encryptedSecrets');
+    if (!item) return null;
+    if (item.status === 'disabled') throw { status: 409, code: 'INTEGRATION_DISABLED', message: 'Enable this integration before testing its connection.' };
+    let result: { connected: boolean; message: string };
+    try {
+      const secrets = item.encryptedSecrets ? JSON.parse(decryptIntegrationSecret(item.encryptedSecrets)) : {};
+      result = await verifyIntegrationConnection(item.provider, item.config ?? {}, secrets);
+    } catch (error) {
+      result = { connected: false, message: error instanceof Error ? error.message : 'Connection test failed.' };
+    }
+    item.status = result.connected ? 'connected' : 'error';
+    item.lastCheckedAt = new Date();
+    item.lastError = result.connected ? '' : result.message.slice(0, 300);
+    item.updatedBy = actorId;
+    await item.save();
+    await audit(tenantId, actorId, result.connected ? 'integration.connection_verified' : 'integration.connection_failed', item);
+    return { ...present(item), connection: result };
   },
   async setStatus(tenantId: string, actorId: string, integrationId: string, status: 'configured' | 'disabled') {
     const item = await TenantIntegration.findOneAndUpdate(
