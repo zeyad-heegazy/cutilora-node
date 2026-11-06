@@ -1,10 +1,12 @@
 import { app } from './app/app.js';
 import { env } from './config/env.js';
 import { connectDatabase, disconnectDatabase } from './database/connection.js';
+import { startTenantWebhookWorker } from './modules/tenancy/services/tenant-webhook.worker.js';
 
 async function bootstrap(): Promise<void> {
   await connectDatabase();
 
+  const stopWebhookWorker = startTenantWebhookWorker();
   const server = app.listen(env.PORT, () => {
     console.info(`Cutilora API listening on port ${env.PORT}`);
   });
