@@ -18,6 +18,7 @@ const SAFE_EVENTS = new Set([
   'organization.updated', 'organization.profile.updated', 'organization.preferences.updated', 'configuration.updated', 'configuration.published', 'configuration.defaults.updated', 'configuration.defaults.applied', 'billing.profile.updated',
   'subscription.change_requested', 'integration.configuration.saved', 'integration.disabled', 'integration.enabled',
   'integration.connection_verified', 'integration.connection_failed', 'integration.credentials.rotated', 'integration.credentials.revoked',
+  'integration.webhook.created', 'integration.webhook.updated', 'integration.webhook.secret.rotated', 'integration.webhook.disabled', 'integration.webhook.enabled',
 ]);
 
 function privateIpv6(address: string) {
@@ -104,6 +105,7 @@ export const tenantWebhookService = {
       encryptedSigningSecret: encryptIntegrationSecret(secret), events, status: 'active',
       createdBy: actorId, updatedBy: actorId,
     });
+    await auditWebhook(tenantId, actorId, 'integration.webhook.created', endpoint);
     return { ...safeEndpoint(endpoint), signingSecret: secret };
   },
   async list(tenantId: string) {
@@ -129,6 +131,7 @@ export const tenantWebhookService = {
       { _id: endpointId, tenantId }, { $set: { encryptedSigningSecret: encryptIntegrationSecret(secret), updatedBy: actorId } }, { new: true },
     );
     if (!endpoint) return null;
+    await auditWebhook(tenantId, actorId, 'integration.webhook.secret.rotated', endpoint);
     return { ...safeEndpoint(endpoint), signingSecret: secret };
   },
   async setStatus(tenantId: string, actorId: string, endpointId: string, status: 'active' | 'disabled') {
