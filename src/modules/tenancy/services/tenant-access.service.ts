@@ -3,7 +3,7 @@ export const TENANT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   tenant_admin: [
     'organization.manage', 'dashboard.read', 'clinic.manage', 'clinic.settings.read', 'clinic.settings.manage', 'branch.manage',
     'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.lifecycle.manage', 'branch.read', 'branch.holidays.read', 'branch.holidays.manage',
-    'documents.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'configuration.manage', 'memberships.manage', 'audit.read', 'audit.export', 'billing.read', 'billing.manage',
+    'documents.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'configuration.manage', 'memberships.manage', 'audit.read', 'audit.export', 'billing.read',
   ],
   billing_admin: ['billing.read', 'billing.manage', 'finance.read', 'finance.manage'],
   clinic_admin: ['clinic.settings.read', 'clinic.settings.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'branch.read', 'branch.manage', 'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.holidays.read', 'branch.holidays.manage'],
