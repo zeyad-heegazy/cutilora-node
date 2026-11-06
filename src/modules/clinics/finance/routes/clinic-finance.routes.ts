@@ -10,3 +10,4 @@ clinicFinanceRouter.post('/invoices', requireTenantPermission('finance.manage'),
 clinicFinanceRouter.post('/payments', requireTenantPermission('finance.manage'), clinicFinanceController.payment);
 clinicFinanceRouter.post('/refunds', requireTenantPermission('finance.manage'), clinicFinanceController.refund);
 clinicFinanceRouter.post('/expenses', requireTenantPermission('finance.manage'), clinicFinanceController.expense);
+clinicFinanceRouter.post('/entries/void', requireTenantPermission('finance.manage'), clinicFinanceController.voidEntry);
