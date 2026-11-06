@@ -32,6 +32,16 @@ function present(item: any) {
     createdAt: item.createdAt, updatedAt: item.updatedAt,
   };
 }
+function validateProviderSecrets(provider: string, secrets: Record<string, string>) {
+  const definition = INTEGRATION_PROVIDER_CATALOG.find(item => item.key === provider);
+  if (!definition) throw { status: 400, code: 'INTEGRATION_PROVIDER_UNSUPPORTED', message: 'Select a supported provider.' };
+  const allowed = new Set<string>(definition.credentialFields);
+  const keys = Object.keys(secrets);
+  if (!keys.length || keys.some(key => !allowed.has(key)) || definition.credentialFields.some(key => !secrets[key]?.trim())) {
+    throw { status: 400, code: 'INVALID_INTEGRATION_CREDENTIALS', message: 'Provide every required credential field for the selected provider and no unsupported fields.' };
+  }
+}
+
 async function audit(tenantId: string, actorId: string, action: string, item: any) {
   await TenantAuditEvent.create({
     tenantId, actorUserId: actorId, action, targetType: 'tenant_integration', targetId: String(item._id),
@@ -57,6 +67,7 @@ export const tenantIntegrationService = {
     if (secrets && (Object.keys(secrets).length > 30 || Object.values(secrets).some(value => typeof value !== 'string' || value.length > 4096))) {
       throw { status: 400, code: 'INVALID_INTEGRATION_CREDENTIALS', message: 'Credentials exceed the supported limits.' };
     }
+    if (secrets && Object.keys(secrets).length) validateProviderSecrets(provider, secrets);
     const filter = { tenantId, provider, clinicId: input.clinicId ?? null };
     const update: Record<string, unknown> = {
       $set: {
@@ -88,6 +99,9 @@ export const tenantIntegrationService = {
     if (!Object.keys(secrets).length || Object.keys(secrets).length > 30 || Object.values(secrets).some(value => typeof value !== 'string' || value.length > 4096)) {
       throw { status: 400, code: 'INVALID_INTEGRATION_CREDENTIALS', message: 'Provide valid replacement credentials.' };
     }
+    const existing = await TenantIntegration.findOne({ _id: integrationId, tenantId }).select('+encryptedSecrets');
+    if (!existing) return null;
+    validateProviderSecrets(existing.provider, secrets);
     const item = await TenantIntegration.findOneAndUpdate(
       { _id: integrationId, tenantId },
       { $set: { encryptedSecrets: encryptIntegrationSecret(JSON.stringify(secrets)), status: 'configured', lastError: '', updatedBy: actorId } },
