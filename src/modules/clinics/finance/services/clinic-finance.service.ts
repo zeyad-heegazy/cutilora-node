@@ -248,9 +248,18 @@ export const clinicFinanceService = {
       { $set: { status: 'refund_pending', updatedBy: actor.userId } }, { new: true },
     ).lean();
     if (!reserved) fail(409, 'PACKAGE_REFUND_CONFLICT', 'Package state changed while processing the refund.');
+    let refund: any;
     try {
-      const refund = await this.recordRefund(actor, { paymentId: String(packageRecord.paymentId), amount: packageRecord.saleAmount, method: input.method, reference: input.reference, refundedAt: input.refundedAt });
-      const updated = await ClinicFinancePackage.findOneAndUpdate({ _id: packageRecord._id, tenantId: actor.tenantId, status: 'refund_pending' }, { $set: { status: 'refunded', updatedBy: actor.userId } }, { new: true }).lean();
+      refund = await this.recordRefund(actor, { paymentId: String(packageRecord.paymentId), amount: packageRecord.saleAmount, method: input.method, reference: input.reference, refundedAt: input.refundedAt });
+    } catch (error) {
+      await ClinicFinancePackage.updateOne({ _id: packageRecord._id, tenantId: actor.tenantId, status: 'refund_pending' }, { $set: { status: 'active', updatedBy: actor.userId } });
+      throw error;
+    }
+    const updated = await ClinicFinancePackage.findOneAndUpdate(
+      { _id: packageRecord._id, tenantId: actor.tenantId, status: 'refund_pending' },
+      { $set: { status: 'refunded', updatedBy: actor.userId } }, { new: true },
+    ).lean();
+    try {
       const event = await ClinicFinancePackageEvent.create({
         tenantId: actor.tenantId, clinicId: packageRecord.clinicId, branchId: packageRecord.branchId,
         packageId: packageRecord._id, eventType: 'refunded', sessionsDelta: 0,
@@ -258,11 +267,13 @@ export const clinicFinanceService = {
         reference: String(refund._id), reason: input.reason?.trim() || null, createdBy: actor.userId,
       });
       await audit(actor, 'finance.package.refunded', updated, { refundId: String(refund._id), packageEventId: String(event._id) });
-      return { package: updated, refund, event };
     } catch (error) {
-      await ClinicFinancePackage.updateOne({ _id: packageRecord._id, tenantId: actor.tenantId, status: 'refund_pending' }, { $set: { status: 'active', updatedBy: actor.userId } });
-      throw error;
+      logger.error('Package refund succeeded but package event logging failed.', {
+        tenantId: actor.tenantId, packageId: String(packageRecord._id),
+        error: error instanceof Error ? error.message : 'unknown',
+      });
     }
+    return { package: updated, refund };
   },
   async listPackageEvents(actor: Actor, packageId: string) {
     if (!validId(packageId)) fail(400, 'INVALID_PACKAGE_ID', 'packageId must be a valid identifier.');
