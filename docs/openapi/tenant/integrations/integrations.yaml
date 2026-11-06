@@ -232,3 +232,23 @@ paths:
       responses:
         "200": { description: Delivery history without payload bodies }
         "404": { description: Endpoint not found }
+
+  /tenant/webhooks/{endpointId}/deliveries/{deliveryId}/retry:
+    post:
+      tags: [Tenant Webhooks]
+      summary: Requeue a failed webhook delivery
+      description: Requeues only a terminal failed delivery for this tenant endpoint. The original event ID and payload are preserved; the attempt counter is reset for a deliberate manual redrive.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: endpointId
+          in: path
+          required: true
+          schema: { type: string }
+        - name: deliveryId
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Delivery returned to the pending queue }
+        "404": { description: Failed delivery not found for this endpoint and tenant }
