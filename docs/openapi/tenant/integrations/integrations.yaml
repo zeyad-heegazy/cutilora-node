@@ -1,0 +1,59 @@
+paths:
+  /tenant/integrations:
+    get:
+      tags: [Tenant Integrations]
+      summary: List tenant and clinic integration configurations
+      description: Secrets are encrypted at rest and never returned. Provider-specific connection verification and delivery are not enabled until a provider adapter is selected.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      responses:
+        "200": { description: Integration configurations with masked credential presence }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+    put:
+      tags: [Tenant Integrations]
+      summary: Create or update an integration configuration
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [provider, integrationType, displayName]
+              properties:
+                clinicId: { type: string, nullable: true }
+                provider: { type: string, maxLength: 80 }
+                integrationType: { type: string, enum: [communication, payment_gateway, calendar, other] }
+                displayName: { type: string, maxLength: 120 }
+                config: { type: object, additionalProperties: true }
+                secrets: { type: object, additionalProperties: { type: string, maxLength: 4096 } }
+      responses:
+        "200": { description: Saved configuration; secret values are not returned }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+  /tenant/integrations/{integrationId}/status:
+    patch:
+      tags: [Tenant Integrations]
+      summary: Enable or disable an integration configuration
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: integrationId
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [configured, disabled] }
+      responses:
+        "200": { description: Updated configuration status }
+        "404": { description: Integration not found in this tenant }
