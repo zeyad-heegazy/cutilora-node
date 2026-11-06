@@ -71,7 +71,7 @@ export const clinicFinanceService = {
   },
   async recordPayment(actor: Actor, input: any) {
     if (!validId(input.invoiceId)) fail(400, 'INVALID_INVOICE_ID', 'invoiceId must be a valid identifier.');
-    const invoice = await ClinicFinanceEntry.findOne({ _id: input.invoiceId, tenantId: actor.tenantId, type: 'invoice', status: 'issued' }).lean();
+    const invoice: any = await ClinicFinanceEntry.findOne({ _id: input.invoiceId, tenantId: actor.tenantId, type: 'invoice', status: 'issued' }).lean();
     if (!invoice) fail(404, 'INVOICE_NOT_FOUND', 'Issued invoice not found in this tenant.');
     assertActorClinic(actor, invoice.clinicId, invoice.branchId);
     if (!money(input.amount) || input.amount <= 0) fail(400, 'INVALID_AMOUNT', 'Payment amount must be greater than zero with at most two decimal places.');
@@ -81,7 +81,7 @@ export const clinicFinanceService = {
       const existing = await ClinicFinanceEntry.findOne({ tenantId: actor.tenantId, idempotencyKey: input.idempotencyKey }).lean();
       if (existing) { if (existing.type !== 'payment' || String(existing.invoiceId) !== String(input.invoiceId) || existing.amount !== input.amount || existing.currency !== invoice.currency) fail(409, 'IDEMPOTENCY_KEY_REUSED', 'This idempotency key was already used for a different payment.'); return existing; }
     }
-    const reserved = await ClinicFinanceEntry.findOneAndUpdate(
+    const reserved: any = await ClinicFinanceEntry.findOneAndUpdate(
       { _id: invoice._id, tenantId: actor.tenantId, type: 'invoice', status: 'issued', $expr: { $lte: [{ $add: [{ $ifNull: ['$settledAmount', 0] }, input.amount] }, '$amount'] } },
       { $inc: { settledAmount: input.amount } }, { new: true },
     ).lean();
@@ -101,16 +101,16 @@ export const clinicFinanceService = {
   },
   async recordRefund(actor: Actor, input: any) {
     if (!validId(input.paymentId)) fail(400, 'INVALID_PAYMENT_ID', 'paymentId must be a valid identifier.');
-    const payment = await ClinicFinanceEntry.findOne({ _id: input.paymentId, tenantId: actor.tenantId, type: 'payment', status: 'posted' }).lean();
+    const payment: any = await ClinicFinanceEntry.findOne({ _id: input.paymentId, tenantId: actor.tenantId, type: 'payment', status: 'posted' }).lean();
     if (!payment) fail(404, 'PAYMENT_NOT_FOUND', 'Posted payment not found in this tenant.');
     assertActorClinic(actor, payment.clinicId, payment.branchId);
     if (!money(input.amount) || input.amount <= 0) fail(400, 'INVALID_AMOUNT', 'Refund amount must be greater than zero with at most two decimal places.');
-    const reservedPayment = await ClinicFinanceEntry.findOneAndUpdate(
+    const reservedPayment: any = await ClinicFinanceEntry.findOneAndUpdate(
       { _id: payment._id, tenantId: actor.tenantId, type: 'payment', status: 'posted', $expr: { $lte: [{ $add: [{ $ifNull: ['$refundedAmount', 0] }, input.amount] }, '$amount'] } },
       { $inc: { refundedAmount: input.amount } }, { new: true },
     ).lean();
     if (!reservedPayment) fail(409, 'REFUND_EXCEEDS_PAYMENT', 'Refund exceeds the unrefunded payment amount.');
-    const invoiceReservation = await ClinicFinanceEntry.findOneAndUpdate(
+    const invoiceReservation: any = await ClinicFinanceEntry.findOneAndUpdate(
       { _id: payment.invoiceId, tenantId: actor.tenantId, type: 'invoice', settledAmount: { $gte: input.amount } },
       { $inc: { settledAmount: -input.amount } }, { new: true },
     ).lean();
