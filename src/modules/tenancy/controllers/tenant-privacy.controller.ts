@@ -181,7 +181,7 @@ export const tenantPrivacyController = {
     try {
       const input = decisionSchema.parse(req.body);
       const item = await tenantPrivacyService.decideDataRequest({
-        ...scope(req), requestId: req.params.requestId, actorUserId: req.auth!.userId, ...input,
+        ...scope(req), requestId: req.params.requestId, actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
       if (!item) return res.status(409).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_REVIEWABLE', message: 'Request not found, already decided, or legal approval is incomplete.' } });
       res.json({ success: true, data: item });
