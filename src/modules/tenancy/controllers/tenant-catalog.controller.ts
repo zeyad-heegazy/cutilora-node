@@ -1,24 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
+import { createSchema, updateSchema, publishSchema } from './validation/tenant-catalog.validation.js';
 import { tenantCatalogService } from '../services/tenant-catalog.service.js';
-
-const objectId = z.string().regex(/^[a-f\\d]{24}$/i);
-const templateTypes = ['service_treatment', 'pricing', 'appointment_policy', 'cancellation_policy', 'rescheduling_policy', 'message_template', 'notification_template', 'operational_policy'] as const;
-const content = z.record(z.unknown());
-const createSchema = z.object({
-  name: z.string().trim().min(1).max(120),
-  key: z.string().trim().min(2).max(140).regex(/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/),
-  type: z.enum(templateTypes),
-  description: z.string().trim().max(1000).optional(),
-  content,
-});
-const updateSchema = createSchema.partial().extend({ expectedVersion: z.number().int().positive() }).refine((v) => Object.keys(v).some((key) => key !== 'expectedVersion'), 'At least one template field is required.');
-const publishSchema = z.object({
-  expectedVersion: z.number().int().positive(),
-  applyTo: z.enum(['none', 'all', 'selected']),
-  clinicIds: z.array(objectId).min(1).max(100).optional(),
-  confirm: z.boolean(),
-}).refine((v) => v.applyTo !== 'selected' || Boolean(v.clinicIds?.length), { message: 'clinicIds are required when applyTo=selected.', path: ['clinicIds'] });
 
 function tenant(req: Request) { return req.tenantContext!.tenantId; }
 function actor(req: Request) { return req.auth!.userId; }
