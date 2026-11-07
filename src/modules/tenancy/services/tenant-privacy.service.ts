@@ -125,6 +125,22 @@ export const tenantPrivacyService = {
     return PrivacyDataRequest.findOne({ _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId }).lean();
   },
 
+  async reviewDataRequest(input: { tenantId: string; clinicId: string; requestId: string; reviewerUserId: string; decision: 'approved' | 'rejected'; legalReviewReference: string }) {
+    return PrivacyDataRequest.findOneAndUpdate({
+      _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
+      status: { $in: ['submitted', 'identity_review', 'in_review'] },
+      legalReviewStatus: 'pending',
+    }, {
+      $set: {
+        legalReviewRequired: true,
+        legalReviewStatus: input.decision,
+        legalReviewReference: input.legalReviewReference,
+        decisionByUserId: input.reviewerUserId,
+        decisionAt: new Date(),
+      },
+    }, { new: true, runValidators: true }).lean();
+  },
+
   async decideDataRequest(input: {
     tenantId: string; clinicId: string; requestId: string; actorUserId: string;
     decision: 'approved' | 'rejected'; legalReviewReference: string; resolutionNote?: string;
