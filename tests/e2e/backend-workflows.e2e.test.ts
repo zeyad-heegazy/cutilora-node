@@ -287,7 +287,7 @@ describe('database-backed backend workflows', () => {
     const created = await tenant().post('/api/v1/tenant/webhooks').send({
       name: 'E2E Webhook',
       url: 'https://example.test/cutilora-webhook',
-      events: ['appointment.created', 'appointment.cancelled'],
+      events: ['clinic.created', 'organization.updated'],
     });
     expect(created.status, JSON.stringify(created.body)).toBe(201);
     expect(created.body.data.secret).toBeTruthy();
@@ -304,7 +304,7 @@ describe('database-backed backend workflows', () => {
 
     const updated = await tenant().patch(`/api/v1/tenant/webhooks/${endpointId}`).send({
       name: 'E2E Webhook Updated',
-      events: ['appointment.created'],
+      events: ['organization.updated'],
     });
     expect(updated.status).toBe(200);
 
