@@ -14,6 +14,7 @@ const schema = new Schema({
   signedAt: { type: Date, required: true, immutable: true },
   revokedAt: { type: Date, default: null, immutable: true },
   revocationReason: { type: String, trim: true, maxlength: 500, default: null, immutable: true },
+  revokesConsentId: { type: Schema.Types.ObjectId, ref: 'ConsentRecord', default: null, immutable: true },
 }, { timestamps: { createdAt: true, updatedAt: false }, versionKey: false, minimize: false });
 
 for (const operation of ['updateOne', 'updateMany', 'findOneAndUpdate', 'replaceOne', 'deleteOne', 'deleteMany', 'findOneAndDelete']) {
@@ -22,4 +23,5 @@ for (const operation of ['updateOne', 'updateMany', 'findOneAndUpdate', 'replace
 
 schema.index({ tenantId: 1, clinicId: 1, patientId: 1, consentType: 1, createdAt: -1 });
 schema.index({ tenantId: 1, patientId: 1, status: 1 });
+schema.index({ tenantId: 1, revokesConsentId: 1 }, { unique: true, partialFilterExpression: { revokesConsentId: { $type: 'objectId' } } });
 export const ConsentRecord = (models.ConsentRecord || model('ConsentRecord', schema)) as Model<any>;
