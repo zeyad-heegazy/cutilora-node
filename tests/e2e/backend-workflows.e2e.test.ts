@@ -337,7 +337,7 @@ describe('database-backed backend workflows', () => {
       events: ['clinic.created', 'organization.updated'],
     });
     expect(created.status, JSON.stringify(created.body)).toBe(201);
-    expect(created.body.data.secret).toBeTruthy();
+    expect(created.body.data.signingSecret).toBeTruthy();
     const endpointId = String(created.body.data._id ?? created.body.data.id);
 
     const listed = await tenant().get('/api/v1/tenant/webhooks');
@@ -346,7 +346,7 @@ describe('database-backed backend workflows', () => {
 
     const rotated = await tenant().post(`/api/v1/tenant/webhooks/${endpointId}/rotate-secret`);
     expect(rotated.status).toBe(200);
-    expect(rotated.body.data.secret).toBeTruthy();
+    expect(rotated.body.data.signingSecret).toBeTruthy();
     expect(rotated.body.data.secret).not.toBe(created.body.data.secret);
 
     const updated = await tenant().patch(`/api/v1/tenant/webhooks/${endpointId}`).send({
