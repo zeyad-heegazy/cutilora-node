@@ -13,7 +13,7 @@ vi.mock('../../src/modules/tenancy/models/branch.model.js', () => ({
 
 import { getTenantRoleCatalog, getTenantRolePermissions, requireTenantPermission } from '../../src/modules/tenancy/middleware/tenant-permissions.js';
 
-function runPermission(role: string, permission: string, context: Record<string, unknown> = {}) {
+async function run(role: string, permission: string, context: Record<string, unknown> = {}) {
   const defaultScope = ['tenant_owner', 'tenant_admin', 'billing_admin'].includes(role) ? 'tenant' : ['clinic_admin', 'clinic_manager'].includes(role) ? 'clinic' : 'branch';
   const req = { tenantContext: { role, scope: defaultScope, clinicId: defaultScope === 'tenant' ? null : 'clinic-a', branchId: defaultScope === 'branch' ? 'branch-a' : null, ...context } } as any;
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
@@ -43,28 +43,28 @@ describe('tenant permission matrix and scoped custom roles', () => {
     expect((await run('branch_manager', 'branch.update')).next).not.toHaveBeenCalled();
   });
 
-  it('evaluates grants against the active tenant, clinic, and branch scope', () => {
-    expect(runPermission('clinic_manager', 'branch.read', { scope: 'clinic', clinicId: 'clinic-a', branchId: 'branch-a' }).next).toHaveBeenCalledOnce();
-    expect(runPermission('branch_manager', 'branch.read', { scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }).next).toHaveBeenCalledOnce();
-    expect(runPermission('branch_manager', 'clinic.settings.manage', { scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' }).next).not.toHaveBeenCalled();
+  it('evaluates grants against the active tenant, clinic, and branch scope', async () => {
+    expect((await run('clinic_manager', 'branch.read', { scope: 'clinic', clinicId: 'clinic-a', branchId: 'branch-a' })).next).toHaveBeenCalledOnce();
+    expect((await run('branch_manager', 'branch.read', { scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' })).next).toHaveBeenCalledOnce();
+    expect((await run('branch_manager', 'clinic.settings.manage', { scope: 'branch', clinicId: 'clinic-a', branchId: 'branch-a' })).next).not.toHaveBeenCalled();
   });
 
-  it('uses tenant custom-role permissions and enforces their declared scope', () => {
-    expect(runPermission('custom', 'branch.read', { scope: 'branch', customPermissions: ['branch.read'] }).next).toHaveBeenCalledOnce();
-    expect(runPermission('custom', 'clinic.settings.manage', { scope: 'branch', customPermissions: ['branch.read'] }).next).not.toHaveBeenCalled();
-    expect(runPermission('custom', 'branch.read', { scope: 'branch', customPermissions: [] }).next).not.toHaveBeenCalled();
+  it('uses tenant custom-role permissions and enforces their declared scope', async () => {
+    expect((await run('custom', 'branch.read', { scope: 'branch', customPermissions: ['branch.read'] })).next).toHaveBeenCalledOnce();
+    expect((await run('custom', 'clinic.settings.manage', { scope: 'branch', customPermissions: ['branch.read'] })).next).not.toHaveBeenCalled();
+    expect((await run('custom', 'branch.read', { scope: 'branch', customPermissions: [] })).next).not.toHaveBeenCalled();
   });
 
-  it('applies direct grants and denials without escaping the membership scope', () => {
-    expect(runPermission('staff', 'branch.schedule.manage', {
+  it('applies direct grants and denials without escaping the membership scope', async () => {
+    expect((await run('staff', 'branch.schedule.manage', {
       scope: 'branch', permissionOverrides: { allow: ['branch.schedule.manage'], deny: [] },
-    }).next).toHaveBeenCalledOnce();
-    expect(runPermission('branch_manager', 'branch.read', {
+    })).next).toHaveBeenCalledOnce();
+    expect((await run('branch_manager', 'branch.read', {
       scope: 'branch', permissionOverrides: { allow: [], deny: ['branch.read'] },
-    }).next).not.toHaveBeenCalled();
+    })).next).not.toHaveBeenCalled();
   });
 
-  it('does not grant permissions to unknown roles', () => {
+  it('does not grant permissions to unknown roles', async () => {
     expect(getTenantRolePermissions('custom_unknown_role')).toEqual([]);
     expect((await run('custom_unknown_role', 'organization.manage')).next).not.toHaveBeenCalled();
   });
