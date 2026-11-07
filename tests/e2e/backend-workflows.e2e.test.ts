@@ -84,7 +84,7 @@ describe('database-backed backend workflows', () => {
       },
     });
 
-    expect(response.status).toBe(201);
+    expect(response.status, JSON.stringify(response.body)).toBe(201);
     tenantId = String(response.body.data.tenant?.id ?? response.body.data.tenant?._id ?? response.body.data.id ?? response.body.data._id);
     expect(tenantId).toMatch(/^[a-f\d]{24}$/i);
     expect(response.body.data).toBeTruthy();
