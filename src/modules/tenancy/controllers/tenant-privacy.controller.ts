@@ -105,6 +105,21 @@ export const tenantPrivacyController = {
     } catch (error) { next(error); }
   },
 
+  async reviewDataRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = z.object({
+        decision: z.enum(['approved', 'rejected']),
+        legalReviewReference: z.string().trim().min(1).max(160),
+      }).parse(req.body);
+      const item = await tenantPrivacyService.reviewDataRequest({
+        ...scope(req), requestId: req.params.requestId,
+        reviewerUserId: req.auth!.userId, ...input,
+      });
+      if (!item) return res.status(409).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_REVIEWABLE', message: 'Request not found, already reviewed, or no longer pending.' } });
+      res.json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
+
   async decideDataRequest(req: Request, res: Response, next: NextFunction) {
     try {
       const input = decisionSchema.parse(req.body);
