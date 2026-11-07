@@ -9,6 +9,7 @@ import { tenantFinanceController } from '../controllers/tenant-finance.controlle
 import { tenantIntegrationController } from '../controllers/tenant-integration.controller.js';
 import { tenantWebhookController } from '../controllers/tenant-webhook.controller.js';
 import { tenantReportsController } from '../controllers/tenant-reports.controller.js';
+import { tenantPrivacyController } from '../controllers/tenant-privacy.controller.js';
 
 export const tenantRouter = Router();
 tenantRouter.use(authenticate, resolveTenantContext);
@@ -60,6 +61,14 @@ tenantRouter.get('/webhooks/:endpointId/deliveries', requireTenantScope, require
 tenantRouter.post('/webhooks/:endpointId/deliveries/:deliveryId/retry', requireTenantScope, requireTenantPermission('integrations.manage'), requireTenantFeature('integrations'), requireTenantFeature('webhooks'), tenantWebhookController.retryDelivery);
 tenantRouter.get('/reports/organization', requireTenantScope, requireTenantPermission('dashboard.read'), tenantReportsController.organizationOverview);
 tenantRouter.get('/reports/organization/export', requireTenantScope, requireTenantPermission('reports.export'), tenantReportsController.exportOrganizationOverview);
+tenantRouter.get('/patients/:patientId/access-history', requireTenantPermission('audit.read'), tenantPrivacyController.patientAccessHistory);
+tenantRouter.get('/consents', requireTenantPermission('audit.read'), tenantPrivacyController.listConsents);
+tenantRouter.post('/consents', requireTenantPermission('audit.export'), tenantPrivacyController.createConsent);
+tenantRouter.post('/consents/:consentId/revoke', requireTenantPermission('audit.export'), tenantPrivacyController.revokeConsent);
+tenantRouter.post('/privacy/data-requests', requireTenantPermission('audit.export'), tenantPrivacyController.createDataRequest);
+tenantRouter.get('/privacy/data-requests', requireTenantPermission('audit.read'), tenantPrivacyController.listDataRequests);
+tenantRouter.get('/privacy/data-requests/:requestId', requireTenantPermission('audit.read'), tenantPrivacyController.getDataRequest);
+tenantRouter.post('/privacy/data-requests/:requestId/decision', requireTenantPermission('audit.export'), tenantPrivacyController.decideDataRequest);
 tenantRouter.get('/audit-logs', requireTenantScope, requireTenantPermission('audit.read'), tenancyController.listTenantAuditEvents);
 tenantRouter.get('/audit-logs/export', requireTenantScope, requireTenantPermission('audit.export'), tenancyController.exportTenantAuditEvents);
 tenantRouter.get('/billing-profile', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantBillingProfile);
