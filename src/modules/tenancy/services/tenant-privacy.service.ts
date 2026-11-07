@@ -97,7 +97,7 @@ export const tenantPrivacyService = {
       approvedByUserId: null,
       approvedAt: null,
     });
-  },,
+  },
 
   async revokeConsent(input: { tenantId: string; clinicId: string; consentId: string; actorUserId: string; reason: string }) {
     const original = await ConsentRecord.findOne({
