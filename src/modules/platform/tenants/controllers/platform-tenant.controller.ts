@@ -6,7 +6,7 @@ import {
   tenantStatusSchema,
   updateTenantSchema,
   upsertSubscriptionSchema,
-} from '../../../tenancy/validations/tenancy.validation.js';
+} from '../../../tenancy/validation/tenancy.validation.js';
 
 export const platformTenantController = {
   async list(req: Request, res: Response, next: NextFunction) {
