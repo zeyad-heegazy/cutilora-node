@@ -97,5 +97,53 @@ export const tenantPrivacyService = {
       approvedByUserId: null,
       approvedAt: null,
     });
+  },,
+
+  async revokeConsent(input: { tenantId: string; clinicId: string; consentId: string; actorUserId: string; reason: string }) {
+    const original = await ConsentRecord.findOne({
+      _id: input.consentId, tenantId: input.tenantId, clinicId: input.clinicId, status: 'granted',
+    }).select('+documentSnapshot').lean() as any;
+    if (!original) return null;
+    return ConsentRecord.create({
+      tenantId: original.tenantId,
+      clinicId: original.clinicId,
+      patientId: original.patientId,
+      consentType: original.consentType,
+      documentVersion: original.documentVersion,
+      documentHash: original.documentHash,
+      documentSnapshot: original.documentSnapshot,
+      status: 'revoked',
+      actorUserId: input.actorUserId,
+      source: 'clinic_portal',
+      signedAt: new Date(),
+      revokedAt: new Date(),
+      revocationReason: input.reason,
+    });
   },
+
+  async getDataRequest(input: { tenantId: string; clinicId: string; requestId: string }) {
+    return PrivacyDataRequest.findOne({ _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId }).lean();
+  },
+
+  async decideDataRequest(input: {
+    tenantId: string; clinicId: string; requestId: string; actorUserId: string;
+    decision: 'approved' | 'rejected'; legalReviewReference: string; resolutionNote?: string;
+  }) {
+    const request = await PrivacyDataRequest.findOne({
+      _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
+      status: { $in: ['submitted', 'identity_review', 'in_review'] },
+      ...(input.decision === 'approved' ? { legalReviewStatus: { $in: ['approved', 'not_required'] } } : {}),
+    });
+    if (!request) return null;
+    request.status = input.decision;
+    request.legalReviewRequired = true;
+    request.legalReviewStatus = 'approved';
+    request.legalReviewReference = input.legalReviewReference;
+    request.decisionByUserId = input.actorUserId as any;
+    request.decisionAt = new Date();
+    request.resolutionNote = input.resolutionNote ?? '';
+    await request.save();
+    return request.toObject();
+  },
+
 };
