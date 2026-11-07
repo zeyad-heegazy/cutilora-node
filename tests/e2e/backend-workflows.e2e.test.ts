@@ -121,7 +121,7 @@ describe('database-backed backend workflows', () => {
       userId: approver._id,
       tenantId,
       scope: 'tenant',
-      role: 'billing_admin',
+      role: 'tenant_owner',
       status: 'active',
     });
     const approverLogin = await request(app).post('/api/v1/auth/login').send({
