@@ -7,3 +7,6 @@ export const createSchema = z.object({
   events: z.array(z.string().trim().min(1).max(120)).min(1).max(100),
 }).strict();
 export const updateSchema = createSchema.partial().refine(value => Object.keys(value).length > 0, 'At least one webhook field must be provided.');
+
+export const statusSchema = z.object({ status: z.enum(['active', 'disabled']) }).strict();
+export const deliveryLimitSchema = z.coerce.number().int().min(1).max(100).default(50);
