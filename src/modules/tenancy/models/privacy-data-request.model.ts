@@ -11,6 +11,7 @@ const schema = new Schema({
   legalReviewRequired: { type: Boolean, default: true },
   legalReviewStatus: { type: String, enum: ['pending', 'approved', 'rejected', 'not_required'], default: 'pending' },
   legalReviewReference: { type: String, trim: true, maxlength: 160, default: null },
+  legalReviewedByUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   decisionByUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   decisionAt: { type: Date, default: null },
   fulfilledAt: { type: Date, default: null },
