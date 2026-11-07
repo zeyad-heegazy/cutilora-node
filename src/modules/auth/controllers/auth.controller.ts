@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { authService } from '../services/auth.service.js';
-import { acceptInvitationSchema, loginSchema } from '../validations/auth.validation.js';
+import { acceptInvitationSchema, loginSchema } from '../validation/auth.validation.js';
 
 export const authController = {
   async login(req: Request, res: Response, next: NextFunction) {
