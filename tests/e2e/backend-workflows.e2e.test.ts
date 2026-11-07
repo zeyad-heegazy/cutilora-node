@@ -239,6 +239,31 @@ describe('database-backed backend workflows', () => {
       .set('X-Clinic-Id', clinicId);
     expect(context.status).toBe(200);
     expect(context.body.data.access.scope).toBe('clinic');
+
+    const directory = await tenant().get('/api/v1/tenant/users?search=e2e-clinic-staff');
+    expect(directory.status, JSON.stringify(directory.body)).toBe(200);
+    const userId = String(directory.body.data.items?.[0]?.userId ?? directory.body.data[0]?.userId ?? directory.body.data.items?.[0]?.id ?? directory.body.data[0]?.id);
+    expect(userId).toMatch(/^[a-f0-9]{24}$/i);
+
+    const userDetails = await tenant().get(`/api/v1/tenant/users/${userId}`);
+    expect(userDetails.status).toBe(200);
+    const effectiveAccess = await tenant().get(`/api/v1/tenant/users/${userId}/effective-access`);
+    expect(effectiveAccess.status).toBe(200);
+
+    const { TenantMembership } = await import('../../src/modules/tenancy/models/tenant-membership.model.js');
+    const membership = await TenantMembership.findOne({ tenantId, userId });
+    expect(membership).toBeTruthy();
+    const membershipId = String(membership!._id);
+
+    const historyBefore = await tenant().get(`/api/v1/tenant/memberships/${membershipId}/history`);
+    expect(historyBefore.status).toBe(200);
+    const changed = await tenant().patch(`/api/v1/tenant/memberships/${membershipId}`).send({ status: 'suspended' });
+    expect(changed.status, JSON.stringify(changed.body)).toBe(200);
+    const reactivated = await tenant().patch(`/api/v1/tenant/memberships/${membershipId}`).send({ status: 'active' });
+    expect(reactivated.status, JSON.stringify(reactivated.body)).toBe(200);
+    const historyAfter = await tenant().get(`/api/v1/tenant/memberships/${membershipId}/history`);
+    expect(historyAfter.status).toBe(200);
+    expect(historyAfter.body.data.length).toBeGreaterThanOrEqual(historyBefore.body.data.length);
   });
 
   it('creates, updates, lists and archives a custom tenant role', async () => {
