@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { schema } from './validation/tenant-integration.validation.js';
+import { schema, rotateCredentialsSchema, integrationStatusSchema } from './validation/tenant-integration.validation.js';
 import { tenantIntegrationService } from '../services/tenant-integration.service.js';
 
 export const tenantIntegrationController = {
@@ -17,7 +17,7 @@ export const tenantIntegrationController = {
   },
   async rotateCredentials(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = z.object({ secrets: z.record(z.string().max(4096)).refine(value => Object.keys(value).length > 0) }).strict().parse(req.body);
+      const input = rotateCredentialsSchema.parse(req.body);
       const item = await tenantIntegrationService.rotateCredentials(req.tenantContext!.tenantId, req.auth!.userId, String(req.params.integrationId ?? ''), input.secrets);
       if (!item) return res.status(404).json({ success: false, error: { code: 'INTEGRATION_NOT_FOUND', message: 'Integration not found in this tenant.' } });
       res.json({ success: true, data: item });
@@ -39,7 +39,7 @@ export const tenantIntegrationController = {
   },
   async updateStatus(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = z.object({ status: z.enum(['configured', 'disabled']) }).strict().parse(req.body);
+      const input = integrationStatusSchema.parse(req.body);
       const item = await tenantIntegrationService.setStatus(req.tenantContext!.tenantId, req.auth!.userId, String(req.params.integrationId ?? ''), input.status);
       if (!item) return res.status(404).json({ success: false, error: { code: 'INTEGRATION_NOT_FOUND', message: 'Integration not found in this tenant.' } });
       res.json({ success: true, data: item });
