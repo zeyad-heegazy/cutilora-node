@@ -6,8 +6,8 @@ info:
     API documentation for the Cutilora Node.js backend.
     Base path: /api/v1.
     Authentication uses Bearer access tokens.
-    Tenant-scoped endpoints require X-Tenant-Id. X-Clinic-Id and X-Branch-Id
-    select optional clinic and branch context; branch context requires clinic context.
+    Tenant-scoped endpoints require X-Tenant-Id. X-Clinic-Id selects an optional clinic context.
+    X-Branch-Id selects a branch and requires X-Clinic-Id; branch-scoped memberships must select an authorized branch.
     The development bootstrap endpoint is unavailable when NODE_ENV=production.
 servers:
   - url: http://localhost:3000/api/v1
@@ -88,6 +88,49 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /auth/invitations/accept:
+    post:
+      tags:
+        - Authentication
+      x-apidog-folder: Tenant/Auth
+      summary: Accept a tenant invitation
+      description: Uses the single-use invitation token as proof of invitation. Existing active user accounts are linked by the invited email. New users must provide a name and password. The invitation token must be delivered privately by the tenant. Acceptance attempts are limited to 10 per IP per 15 minutes on each API process.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - token
+              properties:
+                token:
+                  type: string
+                  minLength: 32
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                  description: Required when the email has no existing user account
+                password:
+                  type: string
+                  format: password
+                  minLength: 12
+                  maxLength: 128
+                  description: Required when the email has no existing user account
+      responses:
+        '200':
+          description: Invitation accepted and tenant membership activated
+        '400':
+          description: Invalid
+          expired: null
+          or already-used invitation token: null
+        '409':
+          description: Membership or invitation state conflict
+        '422':
+          description: Account details required for a new user
+        '429':
+          description: Invitation acceptance rate limit exceeded
   /auth/logout:
     post:
       tags:
@@ -1432,6 +1475,2635 @@ paths:
                 $ref: '#/components/schemas/GeoListResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
+  /tenant/dashboard/summary:
+    get:
+      tags:
+        - Tenant Dashboard
+      summary: Get tenant dashboard summary
+      description: Returns organization identity, tenant-scoped clinic/branch/member counts and the current Cutilora subscription summary. Counts include only records owned by the active tenant.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant dashboard summary
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      organization:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                          name:
+                            type: string
+                          status:
+                            type: string
+                            enum:
+                              - active
+                              - suspended
+                      counts:
+                        type: object
+                        properties:
+                          clinics:
+                            type: object
+                            properties:
+                              total:
+                                type: integer
+                              active:
+                                type: integer
+                              suspended:
+                                type: integer
+                          branches:
+                            type: object
+                            properties:
+                              total:
+                                type: integer
+                              active:
+                                type: integer
+                              suspended:
+                                type: integer
+                          activeMembers:
+                            type: integer
+                          pendingInvitations:
+                            type: integer
+                      subscription:
+                        type: object
+                        nullable: true
+                        properties:
+                          plan:
+                            type: object
+                            additionalProperties: true
+                          billingCycle:
+                            type: string
+                          status:
+                            type: string
+                          nextBillingAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                      generatedAt:
+                        type: string
+                        format: date-time
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/dashboard/activity:
+    get:
+      tags:
+        - Tenant Dashboard
+      summary: Get recent organization activity
+      description: Returns the latest tenant-scoped audit events. This is not a clinic operational activity feed.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Recent tenant activity events
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/dashboard/clinics:
+    get:
+      tags:
+        - Tenant Dashboard
+      summary: List clinic portfolio for dashboard
+      description: Returns tenant-owned clinics with branch counts, active clinic manager identity when assigned through a clinic membership, and latest tenant audit activity timestamp/action when available.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant clinic portfolio
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/dashboard/alerts:
+    get:
+      tags:
+        - Tenant Dashboard
+      summary: Get organization alerts
+      description: Returns actionable alerts derived from available tenant data, including pending invitations, suspended clinics and past-due subscription status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Organization alerts
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/documents:
+    get:
+      tags:
+        - Tenant Organization
+      summary: List organization documents
+      description: Lists active documents belonging to the active tenant. File contents and storage keys are never included.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant document metadata list
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Tenant Organization
+      summary: Upload organization document
+      description: Uploads a private PDF, JPEG, PNG or WebP document using base64. The file is content-sniffed and limited to 3 MB. Documents are stored outside the public uploads directory.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - category
+                - fileBase64
+              properties:
+                name:
+                  type: string
+                  maxLength: 180
+                category:
+                  type: string
+                  enum:
+                    - registration
+                    - tax
+                    - license
+                    - insurance
+                    - contract
+                    - other
+                fileBase64:
+                  type: string
+                  description: Base64 file or supported data URL; maximum decoded size 3 MB
+                expiresAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '201':
+          description: Document uploaded
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/documents/{documentId}:
+    get:
+      tags:
+        - Tenant Organization
+      summary: Get organization document metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document metadata
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Tenant Organization
+      summary: Archive organization document
+      description: Archives the document without physically deleting its legally relevant file.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Document archived
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/documents/{documentId}/versions:
+    get:
+      tags:
+        - Tenant Organization
+      summary: List document version history
+      description: Returns metadata for the document and its replacement chain, including archived versions. Private storage keys and file contents are never returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ordered document version history
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/documents/{documentId}/replace:
+    put:
+      tags:
+        - Tenant Organization
+      summary: Replace an organization document
+      description: Creates a new immutable document version and archives the previous active version. The category is retained from the original document.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileBase64
+              properties:
+                name:
+                  type: string
+                  maxLength: 180
+                fileBase64:
+                  type: string
+                  description: Base64 file or supported data URL; maximum decoded size 3 MB
+                expiresAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '200':
+          description: Replacement document version created
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tenant/documents/{documentId}/download:
+    get:
+      tags:
+        - Tenant Organization
+      summary: Download organization document
+      description: Streams the private file only after tenant ownership, active status and tenant-wide role authorization are checked.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Private document file
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/finance/summary:
+    get:
+      tags:
+        - Tenant Finance
+      summary: Consolidated financial summary
+      description: Read-only group report aggregated from Clinic Finance source entries. Returns currency-separated totals and aggregate outstanding patient balances. It never exposes patient-level details or Cutilora subscription billing.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: branchId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: currency
+          in: query
+          schema:
+            type: string
+            pattern: ^[A-Za-z]{3}$
+      responses:
+        '200':
+          description: Consolidated totals grouped by currency
+          receivables and clinic breakdown: null
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/finance/clinic-comparison:
+    get:
+      tags:
+        - Tenant Finance
+      summary: Compare clinic and branch financial performance
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: branchId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: currency
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Clinic and branch totals
+          grouped by currency: null
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/finance/revenue-trends:
+    get:
+      tags:
+        - Tenant Finance
+      summary: Revenue and collection trends
+      description: Returns monthly invoice and collection trends, payment-method mix and service/category revenue mix when source line items provide categories. Periods use UTC.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: branchId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: currency
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Monthly trends
+          payment-method mix and revenue mix grouped by currency: null
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/finance/expense-summary:
+    get:
+      tags:
+        - Tenant Finance
+      summary: Expense category and clinic comparison
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: branchId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: currency
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Expenses grouped by category
+          clinic: null
+          branch and currency: null
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/finance/reports:
+    get:
+      tags:
+        - Tenant Finance
+      summary: Export consolidated financial report
+      description: Downloads a CSV export of clinic and branch totals. Patient-level records are not included.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: branchId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: currency
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: CSV export
+          content:
+            text/csv:
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /clinic/finance/invoices:
+    post:
+      tags:
+        - Clinic Finance
+      summary: Create a clinic patient invoice
+      description: Writes to the Clinic Finance source ledger. This is intentionally not a Tenant Finance reporting endpoint.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - clinicId
+                - currency
+                - lineItems
+              properties:
+                clinicId:
+                  type: string
+                branchId:
+                  type: string
+                patientId:
+                  type: string
+                invoiceNumber:
+                  type: string
+                currency:
+                  type: string
+                  example: EGP
+                lineItems:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required:
+                      - description
+                      - quantity
+                      - unitPrice
+                    properties:
+                      category:
+                        type: string
+                      description:
+                        type: string
+                      quantity:
+                        type: number
+                        exclusiveMinimum: 0
+                      unitPrice:
+                        type: number
+                        minimum: 0
+      responses:
+        '201':
+          description: Clinic invoice created
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /clinic/finance/payments:
+    post:
+      tags:
+        - Clinic Finance
+      summary: Record payment against a clinic invoice
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - invoiceId
+                - amount
+                - currency
+              properties:
+                invoiceId:
+                  type: string
+                amount:
+                  type: number
+                  exclusiveMinimum: 0
+                currency:
+                  type: string
+                method:
+                  type: string
+                idempotencyKey:
+                  type: string
+      responses:
+        '201':
+          description: Payment recorded
+        '409':
+          description: Payment exceeds outstanding balance or currency differs
+  /clinic/finance/refunds:
+    post:
+      tags:
+        - Clinic Finance
+      summary: Record refund against a clinic payment
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - paymentId
+                - amount
+              properties:
+                paymentId:
+                  type: string
+                amount:
+                  type: number
+                  exclusiveMinimum: 0
+      responses:
+        '201':
+          description: Refund recorded
+        '409':
+          description: Refund exceeds refundable amount
+  /clinic/finance/entries/void:
+    post:
+      tags:
+        - Clinic Finance
+      summary: Void an eligible unpaid invoice or posted expense
+      description: Voids are non-destructive and require a reason. Settled invoices and payment/refund entries cannot be voided; payments must use the refund workflow.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - entryId
+                - reason
+              properties:
+                entryId:
+                  type: string
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: Entry voided and audit event recorded
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Entry is settled
+          unsupported or changed concurrently: null
+  /clinic/finance/expenses:
+    post:
+      tags:
+        - Clinic Finance
+      summary: Record a clinic expense
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - clinicId
+                - amount
+                - currency
+                - category
+              properties:
+                clinicId:
+                  type: string
+                branchId:
+                  type: string
+                amount:
+                  type: number
+                  exclusiveMinimum: 0
+                currency:
+                  type: string
+                category:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Expense recorded
+  /tenant/billing-profile:
+    get:
+      tags:
+        - Tenant Subscription
+      summary: Get tenant billing profile
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant billing profile
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags:
+        - Tenant Subscription
+      summary: Update tenant billing profile
+      description: Updates billing contact and legal invoice details only. Does not alter subscription pricing or payment state.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                legalName:
+                  type: string
+                  maxLength: 200
+                taxNumber:
+                  type: string
+                  maxLength: 100
+                vatNumber:
+                  type: string
+                  maxLength: 100
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                  maxLength: 40
+                address:
+                  type: string
+                  maxLength: 500
+                city:
+                  type: string
+                  maxLength: 120
+                countryCode:
+                  type: string
+                  minLength: 2
+                  maxLength: 2
+      responses:
+        '200':
+          description: Updated billing profile
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/subscription/change-requests:
+    get:
+      tags:
+        - Tenant Subscription
+      summary: List subscription change requests
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant's subscription change requests
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags:
+        - Tenant Subscription
+      summary: Request a subscription change
+      description: Creates a request for Platform review. It does not change plan, price, payment state or subscription status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - type
+              properties:
+                type:
+                  type: string
+                  enum:
+                    - upgrade
+                    - downgrade
+                    - cancel
+                    - reactivate
+                targetPlanCode:
+                  type: string
+                  maxLength: 60
+                targetBillingCycle:
+                  type: string
+                  enum:
+                    - monthly
+                    - quarterly
+                    - yearly
+                effectiveAt:
+                  type: string
+                  enum:
+                    - immediate
+                    - period_end
+                  default: period_end
+                reason:
+                  type: string
+                  maxLength: 1000
+      responses:
+        '201':
+          description: Request submitted for Platform review
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Conflicting pending request or invalid subscription state
+  /tenant/subscription/payments:
+    get:
+      tags:
+        - Tenant Subscription
+      summary: List Cutilora subscription payment history
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant subscription payment history
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/invoices/{invoiceId}/download:
+    get:
+      tags:
+        - Tenant Subscription
+      summary: Redirect to the platform-issued invoice document
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '302':
+          description: HTTPS redirect to invoice document
+        '404':
+          description: Invoice or document not found
+        '409':
+          description: Invoice document URL is invalid
+  /tenant/subscription:
+    get:
+      tags:
+        - Tenant Subscription
+      x-apidog-folder: Tenant/Subscription
+      summary: Get current Cutilora subscription
+      description: Read-only tenant self-service view. Platform retains ownership of plan pricing, billing, invoices, collection and administrative changes.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Current subscription summary with masked payment method and recovery timeline; no gateway token is exposed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      paymentMethod:
+                        type: object
+                        nullable: true
+                        properties:
+                          provider:
+                            type: string
+                          type:
+                            type: string
+                          brand:
+                            type: string
+                          last4:
+                            type: string
+                            maxLength: 4
+                          expiryMonth:
+                            type: integer
+                            nullable: true
+                          expiryYear:
+                            type: integer
+                            nullable: true
+                          updatedAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                      paymentRecovery:
+                        type: object
+                        nullable: true
+                        properties:
+                          failedAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          failureCode:
+                            type: string
+                          retryAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          retryCount:
+                            type: integer
+                          gracePeriodEndsAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+                          suspensionAt:
+                            type: string
+                            format: date-time
+                            nullable: true
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/subscription/usage:
+    get:
+      tags:
+        - Tenant Subscription
+      x-apidog-folder: Tenant/Subscription
+      summary: Get tenant subscription usage
+      description: Returns current tenant-scoped usage counts against Platform-configured plan limits. Usage is read-only; Platform remains authoritative for entitlements.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Usage counts and entitlement availability
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      usage:
+                        type: object
+                        properties:
+                          clinics:
+                            type: integer
+                          branches:
+                            type: integer
+                          activeMembers:
+                            type: integer
+                          pendingInvitations:
+                            type: integer
+                      limits:
+                        type: object
+                        nullable: true
+                      limitsAvailable:
+                        type: boolean
+                      limitsMessage:
+                        type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/invoices:
+    get:
+      tags:
+        - Tenant Subscription
+      x-apidog-folder: Tenant/Subscription/Invoices
+      summary: List tenant subscription invoices
+      description: Lists only invoice/payment records associated with the current tenant's Cutilora subscription. Clinic patient invoices are never included.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant subscription invoice records
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/invoices/{invoiceId}:
+    get:
+      tags:
+        - Tenant Subscription
+      x-apidog-folder: Tenant/Subscription/Invoices
+      summary: Get tenant subscription invoice
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: invoiceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant subscription invoice details
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/invitations:
+    get:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: List tenant invitations
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - pending
+              - processing
+              - expired
+              - accepted
+              - revoked
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Paginated tenant invitations without token hashes
+    post:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: Create a tenant invitation
+      description: Returns a single-use invitation token for private delivery. Delivery channels are selected per invitation; provider adapters are not configured, so no automatic message is sent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - role
+                - scope
+              properties:
+                email:
+                  type: string
+                  format: email
+                phone:
+                  type: string
+                  pattern: ^\+[1-9][0-9]{7,14}$
+                  description: Required when sms is selected; E.164 format.
+                channels:
+                  type: array
+                  minItems: 1
+                  uniqueItems: true
+                  default:
+                    - email
+                  description: Delivery channels to use when provider integrations are configured. SMS requires phone.
+                  items:
+                    type: string
+                    enum:
+                      - email
+                      - sms
+                role:
+                  type: string
+                  enum:
+                    - tenant_admin
+                    - billing_admin
+                    - clinic_admin
+                    - clinic_manager
+                    - branch_manager
+                    - staff
+                    - provider
+                    - receptionist
+                scope:
+                  type: string
+                  enum:
+                    - tenant
+                    - clinic
+                    - branch
+                clinicId:
+                  type: string
+                branchIds:
+                  type: array
+                  items:
+                    type: string
+                expiresInDays:
+                  type: integer
+                  minimum: 1
+                  maximum: 30
+                  default: 7
+      responses:
+        '201':
+          description: Invitation created; token returned once for private delivery
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: A pending invitation already exists for this email
+  /tenant/invitations/{invitationId}/revoke:
+    post:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: Revoke a pending invitation
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation revoked
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/invitations/{invitationId}/resend:
+    post:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: Resend an invitation by rotating its token
+      description: Returns a new token for private delivery. The previous token becomes invalid.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: invitationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: New single-use token returned
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/roles:
+    post:
+      tags:
+        - Tenant Access Control
+      summary: Create a tenant custom role
+      description: Creates a tenant-owned role with explicit tenant, clinic or branch permission grants. Every permission must exist in the catalog, every target must belong to the tenant, and the actor cannot grant beyond their own effective authority.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - scope
+                - permissions
+              properties:
+                key:
+                  type: string
+                  minLength: 2
+                  maxLength: 80
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                description:
+                  type: string
+                  maxLength: 500
+                scope:
+                  type: string
+                  enum:
+                    - tenant
+                    - clinic
+                    - branch
+                permissions:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required:
+                      - permission
+                      - scope
+                    properties:
+                      permission:
+                        type: string
+                        maxLength: 120
+                      scope:
+                        type: string
+                        enum:
+                          - tenant
+                          - clinic
+                          - branch
+                      clinicId:
+                        type: string
+                        nullable: true
+                      branchId:
+                        type: string
+                        nullable: true
+      responses:
+        '201':
+          description: Tenant custom role created and audited
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Tenant role key already exists
+    get:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: List built-in role templates and tenant custom roles
+      description: Returns built-in role templates, starter templates (including Organization Manager, Clinic Manager, Branch Manager, Finance Viewer/Manager and Read-only Analyst), and tenant-scoped custom roles. Starter templates are cloned into tenant-owned roles and then editable; grants are restricted to the actor's permission authority.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Effective access for the authenticated membership and selected context
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/roles/{roleId}:
+    get:
+      tags:
+        - Tenant Access Control
+      summary: Get a tenant custom role
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+      responses:
+        '200':
+          description: Tenant role with scoped grants and version
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Tenant Access Control
+      summary: Update a tenant custom role
+      description: Updates role grants using optimistic version checks. Every grant must be within the actor's effective authority. Permission changes are audited and increment the role version.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 2
+              required:
+                - expectedVersion
+              properties:
+                expectedVersion:
+                  type: integer
+                  minimum: 1
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                description:
+                  type: string
+                  maxLength: 500
+                scope:
+                  type: string
+                  enum:
+                    - tenant
+                    - clinic
+                    - branch
+                permissions:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required:
+                      - permission
+                      - scope
+                    properties:
+                      permission:
+                        type: string
+                      scope:
+                        type: string
+                        enum:
+                          - tenant
+                          - clinic
+                          - branch
+                      clinicId:
+                        type: string
+                        nullable: true
+                      branchId:
+                        type: string
+                        nullable: true
+      responses:
+        '200':
+          description: Updated role and incremented version
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Role version conflict
+  /tenant/roles/{roleId}/clone:
+    post:
+      tags:
+        - Tenant Access Control
+      summary: Clone a tenant custom role or starter template
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            description: Custom role ObjectId or template:<key>
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - key
+                - name
+              properties:
+                key:
+                  type: string
+                  minLength: 2
+                  maxLength: 80
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 120
+                description:
+                  type: string
+                  maxLength: 500
+                clinicId:
+                  type: string
+                  description: Required when cloning a clinic-scoped template
+                branchIds:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: string
+                  description: Required when cloning a branch-scoped template
+      responses:
+        '201':
+          description: Cloned tenant-owned role from a custom role or starter template
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/roles/{roleId}/deactivate:
+    post:
+      tags:
+        - Tenant Access Control
+      summary: Deactivate an unused custom role
+      description: A role referenced by any membership, including suspended memberships, cannot be deactivated.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+      responses:
+        '200':
+          description: Role deactivated
+        '409':
+          description: Role is still assigned
+  /tenant/memberships/{membershipId}/role:
+    put:
+      tags:
+        - Tenant Access Control
+      summary: Assign a custom role to a tenant membership
+      description: Requires a matching membership scope, prevents self-escalation, checks actor authority and protects the last active Tenant Owner.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: membershipId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - roleId
+              properties:
+                roleId:
+                  type: string
+                  pattern: ^[a-fA-F0-9]{24}$
+      responses:
+        '200':
+          description: Custom role assigned
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Last Owner or role scope conflict
+  /tenant/access/me:
+    get:
+      tags:
+        - Tenant Access Control
+      summary: Get current user's effective permissions
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Effective permissions for the selected tenant
+          clinic and branch context: null
+  /tenant/permissions/catalog:
+    get:
+      tags:
+        - Tenant Access Control
+      summary: Get supported tenant permission catalog
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Permissions grouped by module and action
+  /tenant/users/{userId}/effective-access:
+    get:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: Preview a tenant user's effective access
+      description: Returns only memberships in the active tenant, including custom role identity/version, scoped grants and direct-versus-inherited permission sources. Suspended memberships return no effective permissions.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+      responses:
+        '200':
+          description: Tenant-scoped effective access preview
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/users/{userId}:
+    get:
+      tags:
+        - Tenant Organization
+      summary: Get tenant user details and memberships
+      description: Returns global identity details, memberships belonging only to the active tenant, and a limited summary of recent user sessions. Sensitive IP addresses and access tokens are never returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant user details and tenant-scoped memberships
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/users/{userId}/sessions/{sessionId}/revoke:
+    post:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: Revoke one tenant user's active session
+      description: Revokes a selected active session for a user who has a membership in the active tenant. Session revocation is global to that user's account.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Session revoked
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/users:
+    get:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: List tenant users and memberships
+      description: Lists tenant memberships with linked user identity, clinic/branch scopes and lastLoginAt.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - invited
+              - suspended
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum:
+              - tenant_owner
+              - tenant_admin
+              - billing_admin
+              - clinic_admin
+              - clinic_manager
+              - branch_manager
+              - staff
+              - provider
+              - receptionist
+              - custom
+        - name: scope
+          in: query
+          schema:
+            type: string
+            enum:
+              - tenant
+              - clinic
+              - branch
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: lastLoginFrom
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: lastLoginTo
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Paginated tenant memberships and scoped user identities
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/memberships/{membershipId}/history:
+    get:
+      tags:
+        - Tenant Organization
+      summary: List tenant membership history
+      description: Returns append-only tenant audit events associated with a membership. Membership ownership is checked before history is returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: membershipId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Membership audit history
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/memberships/{membershipId}:
+    patch:
+      tags:
+        - Tenant Memberships
+      x-apidog-folder: Tenant/Users and Memberships
+      summary: Update tenant membership role, scope or status
+      description: Enforces role-to-scope compatibility, validates clinic/branch ownership, prevents self-modification and protects the last active Tenant Owner.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: membershipId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role:
+                  type: string
+                  enum:
+                    - tenant_owner
+                    - tenant_admin
+                    - billing_admin
+                    - clinic_admin
+                    - clinic_manager
+                    - branch_manager
+                    - staff
+                    - provider
+                    - receptionist
+                    - custom
+                customRoleId:
+                  type: string
+                  nullable: true
+                permissionOverrides:
+                  type: object
+                  properties:
+                    allow:
+                      type: array
+                      items:
+                        type: string
+                    deny:
+                      type: array
+                      items:
+                        type: string
+                scope:
+                  type: string
+                  enum:
+                    - tenant
+                    - clinic
+                    - branch
+                clinicId:
+                  type: string
+                  nullable: true
+                branchIds:
+                  type: array
+                  items:
+                    type: string
+                  maxItems: 50
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - suspended
+      responses:
+        '200':
+          description: Membership updated
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Last active Tenant Owner cannot be demoted or suspended
+  /tenant/configuration:
+    get:
+      tags:
+        - Tenant Configuration
+      x-apidog-folder: Tenant/Shared Configuration
+      summary: Get organization defaults
+      description: Returns versioned tenant defaults and change history. These values are inherited by newly created clinics; existing clinics retain their own overrides until explicitly published.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Versioned tenant configuration
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    patch:
+      tags:
+        - Tenant Configuration
+      x-apidog-folder: Tenant/Shared Configuration
+      summary: Update organization defaults
+      description: Updates tenant-level defaults and increments the configuration version. Does not silently overwrite existing clinic settings.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - values
+              properties:
+                values:
+                  type: object
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Updated configuration and version history
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Configuration changed concurrently; reload and retry
+  /tenant/configuration/preview-apply:
+    post:
+      tags:
+        - Tenant Configuration
+      x-apidog-folder: Tenant/Shared Configuration
+      summary: Preview publishing defaults to clinics
+      description: Shows the target clinics, current configuration version, clinic overrides and effective values without changing data.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - applyTo
+              properties:
+                applyTo:
+                  type: string
+                  enum:
+                    - all
+                    - selected
+                clinicIds:
+                  type: array
+                  items:
+                    type: string
+                  uniqueItems: true
+                  maxItems: 100
+      responses:
+        '200':
+          description: Configuration impact preview
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: A selected clinic does not belong to this tenant
+  /tenant/configuration/apply:
+    post:
+      tags:
+        - Tenant Configuration
+      x-apidog-folder: Tenant/Shared Configuration
+      summary: Publish defaults to clinics
+      description: Requires confirm=true after preview. Applies only the organizationDefaults/version fields, preserves clinic-specific overrides and is safe to retry for the same version.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - applyTo
+                - confirm
+              properties:
+                applyTo:
+                  type: string
+                  enum:
+                    - all
+                    - selected
+                clinicIds:
+                  type: array
+                  items:
+                    type: string
+                  uniqueItems: true
+                  maxItems: 100
+                confirm:
+                  type: boolean
+                  enum:
+                    - true
+      responses:
+        '200':
+          description: Number of clinics updated and skipped
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: A selected clinic does not belong to this tenant
+  /tenant/integrations/providers:
+    get:
+      tags:
+        - Tenant Integrations
+      summary: List supported integration providers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Provider catalog and supported capabilities
+  /tenant/integrations:
+    get:
+      tags:
+        - Tenant Integrations
+      summary: List tenant and clinic integration configurations
+      description: Secrets are encrypted at rest and never returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Integration configurations with masked credential presence
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    put:
+      tags:
+        - Tenant Integrations
+      summary: Create or update an integration configuration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - provider
+                - integrationType
+                - displayName
+              properties:
+                clinicId:
+                  type: string
+                  nullable: true
+                provider:
+                  type: string
+                  maxLength: 80
+                integrationType:
+                  type: string
+                  enum:
+                    - communication
+                    - payment_gateway
+                    - calendar
+                    - other
+                displayName:
+                  type: string
+                  maxLength: 120
+                config:
+                  type: object
+                  additionalProperties: true
+                secrets:
+                  type: object
+                  additionalProperties:
+                    type: string
+                    maxLength: 4096
+      responses:
+        '200':
+          description: Saved configuration; secret values are not returned
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/integrations/{integrationId}/rotate-credentials:
+    post:
+      tags:
+        - Tenant Integrations
+      summary: Rotate provider credentials
+      description: Replaces the complete encrypted credential set. Secret values are never returned.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: integrationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - secrets
+              properties:
+                secrets:
+                  type: object
+                  minProperties: 1
+                  additionalProperties:
+                    type: string
+                    maxLength: 4096
+      responses:
+        '200':
+          description: Credentials replaced; only credential presence is returned
+        '404':
+          description: Integration not found
+  /tenant/integrations/{integrationId}/revoke-credentials:
+    post:
+      tags:
+        - Tenant Integrations
+      summary: Revoke provider credentials and disable the integration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: integrationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Credentials cleared and integration disabled
+        '404':
+          description: Integration not found
+  /tenant/integrations/{integrationId}/test:
+    post:
+      tags:
+        - Tenant Integrations
+      summary: Test provider credentials
+      description: Tests provider authentication only. It does not perform a payment, send a message, or activate settlement.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: integrationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Connection test result and sanitized health state
+        '404':
+          description: Integration not found in this tenant
+  /tenant/integrations/{integrationId}/status:
+    patch:
+      tags:
+        - Tenant Integrations
+      summary: Enable or disable an integration configuration
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: integrationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - configured
+                    - disabled
+      responses:
+        '200':
+          description: Updated configuration status
+        '404':
+          description: Integration not found in this tenant
+  /tenant/webhooks:
+    get:
+      tags:
+        - Tenant Webhooks
+      summary: List tenant webhook endpoints
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Endpoint metadata without signing secrets
+    post:
+      tags:
+        - Tenant Webhooks
+      summary: Create a signed webhook endpoint
+      description: HTTPS public destinations only. Signing secret is returned once at creation.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - url
+                - events
+              properties:
+                name:
+                  type: string
+                  maxLength: 120
+                url:
+                  type: string
+                  format: uri
+                clinicId:
+                  type: string
+                  nullable: true
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Endpoint and one-time signing secret
+        '400':
+          description: Invalid or unsafe URL or event list
+  /tenant/webhooks/{endpointId}:
+    patch:
+      tags:
+        - Tenant Webhooks
+      summary: Update webhook endpoint configuration
+      description: Updates name, public HTTPS URL, clinic scope or subscribed events.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: endpointId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                name:
+                  type: string
+                  maxLength: 120
+                url:
+                  type: string
+                  format: uri
+                clinicId:
+                  type: string
+                  nullable: true
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Updated endpoint metadata
+        '400':
+          description: Invalid or unsafe URL or event list
+        '404':
+          description: Endpoint not found
+  /tenant/webhooks/{endpointId}/rotate-secret:
+    post:
+      tags:
+        - Tenant Webhooks
+      summary: Rotate webhook signing secret
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: endpointId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Updated endpoint and one-time new signing secret
+        '404':
+          description: Endpoint not found
+  /tenant/webhooks/{endpointId}/status:
+    patch:
+      tags:
+        - Tenant Webhooks
+      summary: Enable or disable a webhook endpoint
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: endpointId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum:
+                    - active
+                    - disabled
+      responses:
+        '200':
+          description: Updated endpoint status
+        '404':
+          description: Endpoint not found
+  /tenant/webhooks/{endpointId}/deliveries:
+    get:
+      tags:
+        - Tenant Webhooks
+      summary: List webhook delivery attempts
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: endpointId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        '200':
+          description: Delivery history without payload bodies
+        '404':
+          description: Endpoint not found
+  /tenant/reports/organization:
+    get:
+      tags:
+        - Tenant Reports
+      summary: Get organization operations and access overview
+      description: Returns live tenant-scoped clinic, branch, membership, invitation and audit aggregates. Appointment and patient-growth metrics are excluded until their source domains expose governed aggregate contracts.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Report with definitions
+          UTC timezone and generation timestamp: null
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/reports/organization/export:
+    get:
+      tags:
+        - Tenant Reports
+      summary: Export organization report as CSV
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: CSV report with generation timestamp, timezone and freshness headers
+          content:
+            text/csv:
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/audit-logs/export:
+    get:
+      tags:
+        - Tenant Governance
+      x-apidog-folder: Tenant/Governance/Audit Logs
+      summary: Export tenant audit events as CSV
+      description: Exports at most 5,000 tenant-scoped events. Only safe audit identifiers and action metadata are included; secrets and arbitrary metadata are excluded. X-Export-Truncated indicates whether additional rows were omitted.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: actorId
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: targetType
+          in: query
+          schema:
+            type: string
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: branchId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: CSV audit export
+          content:
+            text/csv:
+              schema:
+                type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/audit-logs:
+    get:
+      tags:
+        - Tenant Governance
+      x-apidog-folder: Tenant/Governance/Audit Logs
+      summary: List tenant audit events
+      description: Returns append-only audit events for the active tenant only. Supports filters by actor, action, target type, clinic, branch and date range. Sensitive before/after values, secrets and file contents are not stored.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+        - name: actorId
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: targetType
+          in: query
+          schema:
+            type: string
+        - name: clinicId
+          in: query
+          schema:
+            type: string
+        - name: branchId
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Paginated tenant audit events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        actorUserId:
+                          type: string
+                        action:
+                          type: string
+                        targetType:
+                          type: string
+                        targetId:
+                          type: string
+                        clinicId:
+                          type: string
+                          nullable: true
+                        branchId:
+                          type: string
+                          nullable: true
+                        result:
+                          type: string
+                          enum:
+                            - success
+                            - failure
+                        requestId:
+                          type: string
+                        metadata:
+                          type: object
+                        createdAt:
+                          type: string
+                          format: date-time
+                  pagination:
+                    type: object
+                    additionalProperties: true
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+  /tenant/profile:
+    get:
+      tags:
+        - Tenant Organization
+      summary: Get organization profile
+      description: Returns the authenticated user's active tenant profile. Requires tenant-wide owner or admin access.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Tenant profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Tenant Organization
+      summary: Update organization profile
+      description: Updates tenant identity, contact, address, legal details, branding and preferences. Only the Tenant Owner may change legal identity fields. Logo and cover images are sent as Base64 data URLs and stored as files; the API persists their public URLs.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TenantUpdate'
+      responses:
+        '200':
+          description: Updated tenant profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Tenant'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/preferences:
+    get:
+      tags:
+        - Tenant Organization
+      summary: Get organization preferences
+      description: Returns organization-level defaults, including defaults applied when the tenant is created without explicit preferences.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Organization preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/TenantPreferences'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Tenant Organization
+      summary: Update organization preferences
+      description: Updates organization-level defaults using a partial merge. Unspecified preference values are preserved. Clinic and branch timezones remain independent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - preferences
+              properties:
+                preferences:
+                  $ref: '#/components/schemas/TenantPreferences'
+      responses:
+        '200':
+          description: Updated organization preferences
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/TenantPreferences'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/permissions:
+    get:
+      tags:
+        - Tenant Access Control
+      x-apidog-folder: Tenant/Access Control
+      summary: Get current tenant role permissions
+      description: Returns the active built-in or custom role grants for the selected tenant, clinic and branch context. Custom grants are evaluated by the shared deny-by-default permission engine.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Current role, scope and granted permissions
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      role:
+                        type: string
+                      customRoleId:
+                        type: string
+                        nullable: true
+                      scope:
+                        type: string
+                        enum:
+                          - tenant
+                          - clinic
+                          - branch
+                      permissions:
+                        type: array
+                        items:
+                          type: string
+        '403':
+          $ref: '#/components/responses/Forbidden'
   /tenant/context:
     get:
       tags:
@@ -1483,12 +4155,37 @@ paths:
         - Clinics
       x-apidog-folder: Tenant/Clinics
       summary: List clinics in current tenant
+      description: Returns only clinics owned by the authenticated tenant. Supports search by clinic name/code, status filtering and pagination. Requires clinic.manage.
       security:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
-        - $ref: '#/components/parameters/BranchId'
+        - name: search
+          in: query
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - suspended
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
       responses:
         '200':
           description: Clinic list
@@ -1543,6 +4240,161 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '422':
           $ref: '#/components/responses/ValidationError'
+  /tenant/clinics/{clinicId}/branches:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Branches
+      summary: List branches belonging to a clinic
+      description: Validates the clinic belongs to the active tenant and respects clinic/branch membership scope.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - suspended
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Paginated branches for the selected clinic
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/settings:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Settings
+      summary: Get effective clinic settings
+      description: Returns tenant defaults, clinic overrides, effective values, per-setting source labels (tenant_default or clinic_override) and the inherited configuration version.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Clinic defaults
+          overrides and effective values: null
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Settings
+      summary: Update clinic-specific overrides
+      description: Merges only clinic override values; tenant defaults and other clinics are not modified.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - overrides
+              properties:
+                overrides:
+                  type: object
+                  minProperties: 1
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Updated effective clinic settings
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/activate:
+    post:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics
+      summary: Activate a clinic
+      description: Reactivates a suspended clinic. Does not automatically reactivate its branches.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Clinic activated
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/deactivate:
+    post:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics
+      summary: Suspend a clinic
+      description: Suspends the clinic without deleting clinic or operational history.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Clinic suspended
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /tenant/clinics/{clinicId}:
     get:
       tags:
@@ -1557,6 +4409,7 @@ paths:
           required: true
           schema:
             type: string
+            pattern: ^[a-f0-9]{24}$
         - $ref: '#/components/parameters/TenantId'
       responses:
         '200':
@@ -1609,19 +4462,487 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/activity:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics
+      summary: List clinic activity
+      description: Returns audit events for this clinic only. Clinic-scoped users can view only their own clinic; branch-scoped users cannot access the clinic-wide activity feed. Requires clinic.activity.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+        - name: actorId
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: action
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: targetType
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Clinic activity events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  pagination:
+                    type: object
+                    additionalProperties: true
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/users:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics
+      summary: List users assigned to a clinic
+      description: Returns clinic-scoped and branch-scoped memberships within this clinic. Branch-scoped users cannot list the clinic-wide user directory. Requires clinic.members.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - invited
+              - suspended
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum:
+              - tenant_owner
+              - tenant_admin
+              - billing_admin
+              - clinic_admin
+              - clinic_manager
+              - branch_manager
+              - staff
+              - provider
+              - receptionist
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Clinic assigned users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  pagination:
+                    type: object
+                    additionalProperties: true
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/documents:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Documents
+      summary: List clinic documents
+      description: Lists active private documents belonging only to the selected clinic. Requires clinic.documents.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Clinic documents
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ClinicDocument'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Documents
+      summary: Upload a clinic document
+      description: Stores a private PDF, JPEG, PNG or WebP document scoped to the clinic. Maximum file size is 3 MB. Requires clinic.documents.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - category
+                - fileBase64
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 180
+                category:
+                  type: string
+                  enum:
+                    - registration
+                    - tax
+                    - license
+                    - insurance
+                    - contract
+                    - other
+                fileBase64:
+                  type: string
+                  description: Base64 content or supported data URL
+                expiresAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '201':
+          description: Clinic document uploaded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ClinicDocument'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/documents/{documentId}:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Documents
+      summary: Get clinic document metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Clinic document metadata
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/ClinicDocument'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Documents
+      summary: Archive a clinic document
+      description: Archives the active version without deleting its file history. Requires clinic.documents.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Clinic document archived
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/documents/{documentId}/replace:
+    put:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Documents
+      summary: Replace a clinic document
+      description: Creates a new immutable version and archives the previous active version. Requires clinic.documents.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fileBase64
+              properties:
+                name:
+                  type: string
+                  maxLength: 180
+                fileBase64:
+                  type: string
+                expiresAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '200':
+          description: Clinic document replaced
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Concurrent document replacement conflict
+  /tenant/clinics/{clinicId}/documents/{documentId}/versions:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Documents
+      summary: List clinic document versions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Clinic document version history
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/clinics/{clinicId}/documents/{documentId}/download:
+    get:
+      tags:
+        - Clinics
+      x-apidog-folder: Tenant/Clinics/Documents
+      summary: Download a private clinic document
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: clinicId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: documentId
+          in: path
+          required: true
+          schema:
+            type: string
+        - $ref: '#/components/parameters/TenantId'
+      responses:
+        '200':
+          description: Original private document bytes
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
   /tenant/branches:
     get:
       tags:
         - Branches
       x-apidog-folder: Tenant/Branches
-      summary: List branches in current clinic
-      description: X-Clinic-Id is required. If X-Branch-Id is supplied, results are restricted to that branch. Branch listing requires an active clinic context.
+      summary: List branches in the tenant or current permitted scope
+      description: 'Tenant-scoped memberships can list all branches in their tenant and optionally filter by clinicId. Clinic-scoped memberships are restricted to their selected clinic. Branch-scoped memberships are restricted to their selected branch. X-Clinic-Id is not required for tenant-wide listing. Lifecycle values: draft, active, temporarily_closed, suspended, closed.'
       security:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicIdRequired'
+        - $ref: '#/components/parameters/ClinicId'
         - $ref: '#/components/parameters/BranchId'
+        - name: clinicId
+          in: query
+          description: Optional clinic filter for tenant-scoped memberships only; ignored as a scope override and rejected when it differs from the caller's clinic scope.
+          schema:
+            type: string
+            pattern: ^[a-fA-F0-9]{24}$
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - draft
+              - active
+              - temporarily_closed
+              - suspended
+              - closed
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
       responses:
         '200':
           description: Branch list
@@ -1636,6 +4957,11 @@ paths:
                     type: array
                     items:
                       $ref: '#/components/schemas/Branch'
+                  pagination:
+                    type: object
+                    additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1650,7 +4976,6 @@ paths:
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/ClinicIdRequired'
-        - $ref: '#/components/parameters/BranchId'
       requestBody:
         required: true
         content:
@@ -1659,21 +4984,68 @@ paths:
               type: object
               required:
                 - name
-                - slug
               properties:
                 name:
                   type: string
                   minLength: 2
+                  maxLength: 160
+                status:
+                  type: string
+                  enum:
+                    - draft
+                    - active
+                  default: active
+                  description: Create as draft to complete branch details before activation; omitted preserves the existing active-by-default behavior.
                 slug:
                   type: string
                   pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+                  description: Optional; generated from name when omitted
+                code:
+                  type: string
+                  maxLength: 30
                 address:
                   type: string
+                  maxLength: 500
+                addressDetails:
+                  type: object
+                  additionalProperties: true
+                contact:
+                  type: object
+                  additionalProperties: true
+                contactPerson:
+                  type: object
+                  additionalProperties: true
                 cityId:
                   type: string
+                  nullable: true
+                postalCode:
+                  type: string
+                  maxLength: 30
+                latitude:
+                  type: number
+                  minimum: -90
+                  maximum: 90
+                  nullable: true
+                longitude:
+                  type: number
+                  minimum: -180
+                  maximum: 180
+                  nullable: true
+                settings:
+                  type: object
+                  additionalProperties: true
+                openingDate:
+                  type: string
+                  format: date-time
+                  nullable: true
                 timezone:
                   type: string
-                  default: Africa/Cairo
+                  description: Valid IANA timezone; defaults to clinic timezone
+                operatingHours:
+                  type: array
+                  maxItems: 7
+                  items:
+                    $ref: '#/components/schemas/OperatingHoursDay'
       responses:
         '201':
           description: Branch created
@@ -1692,8 +5064,735 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '422':
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tenant/branches/{branchId}/activity:
+    get:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: List branch activity
+      description: Returns audit events for this branch only. Branch-scoped users can view only their own branch. Requires branch.activity.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: actorId
+          in: query
+          schema:
+            type: string
+            pattern: ^[a-f0-9]{24}$
+        - name: action
+          in: query
+          schema:
+            type: string
+            maxLength: 120
+        - name: targetType
+          in: query
+          schema:
+            type: string
+            maxLength: 80
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Branch activity events
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  pagination:
+                    type: object
+                    additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/branches/{branchId}/users:
+    get:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: List users assigned to a branch
+      description: Returns clinic-scoped members and branch-scoped members assigned to this branch. Branch-scoped users can only list users for their own branch. Requires branch.members.read.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum:
+              - active
+              - invited
+              - suspended
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum:
+              - tenant_owner
+              - tenant_admin
+              - billing_admin
+              - clinic_admin
+              - clinic_manager
+              - branch_manager
+              - staff
+              - provider
+              - receptionist
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: perPage
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 25
+      responses:
+        '200':
+          description: Assigned users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      additionalProperties: true
+                  pagination:
+                    type: object
+                    additionalProperties: true
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/branches/{branchId}/business-hours:
+    get:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: Get branch business hours
+      description: Returns the branch timezone and weekly operating schedule. Branch-scoped users can only read their selected branch.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Branch business hours
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      timezone:
+                        type: string
+                      operatingHours:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OperatingHoursDay'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: Replace branch weekly business hours
+      description: Replaces the complete weekly schedule. Exactly seven entries are required, one for every weekday (0-6); mark closed days with isClosed=true. Open days require either one legacy open/close window or one to three non-overlapping split shifts; breaks must be contained within their shift. Overnight hours are not supported. Requires branch.schedule.manage permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - operatingHours
+              properties:
+                operatingHours:
+                  type: array
+                  maxItems: 7
+                  items:
+                    $ref: '#/components/schemas/OperatingHoursDay'
+      responses:
+        '200':
+          description: Updated branch business hours
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      timezone:
+                        type: string
+                      operatingHours:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/OperatingHoursDay'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/branches/{branchId}/settings:
+    get:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches/Settings
+      summary: Get branch settings
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Inherited clinic values
+          branch overrides: null
+          effective values: null
+          timezone and operating hours: null
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches/Settings
+      summary: Update branch-specific overrides
+      description: Merges supplied branch settings without changing organization defaults or clinic settings. Requires branch.settings.manage permission.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - overrides
+              properties:
+                overrides:
+                  type: object
+                  minProperties: 1
+                  additionalProperties: true
+      responses:
+        '200':
+          description: Updated effective branch configuration and source labels
+        '400':
           $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/branches/{branchId}/holidays:
+    get:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches/Holidays
+      summary: List active branch holidays and closures
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Active holidays and exceptional hours
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches/Holidays
+      summary: Create branch holiday or exceptional hours
+      description: Creates a branch-local closure or modified-hours window. Active overlapping date ranges are rejected. Dates are interpreted as calendar dates in the branch's local schedule.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - type
+                - startDate
+                - endDate
+              properties:
+                title:
+                  type: string
+                  maxLength: 160
+                type:
+                  type: string
+                  enum:
+                    - closure
+                    - modified_hours
+                startDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
+                isAllDay:
+                  type: boolean
+                  default: true
+                startTime:
+                  type: string
+                  pattern: ^([01]\d|2[0-3]):[0-5]\d$
+                endTime:
+                  type: string
+                  pattern: ^([01]\d|2[0-3]):[0-5]\d$
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        '201':
+          description: Holiday created
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Date range overlaps an existing active holiday
+  /tenant/branches/{branchId}/holidays/{holidayId}:
+    put:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches/Holidays
+      summary: Replace an active branch holiday or exceptional-hours record
+      description: Replaces the full holiday definition. Active overlapping date ranges are rejected, excluding the record being updated. Cancelled records cannot be edited.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: holidayId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - title
+                - type
+                - startDate
+                - endDate
+              properties:
+                title:
+                  type: string
+                  maxLength: 160
+                type:
+                  type: string
+                  enum:
+                    - closure
+                    - modified_hours
+                startDate:
+                  type: string
+                  format: date
+                endDate:
+                  type: string
+                  format: date
+                isAllDay:
+                  type: boolean
+                  default: true
+                startTime:
+                  type: string
+                  pattern: ^([01]\d|2[0-3]):[0-5]\d$
+                endTime:
+                  type: string
+                  pattern: ^([01]\d|2[0-3]):[0-5]\d$
+                reason:
+                  type: string
+                  maxLength: 500
+      responses:
+        '200':
+          description: Holiday updated
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: Date range overlaps another active holiday
+    delete:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches/Holidays
+      summary: Cancel a branch holiday
+      description: Cancels the holiday record without deleting its history.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: holidayId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Holiday cancelled
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/branches/{branchId}/activate:
+    post:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: Activate a branch
+      description: Activates a draft branch for the first time, or reactivates a suspended or temporarily closed branch within the selected tenant and clinic.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Branch activated
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/branches/{branchId}/deactivate:
+    post:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: Suspend a branch
+      description: Suspends the branch without deleting its history. A permanently closed branch cannot be suspended or reactivated.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Branch suspended
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /tenant/branches/{branchId}/temporary-close:
+    post:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: Temporarily close a branch
+      description: Moves an active branch to temporarily_closed. Reactivate with POST /activate. This is a manual lifecycle state; no automatic reopening is scheduled. Requires branch.lifecycle.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: Branch temporarily closed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tenant/branches/{branchId}/close:
+    post:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: Permanently close a branch
+      description: Moves a branch to closed. This is terminal and cannot be reactivated. Existing records are retained; the branch is never hard-deleted. Requires branch.lifecycle.manage.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - reason
+              properties:
+                reason:
+                  type: string
+                  minLength: 3
+                  maxLength: 500
+      responses:
+        '200':
+          description: Branch permanently closed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+  /tenant/branches/{branchId}:
+    get:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: Get a branch
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - $ref: '#/components/parameters/BranchId'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Branch details
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Branch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags:
+        - Branches
+      x-apidog-folder: Tenant/Branches
+      summary: Update branch details and operating hours; tenant admins and clinic admins or managers can also change lifecycle status
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicIdRequired'
+        - $ref: '#/components/parameters/BranchId'
+        - name: branchId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BranchUpdate'
+      responses:
+        '200':
+          description: Branch updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: '#/components/schemas/Branch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
   /platform/monitoring/view:
     get:
       tags:
@@ -1947,7 +6046,7 @@ components:
       name: X-Branch-Id
       in: header
       required: false
-      description: Optional branch scope; requires X-Clinic-Id.
+      description: Optional branch scope; requires X-Clinic-Id. Required for branch-scoped memberships.
       schema:
         type: string
     GeoResource:
@@ -2298,6 +6397,10 @@ components:
           default: Africa/Cairo
         preferences:
           $ref: '#/components/schemas/TenantPreferences'
+        settings:
+          type: object
+          additionalProperties: true
+          description: Clinic-specific custom settings
         operatingHours:
           type: array
           maxItems: 7
@@ -2390,6 +6493,9 @@ components:
           type: string
         preferences:
           $ref: '#/components/schemas/TenantPreferences'
+        settings:
+          type: object
+          additionalProperties: true
         countryId:
           type: string
           description: Optional legacy top-level location field accepted by PATCH
@@ -2469,6 +6575,29 @@ components:
               type: number
             currency:
               type: string
+            limits:
+              type: object
+              properties:
+                maxClinics:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                maxBranches:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                maxUsers:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                maxStorageBytes:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+            features:
+              type: array
+              items:
+                type: string
         billingCycle:
           type: string
           enum:
@@ -2544,6 +6673,29 @@ components:
               type: string
               minLength: 3
               maxLength: 3
+            limits:
+              type: object
+              properties:
+                maxClinics:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                maxBranches:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                maxUsers:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+                maxStorageBytes:
+                  type: integer
+                  minimum: 0
+                  nullable: true
+            features:
+              type: array
+              items:
+                type: string
         billingCycle:
           type: string
           enum:
@@ -2664,6 +6816,70 @@ components:
           nullable: true
         failureReason:
           type: string
+    OperatingHoursDay:
+      type: object
+      required:
+        - dayOfWeek
+      properties:
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        isClosed:
+          type: boolean
+        openTime:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        closeTime:
+          type: string
+          pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        breakTimes:
+          type: array
+          maxItems: 5
+          items:
+            type: object
+            required:
+              - startTime
+              - endTime
+            properties:
+              startTime:
+                type: string
+                pattern: ^([01]\d|2[0-3]):[0-5]\d$
+              endTime:
+                type: string
+                pattern: ^([01]\d|2[0-3]):[0-5]\d$
+        shifts:
+          type: array
+          minItems: 1
+          maxItems: 3
+          description: Optional split shifts. Use either shifts or legacy openTime/closeTime fields, not both.
+          items:
+            type: object
+            required:
+              - startTime
+              - endTime
+            properties:
+              startTime:
+                type: string
+                pattern: ^([01]\d|2[0-3]):[0-5]\d$
+              endTime:
+                type: string
+                pattern: ^([01]\d|2[0-3]):[0-5]\d$
+              breakTimes:
+                type: array
+                maxItems: 5
+                items:
+                  type: object
+                  required:
+                    - startTime
+                    - endTime
+                  properties:
+                    startTime:
+                      type: string
+                      pattern: ^([01]\d|2[0-3]):[0-5]\d$
+                    endTime:
+                      type: string
+                      pattern: ^([01]\d|2[0-3]):[0-5]\d$
     Branch:
       type: object
       properties:
@@ -2675,18 +6891,123 @@ components:
           type: string
         name:
           type: string
+        code:
+          type: string
+          nullable: true
         slug:
           type: string
         address:
           type: string
           nullable: true
+        addressDetails:
+          type: object
+          additionalProperties: true
+        contact:
+          type: object
+          additionalProperties: true
+        contactPerson:
+          type: object
+          additionalProperties: true
         cityId:
           type: string
           nullable: true
+        postalCode:
+          type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
+          nullable: true
+        settings:
+          type: object
+          additionalProperties: true
+        openingDate:
+          type: string
+          format: date-time
+          nullable: true
         timezone:
           type: string
+        operatingHours:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperatingHoursDay'
         status:
           type: string
+          enum:
+            - draft
+            - active
+            - temporarily_closed
+            - suspended
+            - closed
+        closureReason:
+          type: string
+        temporarilyClosedAt:
+          type: string
+          format: date-time
+          nullable: true
+        closedAt:
+          type: string
+          format: date-time
+          nullable: true
+    BranchUpdate:
+      type: object
+      minProperties: 1
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 160
+        code:
+          type: string
+          maxLength: 30
+        slug:
+          type: string
+          pattern: ^[a-z0-9]+(?:-[a-z0-9]+)*$
+        address:
+          type: string
+          maxLength: 500
+        addressDetails:
+          type: object
+          additionalProperties: true
+        contact:
+          type: object
+          additionalProperties: true
+        contactPerson:
+          type: object
+          additionalProperties: true
+        cityId:
+          type: string
+          nullable: true
+        postalCode:
+          type: string
+          maxLength: 30
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+          nullable: true
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
+          nullable: true
+        settings:
+          type: object
+          additionalProperties: true
+        openingDate:
+          type: string
+          format: date-time
+          nullable: true
+        timezone:
+          type: string
+          description: Valid IANA timezone
+        operatingHours:
+          type: array
+          maxItems: 7
+          items:
+            $ref: '#/components/schemas/OperatingHoursDay'
     CountryInput:
       type: object
       required:
@@ -2963,6 +7284,54 @@ components:
               type: integer
             last_page:
               type: integer
+    ClinicDocument:
+      type: object
+      properties:
+        _id:
+          type: string
+        tenantId:
+          type: string
+        clinicId:
+          type: string
+        category:
+          type: string
+          enum:
+            - registration
+            - tax
+            - license
+            - insurance
+            - contract
+            - other
+        name:
+          type: string
+        mimeType:
+          type: string
+          enum:
+            - application/pdf
+            - image/jpeg
+            - image/png
+            - image/webp
+        sizeBytes:
+          type: integer
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        version:
+          type: integer
+        status:
+          type: string
+          enum:
+            - active
+            - archived
+        uploadedBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
   responses:
     BadRequest:
       description: Bad request or invalid identifier/context
