@@ -74,6 +74,7 @@ tenantRouter.post('/privacy/retention-policies/:policyId/approve', requireTenant
 tenantRouter.get('/privacy/data-requests/:requestId', requireTenantPermission('audit.read'), tenantPrivacyController.getDataRequest);
 tenantRouter.post('/privacy/data-requests/:requestId/legal-review', requireTenantPermission('audit.export'), tenantPrivacyController.reviewDataRequest);
 tenantRouter.post('/privacy/data-requests/:requestId/decision', requireTenantPermission('audit.export'), tenantPrivacyController.decideDataRequest);
+tenantRouter.post('/privacy/data-requests/:requestId/fulfill', requireTenantPermission('audit.export'), tenantPrivacyController.fulfillDataRequest);
 tenantRouter.get('/audit-logs', requireTenantScope, requireTenantPermission('audit.read'), tenancyController.listTenantAuditEvents);
 tenantRouter.get('/audit-logs/export', requireTenantScope, requireTenantPermission('audit.export'), tenancyController.exportTenantAuditEvents);
 tenantRouter.get('/billing-profile', requireTenantScope, requireTenantPermission('billing.read'), tenancyController.getTenantBillingProfile);
