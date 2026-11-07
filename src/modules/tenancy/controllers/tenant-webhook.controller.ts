@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { createSchema, updateSchema } from '../validation/tenant-webhook.validation.js';
+import { createSchema, updateSchema, statusSchema, deliveryLimitSchema } from '../validation/tenant-webhook.validation.js';
 import { tenantWebhookService } from '../services/tenant-webhook.service.js';
 
 export const tenantWebhookController = {
@@ -31,7 +31,7 @@ export const tenantWebhookController = {
   },
   async setStatus(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = z.object({ status: z.enum(['active', 'disabled']) }).strict().parse(req.body);
+      const input = statusSchema.parse(req.body);
       const item = await tenantWebhookService.setStatus(req.tenantContext!.tenantId, req.auth!.userId, String(req.params.endpointId ?? ''), input.status);
       if (!item) return res.status(404).json({ success: false, error: { code: 'WEBHOOK_NOT_FOUND', message: 'Webhook endpoint not found.' } });
       res.json({ success: true, data: item });
@@ -49,7 +49,7 @@ export const tenantWebhookController = {
   },
   async deliveries(req: Request, res: Response, next: NextFunction) {
     try {
-      const limit = z.coerce.number().int().min(1).max(100).default(50).parse(req.query.limit);
+      const limit = deliveryLimitSchema.parse(req.query.limit);
       const items = await tenantWebhookService.listDeliveries(req.tenantContext!.tenantId, String(req.params.endpointId ?? ''), limit);
       if (!items) return res.status(404).json({ success: false, error: { code: 'WEBHOOK_NOT_FOUND', message: 'Webhook endpoint not found.' } });
       res.json({ success: true, data: items });
