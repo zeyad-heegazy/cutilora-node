@@ -74,6 +74,18 @@ export const tenantPrivacyController = {
     } catch (error) { next(error); }
   },
 
+  async approveRetentionPolicy(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = z.object({ legalBasisReference: z.string().trim().min(1).max(200) }).parse(req.body);
+      const item = await tenantPrivacyService.approveRetentionPolicy({
+        tenantId: req.tenantContext!.tenantId, policyId: req.params.policyId,
+        actorUserId: req.auth!.userId, ...input,
+      });
+      if (!item) return res.status(409).json({ success: false, error: { code: 'RETENTION_POLICY_NOT_APPROVABLE', message: 'Policy not found, already reviewed, or not pending approval.' } });
+      res.json({ success: true, data: item, executionEnabled: false });
+    } catch (error) { next(error); }
+  },
+
   async createRetentionPolicy(req: Request, res: Response, next: NextFunction) {
     try {
       const input = z.object({
