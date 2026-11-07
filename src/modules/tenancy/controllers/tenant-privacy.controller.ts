@@ -24,7 +24,6 @@ const requestSchema = z.object({
 });
 const decisionSchema = z.object({
   decision: z.enum(['approved', 'rejected']),
-  legalReviewReference: z.string().trim().min(1).max(160),
   resolutionNote: z.string().trim().max(2000).optional(),
 });
 
