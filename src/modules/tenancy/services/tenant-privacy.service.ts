@@ -204,7 +204,7 @@ export const tenantPrivacyService = {
 
   async decideDataRequest(input: {
     tenantId: string; clinicId: string; requestId: string; actorUserId: string;
-    decision: 'approved' | 'rejected'; legalReviewReference: string; resolutionNote?: string;
+    decision: 'approved' | 'rejected'; resolutionNote?: string;
   }) {
     const request = await PrivacyDataRequest.findOne({
       _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
