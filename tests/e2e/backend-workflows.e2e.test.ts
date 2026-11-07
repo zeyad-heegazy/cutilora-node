@@ -347,7 +347,7 @@ describe('database-backed backend workflows', () => {
     const rotated = await tenant().post(`/api/v1/tenant/webhooks/${endpointId}/rotate-secret`);
     expect(rotated.status).toBe(200);
     expect(rotated.body.data.signingSecret).toBeTruthy();
-    expect(rotated.body.data.secret).not.toBe(created.body.data.secret);
+    expect(rotated.body.data.signingSecret).not.toBe(created.body.data.signingSecret);
 
     const updated = await tenant().patch(`/api/v1/tenant/webhooks/${endpointId}`).send({
       name: 'E2E Webhook Updated',
@@ -562,4 +562,85 @@ describe('database-backed backend workflows', () => {
       .set('Authorization', `Bearer ${platformToken}`);
     expect(rejected.status).toBe(401);
   });
+
+  it('covers tenant configuration preview/apply, dashboard, reports and audit exports', async () => {
+    const configuration = await tenant().patch('/api/v1/tenant/configuration').send({
+      values: { appointment: { duration: 45, buffer: 10 }, locale: 'en' },
+    });
+    expect(configuration.status, JSON.stringify(configuration.body)).toBe(200);
+    expect(configuration.body.data.version).toBeGreaterThan(0);
+    const preview = await tenant().post('/api/v1/tenant/configuration/preview-apply').send({ applyTo: 'selected', clinicIds: [clinicId] });
+    expect(preview.status, JSON.stringify(preview.body)).toBe(200);
+    expect(preview.body.data.clinics).toHaveLength(1);
+    const applied = await tenant().post('/api/v1/tenant/configuration/apply').send({
+      applyTo: 'selected', clinicIds: [clinicId], confirm: true,
+    });
+    expect(applied.status, JSON.stringify(applied.body)).toBe(200);
+    expect(applied.body.data.updated + applied.body.data.skipped).toBeGreaterThanOrEqual(1);
+
+    const dashboard = await tenant().get('/api/v1/tenant/dashboard/summary');
+    expect(dashboard.status).toBe(200);
+    expect(dashboard.body.data.organization.id).toBe(tenantId);
+    const report = await tenant().get('/api/v1/tenant/reports/organization');
+    expect(report.status).toBe(200);
+    expect(report.body.data.clinics).toBeTruthy();
+    const reportExport = await tenant().get('/api/v1/tenant/reports/organization/export');
+    expect(reportExport.status).toBe(200);
+    expect(reportExport.headers['content-type']).toContain('text/csv');
+    const audit = await tenant().get('/api/v1/tenant/audit-logs');
+    expect(audit.status).toBe(200);
+    expect(Array.isArray(audit.body.data)).toBe(true);
+    const auditExport = await tenant().get('/api/v1/tenant/audit-logs/export');
+    expect(auditExport.status).toBe(200);
+    expect(auditExport.headers['content-type']).toContain('text/csv');
+  });
+
+  it('covers private tenant document upload, versioning, download and archive', async () => {
+    const fileBase64 = Buffer.from('%PDF-1.7\\nCutilora E2E private document\\n%%EOF').toString('base64');
+    const created = await tenant().post('/api/v1/tenant/documents').send({
+      name: 'E2E Commercial Registration.pdf', category: 'registration', fileBase64,
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const documentId = String(created.body.data._id ?? created.body.data.id);
+    expect(documentId).toMatch(/^[a-f0-9]{24}$/i);
+    const listed = await tenant().get('/api/v1/tenant/documents');
+    expect(listed.status).toBe(200);
+    expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === documentId)).toBe(true);
+    const details = await tenant().get(`/api/v1/tenant/documents/${documentId}`);
+    expect(details.status).toBe(200);
+    const download = await tenant().get(`/api/v1/tenant/documents/${documentId}/download`);
+    expect(download.status).toBe(200);
+    expect(download.headers['content-type']).toContain('application/pdf');
+    const replaced = await tenant().put(`/api/v1/tenant/documents/${documentId}/replace`).send({
+      name: 'E2E Commercial Registration v2.pdf', fileBase64,
+    });
+    expect(replaced.status, JSON.stringify(replaced.body)).toBe(200);
+    expect(replaced.body.data.version).toBeGreaterThan(1);
+    const versions = await tenant().get(`/api/v1/tenant/documents/${documentId}/versions`);
+    expect(versions.status).toBe(200);
+    expect(versions.body.data.length).toBeGreaterThan(0);
+    const archived = await request(app).delete(`/api/v1/tenant/documents/${documentId}`)
+      .set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId);
+    expect(archived.status).toBe(200);
+  });
+
+  it('covers tenant subscription self-service and billing read workflows', async () => {
+    const subscription = await tenant().get('/api/v1/tenant/subscription');
+    expect(subscription.status).toBe(200);
+    const usage = await tenant().get('/api/v1/tenant/subscription/usage');
+    expect(usage.status).toBe(200);
+    const payments = await tenant().get('/api/v1/tenant/subscription/payments');
+    expect(payments.status).toBe(200);
+    const invoices = await tenant().get('/api/v1/tenant/invoices');
+    expect(invoices.status).toBe(200);
+    const change = await tenant().post('/api/v1/tenant/subscription/change-requests').send({
+      type: 'upgrade', targetPlanCode: 'e2e-growth', effectiveAt: 'period_end',
+      reason: 'E2E subscription upgrade request',
+    });
+    expect(change.status, JSON.stringify(change.body)).toBe(201);
+    const requests = await tenant().get('/api/v1/tenant/subscription/change-requests');
+    expect(requests.status).toBe(200);
+    expect(requests.body.data.length).toBeGreaterThan(0);
+  });
+
 });
