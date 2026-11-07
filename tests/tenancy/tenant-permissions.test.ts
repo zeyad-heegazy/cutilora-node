@@ -77,12 +77,6 @@ describe('tenant permission matrix and scoped custom roles', () => {
     expect(denied.res.status).toHaveBeenCalledWith(403);
   });
 
-  it('prevents clinic-scoped memberships from addressing another clinic by route parameter', async () => {
-    const denied = await run('clinic_manager', 'clinic.settings.read', { scope: 'clinic', clinicId: 'clinic-a' }, { clinicId: 'clinic-b' });
-    expect(denied.next).not.toHaveBeenCalled();
-    expect(denied.res.status).toHaveBeenCalledWith(403);
-  });
-
   it('rejects a clinic-scoped permission when the requested clinic differs from the grant', async () => {
     const denied = await run('clinic_manager', 'clinic.settings.read', {
       scope: 'clinic',
