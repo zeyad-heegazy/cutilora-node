@@ -72,7 +72,7 @@ describe('tenant permission matrix and scoped custom roles', () => {
   it('enforces custom grants at the selected branch and rejects cross-clinic use', async () => {
     const allowed = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-a', branchId: 'branch-a', customPermissions: ['branch.holidays.read'] });
     expect(allowed.next).toHaveBeenCalledOnce();
-    const denied = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-b', branchId: 'branch-a', customPermissions: ['branch.holidays.read'] });
+    const denied = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-a', branchId: 'branch-a', customPermissions: ['branch.holidays.read'] }, { branchId: 'branch-b' });
     expect(denied.next).not.toHaveBeenCalled();
     expect(denied.res.status).toHaveBeenCalledWith(403);
   });
