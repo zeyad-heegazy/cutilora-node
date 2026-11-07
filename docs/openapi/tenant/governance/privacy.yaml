@@ -1,0 +1,201 @@
+paths:
+  /tenant/patients/{patientId}/access-history:
+    get:
+      tags: [Tenant Governance]
+      summary: List clinic-scoped patient data access history
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: patientId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: perPage, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200": { description: Patient access history }
+        "403": { description: Insufficient tenant permission }
+  /tenant/consents:
+    get:
+      tags: [Tenant Governance]
+      summary: List immutable consent records for a patient
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: patientId, in: query, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Consent history }
+    post:
+      tags: [Tenant Governance]
+      summary: Record a versioned patient consent
+      description: Stores the exact consent snapshot and supplied content hash. The snapshot is excluded from ordinary API responses.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patientId, consentType, documentVersion, documentHash, documentSnapshot, status]
+              properties:
+                patientId: { type: string }
+                consentType: { type: string }
+                documentVersion: { type: string }
+                documentHash: { type: string, minLength: 16 }
+                documentSnapshot: { type: string }
+                status: { type: string, enum: [granted, declined] }
+                source: { type: string, enum: [clinic_portal, patient_portal, import, other] }
+      responses:
+        "201": { description: Consent recorded }
+  /tenant/consents/{consentId}:
+    get:
+      tags: [Tenant Governance]
+      summary: Get a consent record
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: consentId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Consent record }
+        "404": { description: Consent not found }
+  /tenant/consents/{consentId}/revoke:
+    post:
+      tags: [Tenant Governance]
+      summary: Append a consent revocation record
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: consentId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason: { type: string, maxLength: 500 }
+      responses:
+        "201": { description: Revocation recorded }
+        "404": { description: Active consent not found }
+  /tenant/privacy/data-requests:
+    get:
+      tags: [Tenant Governance]
+      summary: List clinic privacy requests
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Privacy requests }
+    post:
+      tags: [Tenant Governance]
+      summary: Submit a privacy data request
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [patientId, requestType]
+              properties:
+                patientId: { type: string }
+                requestType: { type: string, enum: [access, export, correction, deletion] }
+                reason: { type: string, maxLength: 1000 }
+      responses:
+        "201": { description: Request submitted; execution is not automatic }
+  /tenant/privacy/data-requests/{requestId}:
+    get:
+      tags: [Tenant Governance]
+      summary: Get a clinic privacy request
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: requestId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Privacy request }
+        "404": { description: Request not found }
+  /tenant/privacy/data-requests/{requestId}/legal-review:
+    post:
+      tags: [Tenant Governance]
+      summary: Record legal review of a privacy request
+      description: A legal reference is mandatory. Approval/rejection of the request is a separate operation.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: requestId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, legalReviewReference]
+              properties:
+                decision: { type: string, enum: [approved, rejected] }
+                legalReviewReference: { type: string, maxLength: 160 }
+      responses:
+        "200": { description: Legal review recorded }
+  /tenant/privacy/data-requests/{requestId}/decision:
+    post:
+      tags: [Tenant Governance]
+      summary: Approve or reject a privacy request after legal review
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: requestId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision, legalReviewReference]
+              properties:
+                decision: { type: string, enum: [approved, rejected] }
+                legalReviewReference: { type: string, maxLength: 160 }
+                resolutionNote: { type: string, maxLength: 2000 }
+      responses:
+        "200": { description: Request decision recorded }
+        "409": { description: Legal review is missing or does not match the decision }
+  /tenant/privacy/retention-policies:
+    get:
+      tags: [Tenant Governance]
+      summary: List tenant retention policy records
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+      responses:
+        "200": { description: Retention policies }
+    post:
+      tags: [Tenant Governance]
+      summary: Create an inactive retention policy proposal
+      description: Policies are created inactive and pending legal approval. No retention job or permanent deletion is executed by this endpoint.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [recordType]
+              properties:
+                recordType: { type: string, maxLength: 100 }
+                retentionPeriodDays: { type: integer, minimum: 1, maximum: 36500, nullable: true }
+                action: { type: string, enum: [archive, anonymize, delete, manual_review] }
+                legalBasisReference: { type: string, maxLength: 200, nullable: true }
+      responses:
+        "201": { description: Inactive retention proposal created }
