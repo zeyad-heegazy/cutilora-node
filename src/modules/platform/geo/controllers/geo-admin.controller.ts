@@ -1,6 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { geoAdminService } from '../services/geo-admin.service.js';
-import { geoCreateSchema, geoListSchema, geoResourceSchema, geoUpdateSchema } from '../../../geo/validations/geo.validation.js';
+import { geoCreateSchema, geoListSchema, geoResourceSchema, geoUpdateSchema } from '../../../geo/validation/geo.validation.js';
 export const geoAdminController = {
   async index(req: Request, res: Response, next: NextFunction) { try { const resource=geoResourceSchema.parse(req.params.resource); const query=geoListSchema.parse(req.query); res.json({ success:true, ...(await geoAdminService.list(resource,query)) }); } catch(e){next(e);} },
   async show(req: Request,res: Response,next: NextFunction){try{const resource=geoResourceSchema.parse(req.params.resource);const item=await geoAdminService.show(resource,String(req.params.entry??''));if(!item)return res.status(404).json({success:false,error:{code:'NOT_FOUND',message:'Geo entry not found.'}});res.json({success:true,data:item});}catch(e){next(e);}},
