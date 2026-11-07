@@ -4,7 +4,7 @@ import { getTenantRoleCatalog, getTenantRolePermissions, requireTenantPermission
 
 async function run(role: string, permission: string, context: Record<string, unknown> = {}) {
   const defaultScope = ['tenant_owner', 'tenant_admin', 'billing_admin'].includes(role) ? 'tenant' : ['clinic_admin', 'clinic_manager'].includes(role) ? 'clinic' : 'branch';
-  const req = { tenantContext: { role, scope: defaultScope, clinicId: defaultScope === 'tenant' ? null : 'clinic-a', branchId: defaultScope === 'branch' ? 'branch-a' : null, ...context } } as any;
+  const req = { params: {}, query: {}, tenantContext: { role, scope: defaultScope, clinicId: defaultScope === 'tenant' ? null : 'clinic-a', branchId: defaultScope === 'branch' ? 'branch-a' : null, ...context } } as any;
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
   const next = vi.fn();
   await requireTenantPermission(permission)(req, res, next);
