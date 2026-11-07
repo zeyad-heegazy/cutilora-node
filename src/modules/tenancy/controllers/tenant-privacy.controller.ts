@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from 'express';
+import { createHash } from 'node:crypto';
 import { z } from 'zod';
 import { tenantPrivacyService } from '../services/tenant-privacy.service.js';
 
@@ -11,7 +12,7 @@ const consentSchema = z.object({
   patientId: patientIdSchema,
   consentType: z.string().trim().min(1).max(100),
   documentVersion: z.string().trim().min(1).max(80),
-  documentHash: z.string().trim().min(16).max(128),
+  documentHash: z.string().trim().regex(/^[a-fA-F0-9]{64}$/),
   documentSnapshot: z.string().min(1).max(100000),
   status: z.enum(['granted', 'declined']),
   source: z.enum(['clinic_portal', 'patient_portal', 'import', 'other']).default('clinic_portal'),
@@ -91,6 +92,8 @@ export const tenantPrivacyController = {
   async createConsent(req: Request, res: Response, next: NextFunction) {
     try {
       const input = consentSchema.parse(req.body);
+      const actualHash = createHash('sha256').update(input.documentSnapshot, 'utf8').digest('hex');
+      if (actualHash !== input.documentHash.toLowerCase()) return res.status(400).json({ success: false, error: { code: 'CONSENT_HASH_MISMATCH', message: 'documentHash must be the SHA-256 hash of documentSnapshot.' } });
       const item = await tenantPrivacyService.recordConsent({
         ...scope(req), ...input, actorUserId: req.auth!.userId, signedAt: new Date(),
         documentHash: input.documentHash.toLowerCase(),
