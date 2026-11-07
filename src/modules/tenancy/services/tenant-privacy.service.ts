@@ -126,15 +126,16 @@ export const tenantPrivacyService = {
     retentionPeriodDays?: number | null;
     action: 'archive' | 'anonymize' | 'delete' | 'manual_review';
     legalBasisReference?: string | null;
-    createdByUserId?: string;
+    actorUserId: string;
   }) {
-    return DataRetentionPolicy.create({
-      ...input,
-      active: false,
-      legalApprovalStatus: 'pending',
-      approvedByUserId: null,
-      approvedAt: null,
+    const item = await DataRetentionPolicy.create({
+      tenantId: input.tenantId, recordType: input.recordType,
+      retentionPeriodDays: input.retentionPeriodDays, action: input.action,
+      legalBasisReference: input.legalBasisReference ?? null,
+      active: false, legalApprovalStatus: 'pending', approvedByUserId: null, approvedAt: null,
     });
+    await writePrivacyAudit({ tenantId: input.tenantId, actorUserId: input.actorUserId, action: 'privacy.retention_policy.proposed', targetType: 'DataRetentionPolicy', targetId: String(item._id) });
+    return item;
   },
 
   async approveRetentionPolicy(input: { tenantId: string; policyId: string; actorUserId: string; legalBasisReference: string }) {
@@ -195,7 +196,10 @@ export const tenantPrivacyService = {
         legalReviewedByUserId: input.reviewerUserId,
         decisionAt: new Date(),
       },
-    }, { new: true, runValidators: true }).lean();
+    }, { new: true, runValidators: true }).lean().then(async (item) => {
+      if (item) await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.reviewerUserId, action: 'privacy.request.legal_reviewed', targetType: 'PrivacyDataRequest', targetId: input.requestId });
+      return item;
+    });
   },
 
   async decideDataRequest(input: {
