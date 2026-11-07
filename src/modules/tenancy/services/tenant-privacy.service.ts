@@ -62,6 +62,22 @@ export const tenantPrivacyService = {
     return { items, pagination: { page, perPage, total, pages: Math.ceil(total / perPage) } };
   },
 
+  async getConsent(input: { tenantId: string; clinicId: string; consentId: string }) {
+    return ConsentRecord.findOne({
+      _id: input.consentId, tenantId: input.tenantId, clinicId: input.clinicId,
+    }).select('-documentSnapshot').lean();
+  },
+
+  async listRetentionPolicies(input: { tenantId: string; page?: number; perPage?: number }) {
+    const { page, perPage, skip } = paginate(input);
+    const filter = { tenantId: input.tenantId };
+    const [items, total] = await Promise.all([
+      DataRetentionPolicy.find(filter).sort({ createdAt: -1 }).skip(skip).limit(perPage).lean(),
+      DataRetentionPolicy.countDocuments(filter),
+    ]);
+    return { items, pagination: { page, perPage, total, pages: Math.ceil(total / perPage) } };
+  },
+
   async createDataRequest(input: {
     tenantId: string;
     clinicId: string;
