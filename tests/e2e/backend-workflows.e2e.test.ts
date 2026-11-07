@@ -328,7 +328,7 @@ describe('database-backed backend workflows', () => {
   it('manages webhook endpoint configuration and signing-key rotation', async () => {
     const created = await tenant().post('/api/v1/tenant/webhooks').send({
       name: 'E2E Webhook',
-      url: 'https://example.test/cutilora-webhook',
+      url: 'https://example.com/cutilora-webhook',
       events: ['clinic.created', 'organization.updated'],
     });
     expect(created.status, JSON.stringify(created.body)).toBe(201);
