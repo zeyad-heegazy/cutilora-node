@@ -70,6 +70,7 @@ tenantRouter.post('/privacy/data-requests', requireTenantPermission('audit.expor
 tenantRouter.get('/privacy/data-requests', requireTenantPermission('audit.read'), tenantPrivacyController.listDataRequests);
 tenantRouter.get('/privacy/retention-policies', requireTenantScope, requireTenantPermission('audit.read'), tenantPrivacyController.listRetentionPolicies);
 tenantRouter.post('/privacy/retention-policies', requireTenantScope, requireTenantPermission('audit.export'), tenantPrivacyController.createRetentionPolicy);
+tenantRouter.post('/privacy/retention-policies/:policyId/approve', requireTenantScope, requireTenantPermission('audit.export'), tenantPrivacyController.approveRetentionPolicy);
 tenantRouter.get('/privacy/data-requests/:requestId', requireTenantPermission('audit.read'), tenantPrivacyController.getDataRequest);
 tenantRouter.post('/privacy/data-requests/:requestId/legal-review', requireTenantPermission('audit.export'), tenantPrivacyController.reviewDataRequest);
 tenantRouter.post('/privacy/data-requests/:requestId/decision', requireTenantPermission('audit.export'), tenantPrivacyController.decideDataRequest);
