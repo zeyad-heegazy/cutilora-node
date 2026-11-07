@@ -1,32 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { createHash } from 'node:crypto';
-import { z } from 'zod';
 import { tenantPrivacyService } from '../services/tenant-privacy.service.js';
-
-const pageSchema = z.object({
-  page: z.coerce.number().int().min(1).default(1),
-  perPage: z.coerce.number().int().min(1).max(100).default(25),
-});
-const patientIdSchema = z.string().trim().min(1).max(120);
-const routeParam = (req: Request, key: string): string => z.string().trim().min(1).parse(req.params[key]);
-const consentSchema = z.object({
-  patientId: patientIdSchema,
-  consentType: z.string().trim().min(1).max(100),
-  documentVersion: z.string().trim().min(1).max(80),
-  documentHash: z.string().trim().regex(/^[a-fA-F0-9]{64}$/),
-  documentSnapshot: z.string().min(1).max(100000),
-  status: z.enum(['granted', 'declined']),
-  source: z.enum(['clinic_portal', 'patient_portal', 'import', 'other']).default('clinic_portal'),
-});
-const requestSchema = z.object({
-  patientId: patientIdSchema,
-  requestType: z.enum(['access', 'export', 'correction', 'deletion']),
-  reason: z.string().trim().max(1000).optional(),
-});
-const decisionSchema = z.object({
-  decision: z.enum(['approved', 'rejected']),
-  resolutionNote: z.string().trim().max(2000).optional(),
-});
 
 const scope = (req: Request) => {
   const context = req.tenantContext!;
