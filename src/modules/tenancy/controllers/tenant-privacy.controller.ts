@@ -57,6 +57,37 @@ export const tenantPrivacyController = {
     } catch (error) { next(error); }
   },
 
+  async getConsent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenantPrivacyService.getConsent({ ...scope(req), consentId: req.params.consentId });
+      if (!item) return res.status(404).json({ success: false, error: { code: 'CONSENT_NOT_FOUND', message: 'Consent record not found.' } });
+      res.json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
+
+  async listRetentionPolicies(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = pageSchema.parse(req.query);
+      const result = await tenantPrivacyService.listRetentionPolicies({ tenantId: req.tenantContext!.tenantId, ...query });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (error) { next(error); }
+  },
+
+  async createRetentionPolicy(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = z.object({
+        recordType: z.string().trim().min(1).max(100),
+        retentionPeriodDays: z.number().int().positive().max(36500).nullable().optional(),
+        action: z.enum(['archive', 'anonymize', 'delete', 'manual_review']).default('manual_review'),
+        legalBasisReference: z.string().trim().max(200).nullable().optional(),
+      }).parse(req.body);
+      const item = await tenantPrivacyService.createRetentionPolicy({
+        tenantId: req.tenantContext!.tenantId, ...input,
+      });
+      res.status(201).json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
+
   async createConsent(req: Request, res: Response, next: NextFunction) {
     try {
       const input = consentSchema.parse(req.body);
