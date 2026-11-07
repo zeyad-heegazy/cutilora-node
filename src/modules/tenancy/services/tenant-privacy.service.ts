@@ -13,7 +13,7 @@ const writePrivacyAudit = async (input: { tenantId: string; clinicId?: string; a
       tenantId: input.tenantId, actorUserId: input.actorUserId,
       action: input.action, targetType: input.targetType, targetId: input.targetId,
       clinicId: input.clinicId ?? null, result: 'success',
-      requestId: input.requestId ?? '', metadata: {},
+      requestId: String(input.requestId ?? '').slice(0, 120), metadata: {},
     });
   } catch (error) {
     // Privacy records remain persisted; audit persistence failures are surfaced to server logs.
@@ -224,6 +224,7 @@ export const tenantPrivacyService = {
       _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
       status: { $in: ['submitted', 'identity_review', 'in_review'] },
       legalReviewStatus: input.decision,
+      legalReviewedByUserId: { $ne: input.actorUserId },
     });
     if (!request) return null;
     request.status = input.decision;
