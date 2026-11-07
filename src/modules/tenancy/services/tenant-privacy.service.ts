@@ -2,9 +2,24 @@ import { DataAccessLog } from '../models/data-access-log.model.js';
 import { ConsentRecord } from '../models/consent-record.model.js';
 import { PrivacyDataRequest } from '../models/privacy-data-request.model.js';
 import { DataRetentionPolicy } from '../models/data-retention-policy.model.js';
+import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 
 type TenantScope = { tenantId: string; clinicId: string };
 type Pagination = { page?: number; perPage?: number };
+
+const writePrivacyAudit = async (input: { tenantId: string; clinicId?: string; actorUserId: string; action: string; targetType: string; targetId: string; requestId?: string | null }) => {
+  try {
+    await TenantAuditEvent.create({
+      tenantId: input.tenantId, actorUserId: input.actorUserId,
+      action: input.action, targetType: input.targetType, targetId: input.targetId,
+      clinicId: input.clinicId ?? null, result: 'success',
+      requestId: input.requestId ?? '', metadata: {},
+    });
+  } catch (error) {
+    // Privacy records remain persisted; audit persistence failures are surfaced to server logs.
+    console.error('Failed to persist privacy audit event', error instanceof Error ? error.message : 'unknown');
+  }
+};
 
 const paginate = (query: Pagination) => {
   const page = Math.max(1, Math.floor(query.page ?? 1));
@@ -21,7 +36,9 @@ export const tenantPrivacyService = {
     resourceId?: string | null;
     correlationId?: string | null;
   }) {
-    return DataAccessLog.create(input);
+    const item = await DataAccessLog.create(input);
+    await writePrivacyAudit({ ...input, action: 'patient.data.accessed', targetType: input.resourceType, targetId: input.resourceId ?? input.patientId, requestId: input.correlationId });
+    return item;
   },
 
   async listPatientAccessHistory(scope: TenantScope & { patientId: string } & Pagination) {
@@ -49,7 +66,9 @@ export const tenantPrivacyService = {
     revokedAt?: Date | null;
     revocationReason?: string | null;
   }) {
-    return ConsentRecord.create({ ...input, signedAt: input.signedAt ?? new Date() });
+    const item = await ConsentRecord.create({ ...input, signedAt: input.signedAt ?? new Date() });
+    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'patient.consent.recorded', targetType: 'ConsentRecord', targetId: String(item._id) });
+    return item;
   },
 
   async listPatientConsents(scope: TenantScope & { patientId: string } & Pagination) {
@@ -86,7 +105,9 @@ export const tenantPrivacyService = {
     requestedByUserId: string;
     reason?: string;
   }) {
-    return PrivacyDataRequest.create(input);
+    const item = await PrivacyDataRequest.create(input);
+    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.requestedByUserId, action: 'privacy.request.submitted', targetType: 'PrivacyDataRequest', targetId: String(item._id) });
+    return item;
   },
 
   async listDataRequests(scope: TenantScope & Pagination) {
@@ -120,7 +141,7 @@ export const tenantPrivacyService = {
       _id: input.consentId, tenantId: input.tenantId, clinicId: input.clinicId, status: 'granted',
     }).select('+documentSnapshot').lean() as any;
     if (!original) return null;
-    return ConsentRecord.create({
+    const revoked = await ConsentRecord.create({
       tenantId: original.tenantId,
       clinicId: original.clinicId,
       patientId: original.patientId,
@@ -135,6 +156,8 @@ export const tenantPrivacyService = {
       revokedAt: new Date(),
       revocationReason: input.reason,
     });
+    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'patient.consent.revoked', targetType: 'ConsentRecord', targetId: String(revoked._id) });
+    return revoked;
   },
 
   async getDataRequest(input: { tenantId: string; clinicId: string; requestId: string }) {
