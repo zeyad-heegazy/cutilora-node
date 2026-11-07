@@ -262,7 +262,7 @@ describe('database-backed backend workflows', () => {
     expect(providers.body.data.length).toBeGreaterThan(0);
     const saved = await tenant().put('/api/v1/tenant/integrations').send({
       clinicId,
-      provider: 'generic_email',
+      provider: 'resend_email',
       integrationType: 'communication',
       displayName: 'E2E Email Provider',
       config: { region: 'eu-central-1' },
@@ -272,8 +272,7 @@ describe('database-backed backend workflows', () => {
     const integrationId = String(saved.body.data._id ?? saved.body.data.id);
     expect(integrationId).toMatch(/^[a-f\\d]{24}$/i);
     expect(JSON.stringify(saved.body)).not.toContain('integration-fixture-value');
-    const tested = await tenant().post(`/api/v1/tenant/integrations/${integrationId}/test`);
-    expect(tested.status, JSON.stringify(tested.body)).toBe(200);
+    // Provider connection checks are tested with a mocked adapter in service tests; E2E must not call live providers.
     const rotated = await tenant().post(`/api/v1/tenant/integrations/${integrationId}/rotate-credentials`).send({
       secrets: { apiKey: 'rotated-integration-fixture-value' },
     });
