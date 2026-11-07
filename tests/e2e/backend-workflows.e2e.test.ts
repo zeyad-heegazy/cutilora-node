@@ -194,6 +194,68 @@ describe('database-backed backend workflows', () => {
     expect(context.body.data.access.scope).toBe('clinic');
   });
 
+  it('creates, updates, lists and archives a custom tenant role', async () => {
+    const created = await tenant().post('/api/v1/tenant/roles').send({
+      name: 'E2E Front Desk',
+      description: 'E2E limited front desk permissions',
+      scope: 'clinic',
+      permissions: ['clinic.settings.read', 'branch.read'],
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const roleId = String(created.body.data._id ?? created.body.data.id);
+    expect(roleId).toMatch(/^[a-f\\d]{24}$/i);
+
+    const listed = await tenant().get('/api/v1/tenant/roles?scope=clinic');
+    expect(listed.status).toBe(200);
+    expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === roleId)).toBe(true);
+
+    const details = await tenant().get(`/api/v1/tenant/roles/${roleId}`);
+    expect(details.status).toBe(200);
+
+    const updated = await tenant().patch(`/api/v1/tenant/roles/${roleId}`).send({
+      name: 'E2E Front Desk Updated',
+      description: 'Updated E2E role',
+      permissions: ['clinic.settings.read'],
+      version: details.body.data.version,
+    });
+    expect(updated.status, JSON.stringify(updated.body)).toBe(200);
+    expect(updated.body.data.name).toBe('E2E Front Desk Updated');
+
+    const archived = await tenant().post(`/api/v1/tenant/roles/${roleId}/archive`);
+    expect(archived.status).toBe(200);
+  });
+
+  it('creates, versions and archives a tenant catalog template', async () => {
+    const created = await tenant().post('/api/v1/tenant/catalog-templates').send({
+      name: 'E2E Laser Treatment',
+      key: 'e2e-laser-treatment',
+      type: 'service_treatment',
+      description: 'E2E service catalog template',
+      content: { durationMinutes: 30, category: 'laser', active: true },
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const templateId = String(created.body.data._id ?? created.body.data.id);
+    const version = Number(created.body.data.version ?? 1);
+
+    const updated = await tenant().patch(`/api/v1/tenant/catalog-templates/${templateId}`).send({
+      expectedVersion: version,
+      description: 'Updated E2E service template',
+      content: { durationMinutes: 45, category: 'laser', active: true },
+    });
+    expect(updated.status, JSON.stringify(updated.body)).toBe(200);
+    expect(updated.body.data.description).toBe('Updated E2E service template');
+
+    const listed = await tenant().get('/api/v1/tenant/catalog-templates?type=service_treatment');
+    expect(listed.status).toBe(200);
+    expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === templateId)).toBe(true);
+
+    const archived = await tenant().post(`/api/v1/tenant/catalog-templates/${templateId}/archive`).send({
+      expectedVersion: updated.body.data.version,
+    });
+    expect(archived.status, JSON.stringify(archived.body)).toBe(200);
+    expect(archived.body.data.status).toBe('archived');
+  });
+
   it('updates organization profile, preferences and billing profile', async () => {
     const profile = await tenant().patch('/api/v1/tenant/profile').send({
       displayName: 'E2E Aesthetic Group Updated',
