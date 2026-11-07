@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from 'express';
 import { createHash } from 'node:crypto';
+import { pageSchema, patientIdSchema, consentSchema, requestSchema, decisionSchema, routeParamSchema, legalBasisSchema, retentionPolicySchema, revokeConsentSchema, legalReviewSchema, fulfillRequestSchema } from '../validation/tenant-privacy.validation.js';
 import { tenantPrivacyService } from '../services/tenant-privacy.service.js';
 
 const scope = (req: Request) => {
@@ -34,7 +35,7 @@ export const tenantPrivacyController = {
 
   async getConsent(req: Request, res: Response, next: NextFunction) {
     try {
-      const item = await tenantPrivacyService.getConsent({ ...scope(req), consentId: routeParam(req, 'consentId') });
+      const item = await tenantPrivacyService.getConsent({ ...scope(req), consentId: routeParamSchema.parse(req.params.consentId) });
       if (!item) return res.status(404).json({ success: false, error: { code: 'CONSENT_NOT_FOUND', message: 'Consent record not found.' } });
       res.json({ success: true, data: item });
     } catch (error) { next(error); }
@@ -50,9 +51,9 @@ export const tenantPrivacyController = {
 
   async approveRetentionPolicy(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = z.object({ legalBasisReference: z.string().trim().min(1).max(200) }).parse(req.body);
+      const input = legalBasisSchema.parse(req.body);
       const item = await tenantPrivacyService.approveRetentionPolicy({
-        tenantId: req.tenantContext!.tenantId, policyId: routeParam(req, 'policyId'),
+        tenantId: req.tenantContext!.tenantId, policyId: routeParamSchema.parse(req.params.policyId),
         actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
       if (!item) return res.status(409).json({ success: false, error: { code: 'RETENTION_POLICY_NOT_APPROVABLE', message: 'Policy not found, already reviewed, or not pending approval.' } });
@@ -62,12 +63,7 @@ export const tenantPrivacyController = {
 
   async createRetentionPolicy(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = z.object({
-        recordType: z.string().trim().min(1).max(100),
-        retentionPeriodDays: z.number().int().positive().max(36500).nullable().optional(),
-        action: z.enum(['archive', 'anonymize', 'delete', 'manual_review']).default('manual_review'),
-        legalBasisReference: z.string().trim().max(200).nullable().optional(),
-      }).parse(req.body);
+      const input = retentionPolicySchema.parse(req.body);
       const item = await tenantPrivacyService.createRetentionPolicy({
         tenantId: req.tenantContext!.tenantId, actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
@@ -90,7 +86,7 @@ export const tenantPrivacyController = {
 
   async revokeConsent(req: Request, res: Response, next: NextFunction) {
     try {
-      const reason = z.object({ reason: z.string().trim().min(1).max(500) }).parse(req.body).reason;
+      const reason = revokeConsentSchema.parse(req.body).reason;
       const item = await tenantPrivacyService.revokeConsent({
         ...scope(req), consentId: routeParam(req, 'consentId'), actorUserId: req.auth!.userId, reason, correlationId: String(res.getHeader('x-request-id') ?? ''),
       });
@@ -119,7 +115,7 @@ export const tenantPrivacyController = {
 
   async getDataRequest(req: Request, res: Response, next: NextFunction) {
     try {
-      const item = await tenantPrivacyService.getDataRequest({ ...scope(req), requestId: routeParam(req, 'requestId') });
+      const item = await tenantPrivacyService.getDataRequest({ ...scope(req), requestId: routeParamSchema.parse(req.params.requestId) });
       if (!item) return res.status(404).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_FOUND', message: 'Privacy request not found.' } });
       res.json({ success: true, data: item });
     } catch (error) { next(error); }
@@ -127,10 +123,7 @@ export const tenantPrivacyController = {
 
   async reviewDataRequest(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = z.object({
-        decision: z.enum(['approved', 'rejected']),
-        legalReviewReference: z.string().trim().min(1).max(160),
-      }).parse(req.body);
+      const input = legalReviewSchema.parse(req.body);
       const item = await tenantPrivacyService.reviewDataRequest({
         ...scope(req), requestId: routeParam(req, 'requestId'),
         reviewerUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
@@ -142,7 +135,7 @@ export const tenantPrivacyController = {
 
   async fulfillDataRequest(req: Request, res: Response, next: NextFunction) {
     try {
-      const input = z.object({ resolutionNote: z.string().trim().min(1).max(2000) }).parse(req.body);
+      const input = fulfillRequestSchema.parse(req.body);
       const item = await tenantPrivacyService.fulfillDataRequest({
         ...scope(req), requestId: routeParam(req, 'requestId'),
         actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
