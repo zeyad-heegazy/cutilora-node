@@ -22,3 +22,18 @@ export const decisionSchema = z.object({
   decision: z.enum(['approved', 'rejected']),
   resolutionNote: z.string().trim().max(2000).optional(),
 });
+
+export const routeParamSchema = z.string().trim().min(1);
+export const legalBasisSchema = z.object({ legalBasisReference: z.string().trim().min(1).max(200) });
+export const retentionPolicySchema = z.object({
+  recordType: z.string().trim().min(1).max(100),
+  retentionPeriodDays: z.number().int().positive().max(36500).nullable().optional(),
+  action: z.enum(['archive', 'anonymize', 'delete', 'manual_review']).default('manual_review'),
+  legalBasisReference: z.string().trim().max(200).nullable().optional(),
+});
+export const revokeConsentSchema = z.object({ reason: z.string().trim().min(1).max(500) });
+export const legalReviewSchema = z.object({
+  decision: z.enum(['approved', 'rejected']),
+  legalReviewReference: z.string().trim().min(1).max(160),
+});
+export const fulfillRequestSchema = z.object({ resolutionNote: z.string().trim().min(1).max(2000) });
