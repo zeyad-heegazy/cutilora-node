@@ -163,6 +163,7 @@ export const tenantPrivacyService = {
       _id: input.consentId, tenantId: input.tenantId, clinicId: input.clinicId, status: 'granted',
     }).select('+documentSnapshot').lean() as any;
     if (!original) return null;
+    if (await ConsentRecord.exists({ tenantId: input.tenantId, revokesConsentId: original._id })) return null;
     const revoked = await ConsentRecord.create({
       tenantId: original.tenantId,
       clinicId: original.clinicId,
@@ -177,6 +178,7 @@ export const tenantPrivacyService = {
       signedAt: new Date(),
       revokedAt: new Date(),
       revocationReason: input.reason,
+      revokesConsentId: original._id,
     });
     await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'patient.consent.revoked', targetType: 'ConsentRecord', targetId: String(revoked._id), requestId: input.correlationId });
     return revoked;
