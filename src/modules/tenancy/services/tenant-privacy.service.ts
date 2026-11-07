@@ -135,7 +135,7 @@ export const tenantPrivacyService = {
         legalReviewRequired: true,
         legalReviewStatus: input.decision,
         legalReviewReference: input.legalReviewReference,
-        decisionByUserId: input.reviewerUserId,
+        legalReviewedByUserId: input.reviewerUserId,
         decisionAt: new Date(),
       },
     }, { new: true, runValidators: true }).lean();
@@ -148,13 +148,11 @@ export const tenantPrivacyService = {
     const request = await PrivacyDataRequest.findOne({
       _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
       status: { $in: ['submitted', 'identity_review', 'in_review'] },
-      ...(input.decision === 'approved' ? { legalReviewStatus: { $in: ['approved', 'not_required'] } } : {}),
+      legalReviewStatus: input.decision,
     });
     if (!request) return null;
     request.status = input.decision;
     request.legalReviewRequired = true;
-    request.legalReviewStatus = 'approved';
-    request.legalReviewReference = input.legalReviewReference;
     request.decisionByUserId = input.actorUserId as any;
     request.decisionAt = new Date();
     request.resolutionNote = input.resolutionNote ?? '';
