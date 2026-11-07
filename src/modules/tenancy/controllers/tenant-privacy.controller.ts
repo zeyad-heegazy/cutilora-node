@@ -165,6 +165,18 @@ export const tenantPrivacyController = {
     } catch (error) { next(error); }
   },
 
+  async fulfillDataRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = z.object({ resolutionNote: z.string().trim().min(1).max(2000) }).parse(req.body);
+      const item = await tenantPrivacyService.fulfillDataRequest({
+        ...scope(req), requestId: req.params.requestId,
+        actorUserId: req.auth!.userId, ...input,
+      });
+      if (!item) return res.status(409).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_FULFILLABLE', message: 'Only legally approved requests can be marked fulfilled.' } });
+      res.json({ success: true, data: item, automatedDataMutation: false });
+    } catch (error) { next(error); }
+  },
+
   async decideDataRequest(req: Request, res: Response, next: NextFunction) {
     try {
       const input = decisionSchema.parse(req.body);
