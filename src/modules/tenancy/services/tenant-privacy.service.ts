@@ -7,7 +7,7 @@ import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 type TenantScope = { tenantId: string; clinicId: string };
 type Pagination = { page?: number; perPage?: number };
 
-const writePrivacyAudit = async (input: { tenantId: string; clinicId?: string; actorUserId: string; action: string; targetType: string; targetId: string; requestId?: string | null }) => {
+const writePrivacyAudit = async (input: { tenantId: string; clinicId?: string; actorUserId: string; action: string; targetType: string; targetId: string; correlationId?: string | null }) => {
   try {
     await TenantAuditEvent.create({
       tenantId: input.tenantId, actorUserId: input.actorUserId,
@@ -61,14 +61,14 @@ export const tenantPrivacyService = {
     documentSnapshot: string;
     status: 'granted' | 'declined' | 'revoked';
     actorUserId: string;
-    requestId?: string;
+    correlationId?: string;
     source: 'clinic_portal' | 'patient_portal' | 'import' | 'other';
     signedAt?: Date;
     revokedAt?: Date | null;
     revocationReason?: string | null;
   }) {
     const item = await ConsentRecord.create({ ...input, signedAt: input.signedAt ?? new Date() });
-    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'patient.consent.recorded', targetType: 'ConsentRecord', targetId: String(item._id), requestId: input.requestId });
+    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'patient.consent.recorded', targetType: 'ConsentRecord', targetId: String(item._id), requestId: input.correlationId });
     return item;
   },
 
@@ -104,11 +104,11 @@ export const tenantPrivacyService = {
     patientId: string;
     requestType: 'access' | 'export' | 'correction' | 'deletion';
     requestedByUserId: string;
-    requestId?: string;
+    correlationId?: string;
     reason?: string;
   }) {
     const item = await PrivacyDataRequest.create(input);
-    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.requestedByUserId, action: 'privacy.request.submitted', targetType: 'PrivacyDataRequest', targetId: String(item._id), requestId: input.requestId });
+    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.requestedByUserId, action: 'privacy.request.submitted', targetType: 'PrivacyDataRequest', targetId: String(item._id), requestId: input.correlationId });
     return item;
   },
 
@@ -140,7 +140,7 @@ export const tenantPrivacyService = {
     return item;
   },
 
-  async approveRetentionPolicy(input: { tenantId: string; policyId: string; actorUserId: string; legalBasisReference: string; requestId?: string }) {
+  async approveRetentionPolicy(input: { tenantId: string; policyId: string; actorUserId: string; legalBasisReference: string; correlationId?: string }) {
     return DataRetentionPolicy.findOneAndUpdate({
       _id: input.policyId, tenantId: input.tenantId, legalApprovalStatus: 'pending', active: false,
     }, {
@@ -152,12 +152,12 @@ export const tenantPrivacyService = {
         active: true,
       },
     }, { new: true, runValidators: true }).lean().then(async (item) => {
-      if (item) await writePrivacyAudit({ tenantId: input.tenantId, actorUserId: input.actorUserId, action: 'privacy.retention_policy.approved', targetType: 'DataRetentionPolicy', targetId: input.policyId, requestId: input.requestId });
+      if (item) await writePrivacyAudit({ tenantId: input.tenantId, actorUserId: input.actorUserId, action: 'privacy.retention_policy.approved', targetType: 'DataRetentionPolicy', targetId: input.policyId, requestId: input.correlationId });
       return item;
     });
   },
 
-  async revokeConsent(input: { tenantId: string; clinicId: string; consentId: string; actorUserId: string; reason: string; requestId?: string }) {
+  async revokeConsent(input: { tenantId: string; clinicId: string; consentId: string; actorUserId: string; reason: string; correlationId?: string }) {
     const original = await ConsentRecord.findOne({
       _id: input.consentId, tenantId: input.tenantId, clinicId: input.clinicId, status: 'granted',
     }).select('+documentSnapshot').lean() as any;
@@ -177,7 +177,7 @@ export const tenantPrivacyService = {
       revokedAt: new Date(),
       revocationReason: input.reason,
     });
-    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'patient.consent.revoked', targetType: 'ConsentRecord', targetId: String(revoked._id), requestId: input.requestId });
+    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'patient.consent.revoked', targetType: 'ConsentRecord', targetId: String(revoked._id), requestId: input.correlationId });
     return revoked;
   },
 
@@ -185,7 +185,7 @@ export const tenantPrivacyService = {
     return PrivacyDataRequest.findOne({ _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId }).lean();
   },
 
-  async reviewDataRequest(input: { tenantId: string; clinicId: string; requestId: string; reviewerUserId: string; decision: 'approved' | 'rejected'; legalReviewReference: string; requestId?: string }) {
+  async reviewDataRequest(input: { tenantId: string; clinicId: string; requestId: string; reviewerUserId: string; decision: 'approved' | 'rejected'; legalReviewReference: string; correlationId?: string }) {
     return PrivacyDataRequest.findOneAndUpdate({
       _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
       status: { $in: ['submitted', 'identity_review', 'in_review'] },
@@ -199,25 +199,25 @@ export const tenantPrivacyService = {
         legalReviewedAt: new Date(),
       },
     }, { new: true, runValidators: true }).lean().then(async (item) => {
-      if (item) await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.reviewerUserId, action: 'privacy.request.legal_reviewed', targetType: 'PrivacyDataRequest', targetId: input.requestId, requestId: input.requestId });
+      if (item) await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.reviewerUserId, action: 'privacy.request.legal_reviewed', targetType: 'PrivacyDataRequest', targetId: input.requestId, requestId: input.correlationId });
       return item;
     });
   },
 
-  async fulfillDataRequest(input: { tenantId: string; clinicId: string; requestId: string; actorUserId: string; resolutionNote: string; requestId?: string }) {
+  async fulfillDataRequest(input: { tenantId: string; clinicId: string; requestId: string; actorUserId: string; resolutionNote: string; correlationId?: string }) {
     const request = await PrivacyDataRequest.findOneAndUpdate({
       _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
       status: 'approved', legalReviewStatus: 'approved',
     }, {
       $set: { status: 'fulfilled', fulfilledAt: new Date(), decisionByUserId: input.actorUserId, resolutionNote: input.resolutionNote },
     }, { new: true, runValidators: true }).lean();
-    if (request) await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'privacy.request.fulfilled', targetType: 'PrivacyDataRequest', targetId: input.requestId, requestId: input.requestId });
+    if (request) await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'privacy.request.fulfilled', targetType: 'PrivacyDataRequest', targetId: input.requestId, requestId: input.correlationId });
     return request;
   },
 
   async decideDataRequest(input: {
     tenantId: string; clinicId: string; requestId: string; actorUserId: string;
-    decision: 'approved' | 'rejected'; resolutionNote?: string; requestId?: string;
+    decision: 'approved' | 'rejected'; resolutionNote?: string; correlationId?: string;
   }) {
     const request = await PrivacyDataRequest.findOne({
       _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
@@ -231,7 +231,7 @@ export const tenantPrivacyService = {
     request.decisionAt = new Date();
     request.resolutionNote = input.resolutionNote ?? '';
     await request.save();
-    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: `privacy.request.${input.decision}`, targetType: 'PrivacyDataRequest', targetId: input.requestId, requestId: input.requestId });
+    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: `privacy.request.${input.decision}`, targetType: 'PrivacyDataRequest', targetId: input.requestId, requestId: input.correlationId });
     return request.toObject();
   },
 
