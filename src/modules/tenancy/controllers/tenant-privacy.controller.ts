@@ -88,7 +88,7 @@ export const tenantPrivacyController = {
     try {
       const reason = revokeConsentSchema.parse(req.body).reason;
       const item = await tenantPrivacyService.revokeConsent({
-        ...scope(req), consentId: routeParam(req, 'consentId'), actorUserId: req.auth!.userId, reason, correlationId: String(res.getHeader('x-request-id') ?? ''),
+        ...scope(req), consentId: routeParamSchema.parse(req.params.consentId), actorUserId: req.auth!.userId, reason, correlationId: String(res.getHeader('x-request-id') ?? ''),
       });
       if (!item) return res.status(404).json({ success: false, error: { code: 'CONSENT_NOT_FOUND', message: 'Active consent not found.' } });
       res.status(201).json({ success: true, data: { ...item.toObject(), documentSnapshot: undefined } });
@@ -125,7 +125,7 @@ export const tenantPrivacyController = {
     try {
       const input = legalReviewSchema.parse(req.body);
       const item = await tenantPrivacyService.reviewDataRequest({
-        ...scope(req), requestId: routeParam(req, 'requestId'),
+        ...scope(req), requestId: routeParamSchema.parse(req.params.requestId),
         reviewerUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
       if (!item) return res.status(409).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_REVIEWABLE', message: 'Request not found, already reviewed, or no longer pending.' } });
