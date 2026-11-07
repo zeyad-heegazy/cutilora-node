@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { createSchema, updateSchema, publishSchema, listQuerySchema, rollbackSchema, archiveSchema } from './validation/tenant-catalog.validation.js';
+import { createSchema, updateSchema, publishSchema, listQuerySchema, rollbackSchema, archiveSchema } from '../validation/tenant-catalog.validation.js';
 import { tenantCatalogService } from '../services/tenant-catalog.service.js';
 
 function tenant(req: Request) { return req.tenantContext!.tenantId; }
