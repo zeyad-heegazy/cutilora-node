@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { schema, rotateCredentialsSchema, integrationStatusSchema } from './validation/tenant-integration.validation.js';
+import { schema, rotateCredentialsSchema, integrationStatusSchema } from '../validation/tenant-integration.validation.js';
 import { tenantIntegrationService } from '../services/tenant-integration.service.js';
 
 export const tenantIntegrationController = {
