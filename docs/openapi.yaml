@@ -191,6 +191,24 @@ paths:
     $ref: "./openapi/tenant/reports/reports.yaml#/paths/~1tenant~1reports~1organization"
   /tenant/reports/organization/export:
     $ref: "./openapi/tenant/reports/reports.yaml#/paths/~1tenant~1reports~1organization~1export"
+  /tenant/patients/{patientId}/access-history:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1patients~1{patientId}~1access-history"
+  /tenant/consents:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1consents"
+  /tenant/consents/{consentId}:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1consents~1{consentId}"
+  /tenant/consents/{consentId}/revoke:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1consents~1{consentId}~1revoke"
+  /tenant/privacy/data-requests:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1data-requests"
+  /tenant/privacy/data-requests/{requestId}:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1data-requests~1{requestId}"
+  /tenant/privacy/data-requests/{requestId}/legal-review:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1data-requests~1{requestId}~1legal-review"
+  /tenant/privacy/data-requests/{requestId}/decision:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1data-requests~1{requestId}~1decision"
+  /tenant/privacy/retention-policies:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1retention-policies"
   /tenant/audit-logs/export:
     $ref: "./openapi/tenant/governance/audit-logs.yaml#/paths/~1tenant~1audit-logs~1export"
   /tenant/audit-logs:
