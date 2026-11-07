@@ -256,6 +256,34 @@ describe('database-backed backend workflows', () => {
     expect(archived.body.data.status).toBe('archived');
   });
 
+  it('saves an integration and exercises its credential lifecycle', async () => {
+    const providers = await tenant().get('/api/v1/tenant/integrations/providers');
+    expect(providers.status).toBe(200);
+    expect(providers.body.data.length).toBeGreaterThan(0);
+    const saved = await tenant().put('/api/v1/tenant/integrations').send({
+      clinicId,
+      provider: 'generic_email',
+      integrationType: 'communication',
+      displayName: 'E2E Email Provider',
+      config: { region: 'eu-central-1' },
+      secrets: { apiKey: 'integration-fixture-value' },
+    });
+    expect(saved.status, JSON.stringify(saved.body)).toBe(200);
+    const integrationId = String(saved.body.data._id ?? saved.body.data.id);
+    expect(integrationId).toMatch(/^[a-f\\d]{24}$/i);
+    expect(JSON.stringify(saved.body)).not.toContain('integration-fixture-value');
+    const tested = await tenant().post(`/api/v1/tenant/integrations/${integrationId}/test`);
+    expect(tested.status, JSON.stringify(tested.body)).toBe(200);
+    const rotated = await tenant().post(`/api/v1/tenant/integrations/${integrationId}/rotate-credentials`).send({
+      secrets: { apiKey: 'rotated-integration-fixture-value' },
+    });
+    expect(rotated.status).toBe(200);
+    const disabled = await tenant().patch(`/api/v1/tenant/integrations/${integrationId}/status`).send({ status: 'disabled' });
+    expect(disabled.status).toBe(200);
+    const revoked = await tenant().post(`/api/v1/tenant/integrations/${integrationId}/revoke-credentials`);
+    expect(revoked.status).toBe(200);
+  });
+
   it('updates organization profile, preferences and billing profile', async () => {
     const profile = await tenant().patch('/api/v1/tenant/profile').send({
       displayName: 'E2E Aesthetic Group Updated',
