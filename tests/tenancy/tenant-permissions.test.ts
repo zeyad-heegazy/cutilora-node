@@ -2,9 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTenantRoleCatalog, getTenantRolePermissions, requireTenantPermission } from '../../src/modules/tenancy/middleware/tenant-permissions.js';
 
-async function run(role: string, permission: string, context: Record<string, unknown> = {}) {
+async function run(role: string, permission: string, context: Record<string, unknown> = {}, query: Record<string, unknown> = {}) {
   const defaultScope = ['tenant_owner', 'tenant_admin', 'billing_admin'].includes(role) ? 'tenant' : ['clinic_admin', 'clinic_manager'].includes(role) ? 'clinic' : 'branch';
-  const req = { params: {}, query: {}, tenantContext: { role, scope: defaultScope, clinicId: defaultScope === 'tenant' ? null : 'clinic-a', branchId: defaultScope === 'branch' ? 'branch-a' : null, ...context } } as any;
+  const req = { params: {}, query, tenantContext: { role, scope: defaultScope, clinicId: defaultScope === 'tenant' ? null : 'clinic-a', branchId: defaultScope === 'branch' ? 'branch-a' : null, ...context } } as any;
   const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
   const next = vi.fn();
   await requireTenantPermission(permission)(req, res, next);
@@ -70,15 +70,15 @@ describe('tenant permission matrix and scoped custom roles', () => {
   });
 
   it('enforces custom grants at the selected branch and rejects cross-clinic use', async () => {
-    const allowed = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-a', branchId: 'branch-a' });
+    const allowed = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-a', branchId: 'branch-a', customPermissions: ['branch.holidays.read'] });
     expect(allowed.next).toHaveBeenCalledOnce();
-    const denied = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-b', branchId: 'branch-a' });
+    const denied = await run('custom_role', 'branch.holidays.read', { roleId: 'role-a', clinicId: 'clinic-b', branchId: 'branch-a', customPermissions: ['branch.holidays.read'] });
     expect(denied.next).not.toHaveBeenCalled();
     expect(denied.res.status).toHaveBeenCalledWith(403);
   });
 
   it('prevents clinic-scoped memberships from addressing another clinic by route parameter', async () => {
-    const denied = await run('clinic_manager', 'clinic.settings.read', { clinicId: 'clinic-a', membershipScope: 'clinic', membershipClinicId: 'clinic-a', resourceClinicId: 'clinic-b' });
+    const denied = await run('clinic_manager', 'clinic.settings.read', { scope: 'clinic', clinicId: 'clinic-a' }, { clinicId: 'clinic-b' });
     expect(denied.next).not.toHaveBeenCalled();
     expect(denied.res.status).toHaveBeenCalledWith(403);
   });
@@ -86,8 +86,8 @@ describe('tenant permission matrix and scoped custom roles', () => {
   it('rejects a clinic-scoped permission when the requested clinic differs from the grant', async () => {
     const denied = await run('clinic_manager', 'clinic.settings.read', {
       scope: 'clinic',
-      clinicId: 'clinic-b',
-    });
+      clinicId: 'clinic-a',
+    }, { clinicId: 'clinic-b' });
     expect(denied.next).not.toHaveBeenCalled();
     expect(denied.res.status).toHaveBeenCalledWith(403);
   });
