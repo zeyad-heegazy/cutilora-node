@@ -1,23 +1,18 @@
 import type { Request, Response, NextFunction } from 'express';
+import { logIdSchema, logQuerySchema } from '../validation/log.validation.js';
 import { logService } from '../services/log.service.js';
 
 export const logController = {
   async list(req: Request, res: Response, next: NextFunction) {
     try {
-      res.json({ success: true, data: await logService.list(req.query as Record<string, unknown>) });
+      res.json({ success: true, data: await logService.list(logQuerySchema.parse(req.query)) });
     } catch (e) {
       next(e);
     }
   },
   async get(req: Request, res: Response, next: NextFunction) {
     try {
-      const id = req.params.id;
-      if (typeof id !== 'string' || !id.trim()) {
-        return res.status(400).json({
-          success: false,
-          error: { code: 'INVALID_LOG_ID', message: 'A valid log ID is required.' },
-        });
-      }
+      const id = logIdSchema.parse(req.params.id);
       const item = await logService.get(id);
       if (!item) {
         return res.status(404).json({
