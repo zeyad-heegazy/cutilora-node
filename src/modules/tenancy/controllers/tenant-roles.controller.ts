@@ -1,36 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
+import { grantSchema, createRoleSchema, updateRoleSchema, cloneRoleSchema, assignRoleSchema } from '../validation/tenant-roles.validation.js';
 import { tenantRolesService, TENANT_PERMISSION_CATALOG, TENANT_ROLE_TEMPLATES } from '../services/tenant-roles.service.js';
 import { getTenantRoleCatalog } from '../services/tenant-access.service.js';
-
-const grantSchema = z.object({
-  permission: z.string().trim().min(3).max(120),
-  scope: z.enum(['tenant', 'clinic', 'branch']),
-  clinicId: z.string().regex(/^[a-fA-F0-9]{24}$/).nullable().optional(),
-  branchId: z.string().regex(/^[a-fA-F0-9]{24}$/).nullable().optional(),
-});
-const createRoleSchema = z.object({
-  key: z.string().trim().min(2).max(80).optional(),
-  name: z.string().trim().min(2).max(120),
-  description: z.string().trim().max(500).optional(),
-  scope: z.enum(['tenant', 'clinic', 'branch']),
-  permissions: z.array(grantSchema).max(200),
-});
-const updateRoleSchema = z.object({
-  expectedVersion: z.number().int().positive(),
-  name: z.string().trim().min(2).max(120).optional(),
-  description: z.string().trim().max(500).optional(),
-  scope: z.enum(['tenant', 'clinic', 'branch']).optional(),
-  permissions: z.array(grantSchema).max(200).optional(),
-}).refine((value) => Object.keys(value).some((key) => key !== 'expectedVersion'), 'At least one role field must be provided.');
-const cloneRoleSchema = z.object({
-  key: z.string().trim().min(2).max(80),
-  name: z.string().trim().min(2).max(120),
-  description: z.string().trim().max(500).optional(),
-  clinicId: z.string().regex(/^[a-fA-F0-9]{24}$/).optional(),
-  branchIds: z.array(z.string().regex(/^[a-fA-F0-9]{24}$/)).max(20).optional(),
-});
-const assignRoleSchema = z.object({ roleId: z.string().regex(/^[a-fA-F0-9]{24}$/) });
 
 function actor(req: Request) {
   return {
