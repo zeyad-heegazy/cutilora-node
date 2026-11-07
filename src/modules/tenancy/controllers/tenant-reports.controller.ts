@@ -1,12 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
+import { querySchema } from '../validation/tenant-reports.validation.js';
 import { tenantReportsService } from '../services/tenant-reports.service.js';
-
-const querySchema = z.object({
-  from: z.coerce.date().optional(),
-  to: z.coerce.date().optional(),
-}).refine(value => !value.from || !value.to || value.from <= value.to, 'from must be before or equal to to')
-  .refine(value => !value.from || !value.to || value.to.getTime() - value.from.getTime() <= 366 * 24 * 60 * 60 * 1000, 'Report range cannot exceed 366 days.');
 
 function rows(report: any) {
   const result: Array<{ section: string; metric: string; value: string }> = [];
