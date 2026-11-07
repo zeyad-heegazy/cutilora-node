@@ -24,10 +24,18 @@ const ownerEmail = 'e2e-tenant-owner@cutilora.test';
 const approverEmail = 'e2e-tenant-approver@cutilora.test';
 const password = 'E2E-Strong-Password-2026!';
 
-const platform = () => request(app).set('Authorization', `Bearer ${platformToken}`);
-const tenant = () => request(app)
-  .set('Authorization', `Bearer ${ownerToken}`)
-  .set('X-Tenant-Id', tenantId);
+const platform = () => ({
+  get: (path: string) => request(app).get(path).set('Authorization', `Bearer ${platformToken}`),
+  post: (path: string) => request(app).post(path).set('Authorization', `Bearer ${platformToken}`),
+  patch: (path: string) => request(app).patch(path).set('Authorization', `Bearer ${platformToken}`),
+  put: (path: string) => request(app).put(path).set('Authorization', `Bearer ${platformToken}`),
+});
+const tenant = () => ({
+  get: (path: string) => request(app).get(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId),
+  post: (path: string) => request(app).post(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId),
+  patch: (path: string) => request(app).patch(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId),
+  put: (path: string) => request(app).put(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId),
+});
 
 beforeAll(async () => {
   ({ app } = await import('../../src/app/app.js'));
