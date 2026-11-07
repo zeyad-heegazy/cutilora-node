@@ -7,7 +7,7 @@ import { TenantAuditEvent } from '../models/tenant-audit-event.model.js';
 type TenantScope = { tenantId: string; clinicId: string };
 type Pagination = { page?: number; perPage?: number };
 
-const writePrivacyAudit = async (input: { tenantId: string; clinicId?: string; actorUserId: string; action: string; targetType: string; targetId: string; correlationId?: string | null }) => {
+const writePrivacyAudit = async (input: { tenantId: string; clinicId?: string; actorUserId: string; action: string; targetType: string; targetId: string; requestId?: string | null }) => {
   try {
     await TenantAuditEvent.create({
       tenantId: input.tenantId, actorUserId: input.actorUserId,
