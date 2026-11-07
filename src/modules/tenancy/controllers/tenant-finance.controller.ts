@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { querySchema } from './validation/tenant-finance.validation.js';
+import { querySchema } from '../validation/tenant-finance.validation.js';
 import { clinicFinanceService } from '../../clinics/finance/services/clinic-finance.service.js';
 
 function scope(req: Request) {
