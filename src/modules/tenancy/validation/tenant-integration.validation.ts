@@ -7,3 +7,6 @@ export const schema = z.object({
   config: z.record(z.unknown()).optional(),
   secrets: z.record(z.string().max(4096)).optional(),
 }).strict();
+
+export const rotateCredentialsSchema = z.object({ secrets: z.record(z.string().max(4096)).refine(value => Object.keys(value).length > 0) }).strict();
+export const integrationStatusSchema = z.object({ status: z.enum(['configured', 'disabled']) }).strict();
