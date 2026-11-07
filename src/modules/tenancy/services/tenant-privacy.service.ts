@@ -150,7 +150,7 @@ export const tenantPrivacyService = {
         active: true,
       },
     }, { new: true, runValidators: true }).lean().then(async (item) => {
-      if (item) await writePrivacyAudit({ tenantId: input.tenantId, actorUserId: input.reviewerUserId, action: 'privacy.request.legal_reviewed', targetType: 'PrivacyDataRequest', targetId: input.requestId });
+      if (item) await writePrivacyAudit({ tenantId: input.tenantId, actorUserId: input.actorUserId, action: 'privacy.retention_policy.approved', targetType: 'DataRetentionPolicy', targetId: input.policyId });
       return item;
     });
   },
