@@ -619,7 +619,8 @@ describe('database-backed backend workflows', () => {
     const versions = await tenant().get(`/api/v1/tenant/documents/${documentId}/versions`);
     expect(versions.status).toBe(200);
     expect(versions.body.data.length).toBeGreaterThan(0);
-    const archived = await request(app).delete(`/api/v1/tenant/documents/${documentId}`)
+    const currentDocumentId = String(replaced.body.data._id ?? replaced.body.data.id);
+    const archived = await request(app).delete(`/api/v1/tenant/documents/${currentDocumentId}`)
       .set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId);
     expect(archived.status).toBe(200);
   });
