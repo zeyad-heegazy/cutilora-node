@@ -16,3 +16,7 @@ export const publishSchema = z.object({
   clinicIds: z.array(objectId).min(1).max(100).optional(),
   confirm: z.boolean(),
 }).refine((v) => v.applyTo !== 'selected' || Boolean(v.clinicIds?.length), { message: 'clinicIds are required when applyTo=selected.', path: ['clinicIds'] });
+
+export const listQuerySchema = z.object({ type: z.enum(templateTypes).optional(), status: z.enum(['draft', 'published', 'archived']).optional() });
+export const rollbackSchema = z.object({ expectedVersion: z.number().int().positive(), targetVersion: z.number().int().positive() });
+export const archiveSchema = z.object({ expectedVersion: z.number().int().positive() });
