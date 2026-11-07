@@ -136,6 +136,20 @@ export const tenantPrivacyService = {
     });
   },
 
+  async approveRetentionPolicy(input: { tenantId: string; policyId: string; actorUserId: string; legalBasisReference: string }) {
+    return DataRetentionPolicy.findOneAndUpdate({
+      _id: input.policyId, tenantId: input.tenantId, legalApprovalStatus: 'pending', active: false,
+    }, {
+      $set: {
+        legalApprovalStatus: 'approved',
+        legalBasisReference: input.legalBasisReference,
+        approvedByUserId: input.actorUserId,
+        approvedAt: new Date(),
+        active: true,
+      },
+    }, { new: true, runValidators: true }).lean();
+  },
+
   async revokeConsent(input: { tenantId: string; clinicId: string; consentId: string; actorUserId: string; reason: string }) {
     const original = await ConsentRecord.findOne({
       _id: input.consentId, tenantId: input.tenantId, clinicId: input.clinicId, status: 'granted',
