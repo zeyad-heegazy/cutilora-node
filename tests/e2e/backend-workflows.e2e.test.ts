@@ -284,6 +284,39 @@ describe('database-backed backend workflows', () => {
     expect(revoked.status).toBe(200);
   });
 
+  it('manages webhook endpoint configuration and signing-key rotation', async () => {
+    const created = await tenant().post('/api/v1/tenant/webhooks').send({
+      name: 'E2E Webhook',
+      url: 'https://example.test/cutilora-webhook',
+      events: ['appointment.created', 'appointment.cancelled'],
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    expect(created.body.data.secret).toBeTruthy();
+    const endpointId = String(created.body.data._id ?? created.body.data.id);
+
+    const listed = await tenant().get('/api/v1/tenant/webhooks');
+    expect(listed.status).toBe(200);
+    expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === endpointId)).toBe(true);
+
+    const rotated = await tenant().post(`/api/v1/tenant/webhooks/${endpointId}/rotate-secret`);
+    expect(rotated.status).toBe(200);
+    expect(rotated.body.data.secret).toBeTruthy();
+    expect(rotated.body.data.secret).not.toBe(created.body.data.secret);
+
+    const updated = await tenant().patch(`/api/v1/tenant/webhooks/${endpointId}`).send({
+      name: 'E2E Webhook Updated',
+      events: ['appointment.created'],
+    });
+    expect(updated.status).toBe(200);
+
+    const deliveries = await tenant().get(`/api/v1/tenant/webhooks/${endpointId}/deliveries`);
+    expect(deliveries.status).toBe(200);
+    expect(deliveries.body.data).toEqual([]);
+
+    const disabled = await tenant().patch(`/api/v1/tenant/webhooks/${endpointId}/status`).send({ status: 'disabled' });
+    expect(disabled.status).toBe(200);
+  });
+
   it('updates organization profile, preferences and billing profile', async () => {
     const profile = await tenant().patch('/api/v1/tenant/profile').send({
       displayName: 'E2E Aesthetic Group Updated',
