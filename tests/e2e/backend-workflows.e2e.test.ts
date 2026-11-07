@@ -16,9 +16,9 @@ let ownerToken = '';
 let tenantId = '';
 let clinicId = '';
 let invoiceId = '';
-let paymentId = '';
+let paymentId = '';\nlet approverToken = '';\nlet approverUserId = '';
 const platformEmail = 'e2e-platform-admin@cutilora.test';
-const ownerEmail = 'e2e-tenant-owner@cutilora.test';
+const ownerEmail = 'e2e-tenant-owner@cutilora.test';\nconst approverEmail = 'e2e-tenant-approver@cutilora.test';
 const password = 'E2E-Strong-Password-2026!';
 
 const platform = () => request(app).set('Authorization', `Bearer ${platformToken}`);
@@ -177,7 +177,7 @@ describe('database-backed backend workflows', () => {
       clinicId,
       currency: 'EGP',
       invoiceNumber: 'E2E-PKG-INV-0001',
-      lineItems: [{ description: 'Package sale', quantity: 1, unitPrice: 900 }],
+      patientId: new mongoose.Types.ObjectId().toString(),\n      lineItems: [{ description: 'Package sale', quantity: 1, unitPrice: 900 }],
     });
     expect(invoice.status).toBe(201);
 
@@ -210,8 +210,32 @@ describe('database-backed backend workflows', () => {
     expect(events.status).toBe(200);
     expect(events.body.data.length).toBeGreaterThan(0);
 
-    const refunded = await tenant().post(`/api/v1/clinic/finance/packages/${packageId}/refund`).send({
-      reason: 'E2E refund',
+    const refundInvoice = await tenant().post('/api/v1/clinic/finance/invoices').send({
+      clinicId,
+      patientId: new mongoose.Types.ObjectId().toString(),
+      currency: 'EGP',
+      invoiceNumber: 'E2E-PKG-REFUND-INV-0001',
+      lineItems: [{ description: 'Refundable package sale', quantity: 1, unitPrice: 400 }],
+    });
+    expect(refundInvoice.status).toBe(201);
+    const refundPayment = await tenant().post('/api/v1/clinic/finance/payments').send({
+      invoiceId: String(refundInvoice.body.data._id ?? refundInvoice.body.data.id),
+      amount: 400,
+      currency: 'EGP',
+      method: 'cash',
+      idempotencyKey: 'e2e-package-refund-payment-0001',
+    });
+    expect(refundPayment.status).toBe(201);
+    const refundablePackage = await tenant().post('/api/v1/clinic/finance/packages').send({
+      invoiceId: String(refundInvoice.body.data._id ?? refundInvoice.body.data.id),
+      paymentId: String(refundPayment.body.data._id ?? refundPayment.body.data.id),
+      name: 'E2E refundable package',
+      saleAmount: 400,
+      sessionsPurchased: 2,
+    });
+    expect(refundablePackage.status).toBe(201);
+    const refunded = await tenant().post(`/api/v1/clinic/finance/packages/${refundablePackage.body.data._id ?? refundablePackage.body.data.id}/refund`).send({
+      reason: 'E2E unused package refund',
       method: 'cash',
     });
     expect([200, 201]).toContain(refunded.status);
