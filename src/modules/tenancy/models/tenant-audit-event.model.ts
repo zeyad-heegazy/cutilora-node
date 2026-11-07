@@ -19,7 +19,7 @@ schema.pre('save', function () {
     if (depth > 5) return '[TRUNCATED]';
     if (Array.isArray(value)) return value.slice(0, 100).map(item => redact(item, depth + 1));
     if (!value || typeof value !== 'object') return typeof value === 'string' ? value.slice(0, 2000) : value;
-    return Object.fromEntries(Object.entries(value).slice(0, 100).map(([key, item]) => [key, /password|secret|token|credential|authorization|api.?key|card|cvv/i.test(key) ? '[REDACTED]' : redact(item, depth + 1)]));
+    return Object.fromEntries(Object.entries(value).slice(0, 100).map(([key, item]) => [key, /password|secret|token|credential|authorization|api.?key|card|cvv|patient|medical|diagnos|treatment|prescription|clinical|health|email|phone|address|date.?of.?birth|national.?id|document.?snapshot|attachment|file.?content|notes|reason/i.test(key) ? '[REDACTED]' : redact(item, depth + 1)]));
   };
   this.metadata = redact(this.metadata ?? {});
   if (this.changes) this.changes = redact(this.changes);
