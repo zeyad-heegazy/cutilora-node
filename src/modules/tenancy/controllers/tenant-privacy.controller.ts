@@ -8,6 +8,7 @@ const pageSchema = z.object({
   perPage: z.coerce.number().int().min(1).max(100).default(25),
 });
 const patientIdSchema = z.string().trim().min(1).max(120);
+const routeParam = (req: Request, key: string): string => z.string().trim().min(1).parse(req.params[key]);
 const consentSchema = z.object({
   patientId: patientIdSchema,
   consentType: z.string().trim().min(1).max(100),
@@ -59,7 +60,7 @@ export const tenantPrivacyController = {
 
   async getConsent(req: Request, res: Response, next: NextFunction) {
     try {
-      const item = await tenantPrivacyService.getConsent({ ...scope(req), consentId: req.params.consentId });
+      const item = await tenantPrivacyService.getConsent({ ...scope(req), consentId: routeParam(req, 'consentId') });
       if (!item) return res.status(404).json({ success: false, error: { code: 'CONSENT_NOT_FOUND', message: 'Consent record not found.' } });
       res.json({ success: true, data: item });
     } catch (error) { next(error); }
@@ -77,7 +78,7 @@ export const tenantPrivacyController = {
     try {
       const input = z.object({ legalBasisReference: z.string().trim().min(1).max(200) }).parse(req.body);
       const item = await tenantPrivacyService.approveRetentionPolicy({
-        tenantId: req.tenantContext!.tenantId, policyId: req.params.policyId,
+        tenantId: req.tenantContext!.tenantId, policyId: routeParam(req, 'policyId'),
         actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
       if (!item) return res.status(409).json({ success: false, error: { code: 'RETENTION_POLICY_NOT_APPROVABLE', message: 'Policy not found, already reviewed, or not pending approval.' } });
@@ -144,7 +145,7 @@ export const tenantPrivacyController = {
 
   async getDataRequest(req: Request, res: Response, next: NextFunction) {
     try {
-      const item = await tenantPrivacyService.getDataRequest({ ...scope(req), requestId: req.params.requestId });
+      const item = await tenantPrivacyService.getDataRequest({ ...scope(req), requestId: routeParam(req, 'requestId') });
       if (!item) return res.status(404).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_FOUND', message: 'Privacy request not found.' } });
       res.json({ success: true, data: item });
     } catch (error) { next(error); }
