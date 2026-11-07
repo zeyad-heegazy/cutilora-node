@@ -107,6 +107,29 @@ describe('database-backed backend workflows', () => {
     expect(clinic).toBeTruthy();
     clinicId = String(clinic.id ?? clinic._id);
     expect(clinicId).toMatch(/^[a-f\d]{24}$/i);
+
+    const { User } = await import('../../src/modules/auth/models/user.model.js');
+    const { TenantMembership } = await import('../../src/modules/tenancy/models/tenant-membership.model.js');
+    const { hashPassword } = await import('../../src/modules/auth/services/auth.security.js');
+    const approver = await User.create({
+      name: 'E2E Finance Approver',
+      email: approverEmail,
+      passwordHash: await hashPassword(password),
+    });
+    approverUserId = String(approver._id);
+    await TenantMembership.create({
+      userId: approver._id,
+      tenantId,
+      scope: 'tenant',
+      role: 'billing_admin',
+      status: 'active',
+    });
+    const approverLogin = await request(app).post('/api/v1/auth/login').send({
+      email: approverEmail,
+      password,
+    });
+    expect(approverLogin.status).toBe(200);
+    approverToken = approverLogin.body.data.access_token;
   });
 
   it('updates organization profile, preferences and billing profile', async () => {
@@ -271,8 +294,17 @@ describe('database-backed backend workflows', () => {
     });
     expect(closed.status).toBe(200);
 
-    const approved = await tenant().post(`/api/v1/clinic/finance/daily-closes/${closeId}/approve`);
-    expect(approved.status).toBe(200);
+    const selfApproval = await tenant().post(`/api/v1/clinic/finance/daily-closes/${closeId}/approve`);
+    expect(selfApproval.status).toBe(403);
+    expect(selfApproval.body.error.code).toBe('DAILY_CLOSE_SEPARATION_REQUIRED');
+
+    const approved = await request(app)
+      .post(`/api/v1/clinic/finance/daily-closes/${closeId}/approve`)
+      .set('Authorization', `Bearer ${approverToken}`)
+      .set('X-Tenant-Id', tenantId);
+    expect(approved.status, JSON.stringify(approved.body)).toBe(200);
+    expect(approved.body.data.status).toBe('approved');
+    expect(String(approved.body.data.approvedBy)).toBe(approverUserId);
   });
 
   it('enforces tenant isolation and rejects malformed tenant context', async () => {
