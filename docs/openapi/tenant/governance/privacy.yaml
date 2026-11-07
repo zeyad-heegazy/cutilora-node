@@ -161,10 +161,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [decision, legalReviewReference]
+              required: [decision]
               properties:
                 decision: { type: string, enum: [approved, rejected] }
-                legalReviewReference: { type: string, maxLength: 160 }
                 resolutionNote: { type: string, maxLength: 2000 }
       responses:
         "200": { description: Request decision recorded }
