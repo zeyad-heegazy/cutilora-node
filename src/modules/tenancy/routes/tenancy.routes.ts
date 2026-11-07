@@ -68,6 +68,7 @@ tenantRouter.post('/consents/:consentId/revoke', requireTenantPermission('audit.
 tenantRouter.post('/privacy/data-requests', requireTenantPermission('audit.export'), tenantPrivacyController.createDataRequest);
 tenantRouter.get('/privacy/data-requests', requireTenantPermission('audit.read'), tenantPrivacyController.listDataRequests);
 tenantRouter.get('/privacy/data-requests/:requestId', requireTenantPermission('audit.read'), tenantPrivacyController.getDataRequest);
+tenantRouter.post('/privacy/data-requests/:requestId/legal-review', requireTenantPermission('audit.export'), tenantPrivacyController.reviewDataRequest);
 tenantRouter.post('/privacy/data-requests/:requestId/decision', requireTenantPermission('audit.export'), tenantPrivacyController.decideDataRequest);
 tenantRouter.get('/audit-logs', requireTenantScope, requireTenantPermission('audit.read'), tenancyController.listTenantAuditEvents);
 tenantRouter.get('/audit-logs/export', requireTenantScope, requireTenantPermission('audit.export'), tenancyController.exportTenantAuditEvents);
