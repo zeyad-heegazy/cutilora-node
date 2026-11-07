@@ -36,6 +36,14 @@ const tenant = () => ({
   patch: (path: string) => request(app).patch(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId),
   put: (path: string) => request(app).put(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId),
 });
+const clinicTenant = () => ({
+  get: (path: string) => request(app).get(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId).set('X-Clinic-Id', clinicId),
+  post: (path: string) => request(app).post(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId).set('X-Clinic-Id', clinicId),
+  patch: (path: string) => request(app).patch(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId).set('X-Clinic-Id', clinicId),
+  put: (path: string) => request(app).put(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId).set('X-Clinic-Id', clinicId),
+  delete: (path: string) => request(app).delete(path).set('Authorization', `Bearer ${ownerToken}`).set('X-Tenant-Id', tenantId).set('X-Clinic-Id', clinicId),
+});
+
 
 beforeAll(async () => {
   ({ app } = await import('../../src/app/app.js'));
@@ -155,6 +163,40 @@ describe('database-backed backend workflows', () => {
     });
     expect(approverLogin.status).toBe(200);
     approverToken = approverLogin.body.data.access_token;
+  });
+
+  it('creates a clinic branch and manages its holiday lifecycle', async () => {
+    const created = await clinicTenant().post('/api/v1/tenant/branches').send({
+      name: 'E2E Maadi Branch',
+      code: 'E2E-MAADI',
+      timezone: 'Africa/Cairo',
+      address: 'Maadi, Cairo',
+      status: 'active',
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const branchId = String(created.body.data._id ?? created.body.data.id);
+    expect(branchId).toMatch(/^[a-f0-9]{24}$/i);
+
+    const details = await clinicTenant().get(`/api/v1/tenant/branches/${branchId}`);
+    expect(details.status).toBe(200);
+
+    const holiday = await clinicTenant().post(`/api/v1/tenant/branches/${branchId}/holidays`).send({
+      title: 'E2E Clinic Holiday',
+      type: 'closure',
+      startDate: '2026-12-01',
+      endDate: '2026-12-01',
+      isAllDay: true,
+      reason: 'E2E scheduled closure',
+    });
+    expect(holiday.status, JSON.stringify(holiday.body)).toBe(201);
+    const holidayId = String(holiday.body.data._id ?? holiday.body.data.id);
+
+    const listed = await clinicTenant().get(`/api/v1/tenant/branches/${branchId}/holidays`);
+    expect(listed.status).toBe(200);
+    expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === holidayId)).toBe(true);
+
+    const cancelled = await clinicTenant().delete(`/api/v1/tenant/branches/${branchId}/holidays/${holidayId}`);
+    expect(cancelled.status).toBe(200);
   });
 
   it('creates, lists and accepts a clinic-scoped staff invitation', async () => {
