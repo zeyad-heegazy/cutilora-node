@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import mongoose from 'mongoose';
 import type { Express } from 'express';
@@ -9,6 +9,11 @@ process.env.MONGODB_URI = 'mongodb://127.0.0.1:27017/cutilora_e2e_test';
 process.env.MONGODB_DB_NAME = 'cutilora_e2e_test';
 process.env.JWT_SECRET = 'e2e-test-secret-that-is-at-least-thirty-two-characters';
 process.env.INTEGRATION_ENCRYPTION_KEY = 'e2e-test-integration-key-that-is-at-least-thirty-two';
+
+// Keep webhook URL validation deterministic without relying on CI DNS/network access.
+vi.mock('node:dns/promises', () => ({
+  lookup: vi.fn(async () => [{ address: '93.184.216.34', family: 4 }]),
+}));
 
 let app: Express;
 let platformToken = '';
