@@ -63,10 +63,13 @@ tenantRouter.get('/reports/organization', requireTenantScope, requireTenantPermi
 tenantRouter.get('/reports/organization/export', requireTenantScope, requireTenantPermission('reports.export'), tenantReportsController.exportOrganizationOverview);
 tenantRouter.get('/patients/:patientId/access-history', requireTenantPermission('audit.read'), tenantPrivacyController.patientAccessHistory);
 tenantRouter.get('/consents', requireTenantPermission('audit.read'), tenantPrivacyController.listConsents);
+tenantRouter.get('/consents/:consentId', requireTenantPermission('audit.read'), tenantPrivacyController.getConsent);
 tenantRouter.post('/consents', requireTenantPermission('audit.export'), tenantPrivacyController.createConsent);
 tenantRouter.post('/consents/:consentId/revoke', requireTenantPermission('audit.export'), tenantPrivacyController.revokeConsent);
 tenantRouter.post('/privacy/data-requests', requireTenantPermission('audit.export'), tenantPrivacyController.createDataRequest);
 tenantRouter.get('/privacy/data-requests', requireTenantPermission('audit.read'), tenantPrivacyController.listDataRequests);
+tenantRouter.get('/privacy/retention-policies', requireTenantScope, requireTenantPermission('audit.read'), tenantPrivacyController.listRetentionPolicies);
+tenantRouter.post('/privacy/retention-policies', requireTenantScope, requireTenantPermission('audit.export'), tenantPrivacyController.createRetentionPolicy);
 tenantRouter.get('/privacy/data-requests/:requestId', requireTenantPermission('audit.read'), tenantPrivacyController.getDataRequest);
 tenantRouter.post('/privacy/data-requests/:requestId/legal-review', requireTenantPermission('audit.export'), tenantPrivacyController.reviewDataRequest);
 tenantRouter.post('/privacy/data-requests/:requestId/decision', requireTenantPermission('audit.export'), tenantPrivacyController.decideDataRequest);
