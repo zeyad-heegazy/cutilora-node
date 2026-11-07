@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express';
-import { baseScope, invoiceSchema, paymentSchema, refundSchema, voidSchema, expenseSchema, packageSchema, packageListSchema, packageRedeemSchema, packageRefundSchema, dailyCloseOpenSchema, dailyCloseSchema } from './validation/clinic-finance.validation.js';
+import { baseScope, invoiceSchema, paymentSchema, refundSchema, voidSchema, expenseSchema, packageSchema, packageListSchema, packageRedeemSchema, packageRefundSchema, dailyCloseOpenSchema, dailyCloseSchema } from '../validation/clinic-finance.validation.js';
 import { clinicFinanceService } from '../services/clinic-finance.service.js';
 
 function parseScope(query: any, context: any) {
