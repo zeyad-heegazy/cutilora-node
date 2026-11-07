@@ -78,7 +78,7 @@ export const tenantPrivacyController = {
       const input = z.object({ legalBasisReference: z.string().trim().min(1).max(200) }).parse(req.body);
       const item = await tenantPrivacyService.approveRetentionPolicy({
         tenantId: req.tenantContext!.tenantId, policyId: req.params.policyId,
-        actorUserId: req.auth!.userId, ...input,
+        actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
       if (!item) return res.status(409).json({ success: false, error: { code: 'RETENTION_POLICY_NOT_APPROVABLE', message: 'Policy not found, already reviewed, or not pending approval.' } });
       res.json({ success: true, data: item, executionEnabled: false });
@@ -106,7 +106,7 @@ export const tenantPrivacyController = {
       const actualHash = createHash('sha256').update(input.documentSnapshot, 'utf8').digest('hex');
       if (actualHash !== input.documentHash.toLowerCase()) return res.status(400).json({ success: false, error: { code: 'CONSENT_HASH_MISMATCH', message: 'documentHash must be the SHA-256 hash of documentSnapshot.' } });
       const item = await tenantPrivacyService.recordConsent({
-        ...scope(req), ...input, actorUserId: req.auth!.userId, signedAt: new Date(),
+        ...scope(req), ...input, actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), signedAt: new Date(),
         documentHash: input.documentHash.toLowerCase(),
       });
       res.status(201).json({ success: true, data: { ...item.toObject(), documentSnapshot: undefined } });
@@ -117,7 +117,7 @@ export const tenantPrivacyController = {
     try {
       const reason = z.object({ reason: z.string().trim().min(1).max(500) }).parse(req.body).reason;
       const item = await tenantPrivacyService.revokeConsent({
-        ...scope(req), consentId: req.params.consentId, actorUserId: req.auth!.userId, reason,
+        ...scope(req), consentId: req.params.consentId, actorUserId: req.auth!.userId, reason, correlationId: String(res.getHeader('x-request-id') ?? ''),
       });
       if (!item) return res.status(404).json({ success: false, error: { code: 'CONSENT_NOT_FOUND', message: 'Active consent not found.' } });
       res.status(201).json({ success: true, data: { ...item.toObject(), documentSnapshot: undefined } });
@@ -128,7 +128,7 @@ export const tenantPrivacyController = {
     try {
       const input = requestSchema.parse(req.body);
       const item = await tenantPrivacyService.createDataRequest({
-        ...scope(req), ...input, requestedByUserId: req.auth!.userId,
+        ...scope(req), ...input, requestedByUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''),
       });
       res.status(201).json({ success: true, data: item });
     } catch (error) { next(error); }
@@ -158,7 +158,7 @@ export const tenantPrivacyController = {
       }).parse(req.body);
       const item = await tenantPrivacyService.reviewDataRequest({
         ...scope(req), requestId: req.params.requestId,
-        reviewerUserId: req.auth!.userId, ...input,
+        reviewerUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
       if (!item) return res.status(409).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_REVIEWABLE', message: 'Request not found, already reviewed, or no longer pending.' } });
       res.json({ success: true, data: item });
@@ -170,7 +170,7 @@ export const tenantPrivacyController = {
       const input = z.object({ resolutionNote: z.string().trim().min(1).max(2000) }).parse(req.body);
       const item = await tenantPrivacyService.fulfillDataRequest({
         ...scope(req), requestId: req.params.requestId,
-        actorUserId: req.auth!.userId, ...input,
+        actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
       if (!item) return res.status(409).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_FULFILLABLE', message: 'Only legally approved requests can be marked fulfilled.' } });
       res.json({ success: true, data: item, automatedDataMutation: false });
