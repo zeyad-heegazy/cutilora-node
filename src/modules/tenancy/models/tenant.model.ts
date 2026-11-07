@@ -71,7 +71,7 @@ const billingProfileSchema = new Schema({
   phone: { type: String, trim: true, maxlength: 40, default: '' },
   address: { type: String, trim: true, maxlength: 500, default: '' },
   city: { type: String, trim: true, maxlength: 120, default: '' },
-  countryCode: { type: String, trim: true, uppercase: true, minlength: 2, maxlength: 2, default: '' },
+  countryCode: { type: String, trim: true, uppercase: true, maxlength: 2, match: [/^$|^[A-Z]{2}$/, 'countryCode must be empty or a two-letter ISO country code.'], default: '' },
 }, { _id: false });
 
 const schema = new Schema(
