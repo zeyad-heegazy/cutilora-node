@@ -205,6 +205,8 @@ paths:
     $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1data-requests~1{requestId}"
   /tenant/privacy/data-requests/{requestId}/legal-review:
     $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1data-requests~1{requestId}~1legal-review"
+  /tenant/privacy/data-requests/{requestId}/fulfill:
+    $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1data-requests~1{requestId}~1fulfill"
   /tenant/privacy/data-requests/{requestId}/decision:
     $ref: "./openapi/tenant/governance/privacy.yaml#/paths/~1tenant~1privacy~1data-requests~1{requestId}~1decision"
   /tenant/privacy/retention-policies/{policyId}/approve:
