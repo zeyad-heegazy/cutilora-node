@@ -105,11 +105,11 @@ describe('database-backed backend workflows', () => {
     });
     expect(profile.status).toBe(200);
 
-    const preferences = await tenant().patch('/api/v1/tenant/preferences').send({
+    const preferences = await tenant().patch('/api/v1/tenant/preferences').send({ preferences: {
       locale: 'ar',
       currency: 'EGP',
       timezone: 'Africa/Cairo',
-    });
+    } });
     expect(preferences.status).toBe(200);
 
     const billing = await tenant().patch('/api/v1/tenant/billing-profile').send({
