@@ -6,10 +6,10 @@ const schema = new Schema({
   retentionPeriodDays: { type: Number, min: 1, default: null, immutable: true },
   action: { type: String, enum: ['archive', 'anonymize', 'delete', 'manual_review'], default: 'manual_review', immutable: true },
   legalBasisReference: { type: String, trim: true, maxlength: 200, default: null, immutable: true },
-  legalApprovalStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending', immutable: true },
-  approvedByUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null, immutable: true },
-  approvedAt: { type: Date, default: null, immutable: true },
-  active: { type: Boolean, default: false, immutable: true },
+  legalApprovalStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+  approvedByUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
+  approvedAt: { type: Date, default: null },
+  active: { type: Boolean, default: false },
 }, { timestamps: { createdAt: true, updatedAt: false }, versionKey: false, minimize: false });
 
 schema.index({ tenantId: 1, recordType: 1, createdAt: -1 });
