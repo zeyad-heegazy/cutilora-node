@@ -89,6 +89,31 @@ describe('database-backed backend workflows', () => {
     expect(tenantId).toMatch(/^[a-f\d]{24}$/i);
     expect(response.body.data).toBeTruthy();
 
+    const subscription = await platform().put(`/api/v1/platform/tenants/${tenantId}/subscription`).send({
+      plan: {
+        code: 'e2e-starter',
+        name: 'E2E Starter',
+        amount: 500,
+        currency: 'EGP',
+        limits: { maxClinics: 5, maxBranches: 10, maxUsers: 20, maxStorageBytes: 10485760 },
+        features: ['integrations', 'webhooks'],
+      },
+      billingCycle: 'monthly',
+      status: 'active',
+    });
+    expect(subscription.status).toBe(200);
+
+    const subscriptionPayment = await platform().post(`/api/v1/platform/tenants/${tenantId}/subscription/payments`).send({
+      amount: 500,
+      currency: 'EGP',
+      status: 'paid',
+      method: 'bank_transfer',
+      provider: 'manual',
+      providerReference: 'E2E-SUB-PAY-001',
+      invoiceNumber: 'E2E-SUB-INV-001',
+    });
+    expect(subscriptionPayment.status).toBe(201);
+
     const ownerLogin = await request(app).post('/api/v1/auth/login').send({
       email: ownerEmail,
       password,
