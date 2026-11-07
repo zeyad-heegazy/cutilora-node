@@ -126,6 +126,7 @@ export const tenantPrivacyService = {
     retentionPeriodDays?: number | null;
     action: 'archive' | 'anonymize' | 'delete' | 'manual_review';
     legalBasisReference?: string | null;
+    createdByUserId?: string;
   }) {
     return DataRetentionPolicy.create({
       ...input,
@@ -147,7 +148,10 @@ export const tenantPrivacyService = {
         approvedAt: new Date(),
         active: true,
       },
-    }, { new: true, runValidators: true }).lean();
+    }, { new: true, runValidators: true }).lean().then(async (item) => {
+      if (item) await writePrivacyAudit({ tenantId: input.tenantId, actorUserId: input.reviewerUserId, action: 'privacy.request.legal_reviewed', targetType: 'PrivacyDataRequest', targetId: input.requestId });
+      return item;
+    });
   },
 
   async revokeConsent(input: { tenantId: string; clinicId: string; consentId: string; actorUserId: string; reason: string }) {
@@ -210,6 +214,7 @@ export const tenantPrivacyService = {
     request.decisionAt = new Date();
     request.resolutionNote = input.resolutionNote ?? '';
     await request.save();
+    await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: `privacy.request.${input.decision}`, targetType: 'PrivacyDataRequest', targetId: input.requestId });
     return request.toObject();
   },
 
