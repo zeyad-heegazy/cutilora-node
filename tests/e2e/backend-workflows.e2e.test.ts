@@ -203,7 +203,7 @@ describe('database-backed backend workflows', () => {
     });
     expect(created.status, JSON.stringify(created.body)).toBe(201);
     const roleId = String(created.body.data._id ?? created.body.data.id);
-    expect(roleId).toMatch(/^[a-f\\d]{24}$/i);
+    expect(roleId).toMatch(/^[a-f0-9]{24}$/i);
 
     const listed = await tenant().get('/api/v1/tenant/roles?scope=clinic');
     expect(listed.status).toBe(200);
@@ -270,7 +270,7 @@ describe('database-backed backend workflows', () => {
     });
     expect(saved.status, JSON.stringify(saved.body)).toBe(200);
     const integrationId = String(saved.body.data._id ?? saved.body.data.id);
-    expect(integrationId).toMatch(/^[a-f\\d]{24}$/i);
+    expect(integrationId).toMatch(/^[a-f0-9]{24}$/i);
     expect(JSON.stringify(saved.body)).not.toContain('integration-fixture-value');
     // Provider connection checks are tested with a mocked adapter in service tests; E2E must not call live providers.
     const rotated = await tenant().post(`/api/v1/tenant/integrations/${integrationId}/rotate-credentials`).send({
