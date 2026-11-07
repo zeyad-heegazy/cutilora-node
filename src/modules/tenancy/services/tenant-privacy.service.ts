@@ -129,6 +129,7 @@ export const tenantPrivacyService = {
     action: 'archive' | 'anonymize' | 'delete' | 'manual_review';
     legalBasisReference?: string | null;
     actorUserId: string;
+    correlationId?: string;
   }) {
     const item = await DataRetentionPolicy.create({
       tenantId: input.tenantId, recordType: input.recordType,
@@ -136,7 +137,7 @@ export const tenantPrivacyService = {
       legalBasisReference: input.legalBasisReference ?? null,
       active: false, legalApprovalStatus: 'pending', approvedByUserId: null, approvedAt: null,
     });
-    await writePrivacyAudit({ tenantId: input.tenantId, actorUserId: input.actorUserId, action: 'privacy.retention_policy.proposed', targetType: 'DataRetentionPolicy', targetId: String(item._id) });
+    await writePrivacyAudit({ tenantId: input.tenantId, actorUserId: input.actorUserId, action: 'privacy.retention_policy.proposed', targetType: 'DataRetentionPolicy', targetId: String(item._id), requestId: input.correlationId });
     return item;
   },
 
