@@ -1,0 +1,118 @@
+import type { NextFunction, Request, Response } from 'express';
+import { z } from 'zod';
+import { tenantPrivacyService } from '../services/tenant-privacy.service.js';
+
+const pageSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+});
+const patientIdSchema = z.string().trim().min(1).max(120);
+const consentSchema = z.object({
+  patientId: patientIdSchema,
+  consentType: z.string().trim().min(1).max(100),
+  documentVersion: z.string().trim().min(1).max(80),
+  documentHash: z.string().trim().min(16).max(128),
+  documentSnapshot: z.string().min(1).max(100000),
+  status: z.enum(['granted', 'declined']),
+  source: z.enum(['clinic_portal', 'patient_portal', 'import', 'other']).default('clinic_portal'),
+});
+const requestSchema = z.object({
+  patientId: patientIdSchema,
+  requestType: z.enum(['access', 'export', 'correction', 'deletion']),
+  reason: z.string().trim().max(1000).optional(),
+});
+const decisionSchema = z.object({
+  decision: z.enum(['approved', 'rejected']),
+  legalReviewReference: z.string().trim().min(1).max(160),
+  resolutionNote: z.string().trim().max(2000).optional(),
+});
+
+const scope = (req: Request) => {
+  const context = req.tenantContext!;
+  if (!context.clinicId) {
+    const error = new Error('Select a clinic using X-Clinic-Id for this privacy operation.') as Error & { status?: number; code?: string };
+    error.status = 400;
+    error.code = 'CLINIC_CONTEXT_REQUIRED';
+    throw error;
+  }
+  return { tenantId: context.tenantId, clinicId: context.clinicId };
+};
+
+export const tenantPrivacyController = {
+  async patientAccessHistory(req: Request, res: Response, next: NextFunction) {
+    try {
+      const patientId = patientIdSchema.parse(req.params.patientId);
+      const query = pageSchema.parse(req.query);
+      const result = await tenantPrivacyService.listPatientAccessHistory({ ...scope(req), patientId, ...query });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (error) { next(error); }
+  },
+
+  async listConsents(req: Request, res: Response, next: NextFunction) {
+    try {
+      const patientId = patientIdSchema.parse(req.query.patientId);
+      const query = pageSchema.parse(req.query);
+      const result = await tenantPrivacyService.listPatientConsents({ ...scope(req), patientId, ...query });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (error) { next(error); }
+  },
+
+  async createConsent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = consentSchema.parse(req.body);
+      const item = await tenantPrivacyService.recordConsent({
+        ...scope(req), ...input, actorUserId: req.auth!.userId, signedAt: new Date(),
+        documentHash: input.documentHash.toLowerCase(),
+      });
+      res.status(201).json({ success: true, data: { ...item.toObject(), documentSnapshot: undefined } });
+    } catch (error) { next(error); }
+  },
+
+  async revokeConsent(req: Request, res: Response, next: NextFunction) {
+    try {
+      const reason = z.object({ reason: z.string().trim().min(1).max(500) }).parse(req.body).reason;
+      const item = await tenantPrivacyService.revokeConsent({
+        ...scope(req), consentId: req.params.consentId, actorUserId: req.auth!.userId, reason,
+      });
+      if (!item) return res.status(404).json({ success: false, error: { code: 'CONSENT_NOT_FOUND', message: 'Active consent not found.' } });
+      res.status(201).json({ success: true, data: { ...item.toObject(), documentSnapshot: undefined } });
+    } catch (error) { next(error); }
+  },
+
+  async createDataRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = requestSchema.parse(req.body);
+      const item = await tenantPrivacyService.createDataRequest({
+        ...scope(req), ...input, requestedByUserId: req.auth!.userId,
+      });
+      res.status(201).json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
+
+  async listDataRequests(req: Request, res: Response, next: NextFunction) {
+    try {
+      const query = pageSchema.parse(req.query);
+      const result = await tenantPrivacyService.listDataRequests({ ...scope(req), ...query });
+      res.json({ success: true, data: result.items, pagination: result.pagination });
+    } catch (error) { next(error); }
+  },
+
+  async getDataRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const item = await tenantPrivacyService.getDataRequest({ ...scope(req), requestId: req.params.requestId });
+      if (!item) return res.status(404).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_FOUND', message: 'Privacy request not found.' } });
+      res.json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
+
+  async decideDataRequest(req: Request, res: Response, next: NextFunction) {
+    try {
+      const input = decisionSchema.parse(req.body);
+      const item = await tenantPrivacyService.decideDataRequest({
+        ...scope(req), requestId: req.params.requestId, actorUserId: req.auth!.userId, ...input,
+      });
+      if (!item) return res.status(409).json({ success: false, error: { code: 'PRIVACY_REQUEST_NOT_REVIEWABLE', message: 'Request not found, already decided, or legal approval is incomplete.' } });
+      res.json({ success: true, data: item });
+    } catch (error) { next(error); }
+  },
+};
