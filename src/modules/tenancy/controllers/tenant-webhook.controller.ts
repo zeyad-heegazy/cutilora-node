@@ -1,15 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
-import { z } from 'zod';
+import { createSchema, updateSchema } from '../validation/tenant-webhook.validation.js';
 import { tenantWebhookService } from '../services/tenant-webhook.service.js';
-
-const id = z.string().regex(/^[a-f0-9]{24}$/i);
-const createSchema = z.object({
-  name: z.string().trim().min(2).max(120),
-  url: z.string().url().max(2048),
-  clinicId: id.nullable().optional(),
-  events: z.array(z.string().trim().min(1).max(120)).min(1).max(100),
-}).strict();
-const updateSchema = createSchema.partial().refine(value => Object.keys(value).length > 0, 'At least one webhook field must be provided.');
 
 export const tenantWebhookController = {
   async list(req: Request, res: Response, next: NextFunction) {
