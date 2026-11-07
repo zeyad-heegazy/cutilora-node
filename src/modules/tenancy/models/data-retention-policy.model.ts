@@ -5,7 +5,7 @@ const schema = new Schema({
   recordType: { type: String, required: true, trim: true, maxlength: 100, immutable: true },
   retentionPeriodDays: { type: Number, min: 1, default: null, immutable: true },
   action: { type: String, enum: ['archive', 'anonymize', 'delete', 'manual_review'], default: 'manual_review', immutable: true },
-  legalBasisReference: { type: String, trim: true, maxlength: 200, default: null, immutable: true },
+  legalBasisReference: { type: String, trim: true, maxlength: 200, default: null },
   legalApprovalStatus: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
   approvedByUserId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   approvedAt: { type: Date, default: null },
