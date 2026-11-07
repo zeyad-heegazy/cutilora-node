@@ -554,7 +554,7 @@ export const tenantBillingProfileSchema = z.object({
   legalName: z.string().trim().max(200).optional(),
   taxNumber: z.string().trim().max(100).optional(),
   vatNumber: z.string().trim().max(100).optional(),
-  email: z.string().trim().email().max(254).or(z.literal('')).optional(),
+  email: z.string().trim().email().max(254).toLowerCase().or(z.literal('')).optional(),
   phone: z.string().trim().max(40).optional(),
   address: z.string().trim().max(500).optional(),
   city: z.string().trim().max(120).optional(),
@@ -576,5 +576,22 @@ export const tenantSubscriptionChangeRequestSchema = z.object({
       message: 'A target plan or billing cycle is required for upgrade and downgrade requests.',
       path: ['targetPlanCode'],
     });
+  }
+
+  if (['cancel', 'reactivate'].includes(value.type)) {
+    if (value.targetPlanCode !== undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Plan details are not allowed for cancellation or reactivation requests.',
+        path: ['targetPlanCode'],
+      });
+    }
+    if (value.targetBillingCycle !== undefined) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Plan details are not allowed for cancellation or reactivation requests.',
+        path: ['targetBillingCycle'],
+      });
+    }
   }
 });
