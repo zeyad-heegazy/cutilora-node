@@ -16,9 +16,12 @@ let ownerToken = '';
 let tenantId = '';
 let clinicId = '';
 let invoiceId = '';
-let paymentId = '';\nlet approverToken = '';\nlet approverUserId = '';
+let paymentId = '';
+let approverToken = '';
+let approverUserId = '';
 const platformEmail = 'e2e-platform-admin@cutilora.test';
-const ownerEmail = 'e2e-tenant-owner@cutilora.test';\nconst approverEmail = 'e2e-tenant-approver@cutilora.test';
+const ownerEmail = 'e2e-tenant-owner@cutilora.test';
+const approverEmail = 'e2e-tenant-approver@cutilora.test';
 const password = 'E2E-Strong-Password-2026!';
 
 const platform = () => request(app).set('Authorization', `Bearer ${platformToken}`);
@@ -177,7 +180,8 @@ describe('database-backed backend workflows', () => {
       clinicId,
       currency: 'EGP',
       invoiceNumber: 'E2E-PKG-INV-0001',
-      patientId: new mongoose.Types.ObjectId().toString(),\n      lineItems: [{ description: 'Package sale', quantity: 1, unitPrice: 900 }],
+      patientId: new mongoose.Types.ObjectId().toString(),
+      lineItems: [{ description: 'Package sale', quantity: 1, unitPrice: 900 }],
     });
     expect(invoice.status).toBe(201);
 
