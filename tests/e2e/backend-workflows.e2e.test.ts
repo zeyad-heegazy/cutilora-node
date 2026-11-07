@@ -132,6 +132,43 @@ describe('database-backed backend workflows', () => {
     approverToken = approverLogin.body.data.access_token;
   });
 
+  it('creates, lists and accepts a clinic-scoped staff invitation', async () => {
+    const invitedEmail = 'e2e-clinic-staff@cutilora.test';
+    const created = await tenant().post('/api/v1/tenant/invitations').send({
+      email: invitedEmail,
+      channels: ['email'],
+      role: 'staff',
+      scope: 'clinic',
+      clinicId,
+    });
+    expect(created.status).toBe(201);
+    expect(created.body.data.invitation.email).toBe(invitedEmail);
+    expect(created.body.data.invitationToken).toBeTruthy();
+
+    const listed = await tenant().get('/api/v1/tenant/invitations');
+    expect(listed.status).toBe(200);
+    expect(listed.body.data.some((item: any) => item.email === invitedEmail)).toBe(true);
+
+    const accepted = await request(app).post('/api/v1/auth/invitations/accept').send({
+      token: created.body.data.invitationToken,
+      name: 'E2E Clinic Staff',
+      password,
+    });
+    expect(accepted.status).toBe(200);
+
+    const login = await request(app).post('/api/v1/auth/login').send({
+      email: invitedEmail,
+      password,
+    });
+    expect(login.status).toBe(200);
+    const context = await request(app).get('/api/v1/tenant/context')
+      .set('Authorization', `Bearer ${login.body.data.access_token}`)
+      .set('X-Tenant-Id', tenantId)
+      .set('X-Clinic-Id', clinicId);
+    expect(context.status).toBe(200);
+    expect(context.body.data.access.scope).toBe('clinic');
+  });
+
   it('updates organization profile, preferences and billing profile', async () => {
     const profile = await tenant().patch('/api/v1/tenant/profile').send({
       displayName: 'E2E Aesthetic Group Updated',
