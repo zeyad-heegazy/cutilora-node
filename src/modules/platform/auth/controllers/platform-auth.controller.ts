@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { platformAuthService } from '../services/platform-auth.service.js';
-import { bootstrapAdminSchema, loginSchema } from '../../../auth/validations/auth.validation.js';
+import { bootstrapAdminSchema, loginSchema } from '../../../auth/validation/auth.validation.js';
 export const platformAuthController = {
   async login(req: Request, res: Response, next: NextFunction) {
     try { const input = loginSchema.parse(req.body); res.json({ success: true, data: await platformAuthService.login(input.email, input.password) }); }
