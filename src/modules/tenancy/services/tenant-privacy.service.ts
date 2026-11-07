@@ -202,6 +202,17 @@ export const tenantPrivacyService = {
     });
   },
 
+  async fulfillDataRequest(input: { tenantId: string; clinicId: string; requestId: string; actorUserId: string; resolutionNote: string }) {
+    const request = await PrivacyDataRequest.findOneAndUpdate({
+      _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
+      status: 'approved', legalReviewStatus: 'approved',
+    }, {
+      $set: { status: 'fulfilled', fulfilledAt: new Date(), decisionByUserId: input.actorUserId, resolutionNote: input.resolutionNote },
+    }, { new: true, runValidators: true }).lean();
+    if (request) await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'privacy.request.fulfilled', targetType: 'PrivacyDataRequest', targetId: input.requestId });
+    return request;
+  },
+
   async decideDataRequest(input: {
     tenantId: string; clinicId: string; requestId: string; actorUserId: string;
     decision: 'approved' | 'rejected'; resolutionNote?: string;
