@@ -94,7 +94,7 @@ export const tenantPrivacyController = {
         legalBasisReference: z.string().trim().max(200).nullable().optional(),
       }).parse(req.body);
       const item = await tenantPrivacyService.createRetentionPolicy({
-        tenantId: req.tenantContext!.tenantId, actorUserId: req.auth!.userId, ...input,
+        tenantId: req.tenantContext!.tenantId, actorUserId: req.auth!.userId, correlationId: String(res.getHeader('x-request-id') ?? ''), ...input,
       });
       res.status(201).json({ success: true, data: item });
     } catch (error) { next(error); }
