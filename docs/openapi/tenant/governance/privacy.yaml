@@ -168,6 +168,28 @@ paths:
       responses:
         "200": { description: Request decision recorded }
         "409": { description: Legal review is missing or does not match the decision }
+  /tenant/privacy/data-requests/{requestId}/fulfill:
+    post:
+      tags: [Tenant Governance]
+      summary: Mark an approved privacy request manually fulfilled
+      description: Requires an approved legal review and records a completion note. This endpoint does not itself export, correct, anonymize, or delete patient data.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: requestId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolutionNote]
+              properties:
+                resolutionNote: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        "200": { description: Request marked fulfilled; no automated data mutation performed }
+        "409": { description: Request is not approved for fulfillment }
   /tenant/privacy/retention-policies/{policyId}/approve:
     post:
       tags: [Tenant Governance]
