@@ -579,6 +579,85 @@ describe('database-backed backend workflows', () => {
     expect(foreign.body.error.code).toBe('TENANT_ACCESS_DENIED');
   });
 
+  it('covers platform tenant administration and geo catalog CRUD', async () => {
+    const tenants = await platform().get('/api/v1/platform/tenants');
+    expect(tenants.status).toBe(200);
+    expect(Array.isArray(tenants.body.data)).toBe(true);
+
+    const details = await platform().get(`/api/v1/platform/tenants/${tenantId}`);
+    expect(details.status).toBe(200);
+
+    const updated = await platform().patch(`/api/v1/platform/tenants/${tenantId}`).send({
+      description: 'Platform-managed E2E tenant description',
+    });
+    expect(updated.status, JSON.stringify(updated.body)).toBe(200);
+
+    const suspended = await platform().patch(`/api/v1/platform/tenants/${tenantId}/status`).send({ status: 'suspended' });
+    expect(suspended.status, JSON.stringify(suspended.body)).toBe(200);
+    expect(suspended.body.data.status).toBe('suspended');
+
+    const reactivated = await platform().patch(`/api/v1/platform/tenants/${tenantId}/status`).send({ status: 'active' });
+    expect(reactivated.status, JSON.stringify(reactivated.body)).toBe(200);
+    expect(reactivated.body.data.status).toBe('active');
+
+    const countries = await platform().get('/api/v1/platform/geo/countries');
+    expect(countries.status).toBe(200);
+
+    const created = await platform().post('/api/v1/platform/geo/countries').send({
+      name_en: 'Cutilora E2E Test Country',
+      name_ar: 'اختبار',
+      code: 'E2E-X1',
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const countryId = String(created.body.data.id ?? created.body.data._id);
+    expect(countryId).toMatch(/^[a-f0-9]{24}$/i);
+
+    const country = await platform().get(`/api/v1/platform/geo/countries/${countryId}`);
+    expect(country.status).toBe(200);
+
+    const renamed = await platform().patch(`/api/v1/platform/geo/countries/${countryId}`).send({
+      name_en: 'Cutilora E2E Test Country Updated',
+    });
+    expect(renamed.status, JSON.stringify(renamed.body)).toBe(200);
+
+    const deleted = await request(app).delete(`/api/v1/platform/geo/countries/${countryId}`)
+      .set('Authorization', `Bearer ${platformToken}`);
+    expect(deleted.status, JSON.stringify(deleted.body)).toBe(200);
+  });
+
+  it('covers tenant clinic, dashboard and finance reporting read workflows', async () => {
+    const clinic = await tenant().get(`/api/v1/tenant/clinics/${clinicId}`);
+    expect(clinic.status).toBe(200);
+
+    const updated = await tenant().patch(`/api/v1/tenant/clinics/${clinicId}`).send({
+      description: 'Updated through full backend E2E',
+      bookingSettings: { allowOnlineBooking: false, defaultAppointmentDurationMinutes: 45 },
+    });
+    expect(updated.status, JSON.stringify(updated.body)).toBe(200);
+
+    const clinicUsers = await tenant().get(`/api/v1/tenant/clinics/${clinicId}/users`);
+    expect(clinicUsers.status).toBe(200);
+    const clinicActivity = await tenant().get(`/api/v1/tenant/clinics/${clinicId}/activity`);
+    expect(clinicActivity.status).toBe(200);
+    const clinicBranches = await tenant().get(`/api/v1/tenant/clinics/${clinicId}/branches`);
+    expect(clinicBranches.status).toBe(200);
+
+    for (const endpoint of [
+      '/api/v1/tenant/dashboard/activity',
+      '/api/v1/tenant/dashboard/clinics',
+      '/api/v1/tenant/dashboard/alerts',
+      '/api/v1/tenant/finance/clinic-comparison',
+      '/api/v1/tenant/finance/revenue-trends',
+      '/api/v1/tenant/finance/expense-summary',
+    ]) {
+      const response = await tenant().get(endpoint);
+      expect(response.status, endpoint + ': ' + JSON.stringify(response.body)).toBe(200);
+    }
+
+    const financeReport = await tenant().get('/api/v1/tenant/finance/reports?format=csv');
+    expect(financeReport.status).toBe(200);
+  });
+
   it('revokes the platform session token on logout', async () => {
     const logout = await platform().post('/api/v1/auth/platform/logout');
     expect(logout.status).toBe(200);
