@@ -194,7 +194,7 @@ export const tenantPrivacyService = {
         legalReviewStatus: input.decision,
         legalReviewReference: input.legalReviewReference,
         legalReviewedByUserId: input.reviewerUserId,
-        decisionAt: new Date(),
+        legalReviewedAt: new Date(),
       },
     }, { new: true, runValidators: true }).lean().then(async (item) => {
       if (item) await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.reviewerUserId, action: 'privacy.request.legal_reviewed', targetType: 'PrivacyDataRequest', targetId: input.requestId });
