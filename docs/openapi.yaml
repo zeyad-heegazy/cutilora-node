@@ -286,7 +286,7 @@ paths:
   /tenant/clinics/{clinicId}/activate:
     $ref: "./openapi/tenant/clinics/lifecycle.yaml#/paths/~1tenant~1clinics~1{clinicId}~1activate"
   /tenant/clinics/{clinicId}/deactivate:
-    $ref: "./openapi/tenant/clinics/lifecycle.yaml#/paths/~1tenant~1clinics~1{clinicId}~1archive"
+    $ref: "./openapi/tenant/clinics/lifecycle.yaml#/paths/~1tenant~1clinics~1{clinicId}~1deactivate"
   /tenant/clinics/{clinicId}:
     $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}"
   /tenant/clinics/{clinicId}/activity:
@@ -320,7 +320,7 @@ paths:
   /tenant/branches/{branchId}/activate:
     $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1activate"
   /tenant/branches/{branchId}/deactivate:
-    $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1archive"
+    $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1deactivate"
   /tenant/branches/{branchId}/temporary-close:
     $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1temporary-close"
   /tenant/branches/{branchId}/close:
