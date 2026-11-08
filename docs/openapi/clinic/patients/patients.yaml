@@ -2,42 +2,16 @@ paths:
   /patient-tags:
     get:
       tags: [Patients]
-      summary: List clinic patient tags
-      responses:
-        '200': { description: Clinic-scoped patient tags }
-    post:
-      tags: [Patients]
-      summary: Create clinic patient tag
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { type: object, required: [name], properties: { name: { type: string, maxLength: 40 }, color: { type: string, pattern: '^#[0-9a-fA-F]{6}  /patients:
-    get:
-      tags: [Patients]
-      summary: List clinic patients
+      summary: List tags configured for the selected clinic
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/ClinicId'
-        - in: query
-          name: q
-          schema: { type: string, maxLength: 120 }
-        - in: query
-          name: status
-          schema: { type: string, enum: [lead, active, inactive, blocked, archived] }
-        - in: query
-          name: page
-          schema: { type: integer, minimum: 1, default: 1 }
-        - in: query
-          name: perPage
-          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
       responses:
-        '200': { description: Paginated clinic-scoped patients }
-        '400': { description: Invalid clinic context or query }
-        '403': { description: Missing patient read permission }
+        '200': { description: Clinic-scoped tag catalog }
+        '403': { description: Patient read permission required }
     post:
       tags: [Patients]
-      summary: Create clinic patient
+      summary: Create a clinic patient tag
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/ClinicId'
@@ -47,148 +21,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [firstName, lastName]
+              required: [name]
               properties:
-                firstName: { type: string, maxLength: 80 }
-                lastName: { type: string, maxLength: 80 }
-                displayName: { type: string, maxLength: 160 }
-                dateOfBirth: { type: string, format: date-time, nullable: true }
-                gender: { type: string, enum: [female, male, other, undisclosed] }
-                contacts: { type: array, maxItems: 20, items: { type: object } }
-                addresses: { type: array, maxItems: 20, items: { type: object } }
+                name: { type: string, minLength: 1, maxLength: 40 }
+                color: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
       responses:
-        '201': { description: Patient created; possible duplicate is returned as metadata and never merged }
-        '400': { description: Validation failure }
-        '403': { description: Missing patient manage permission }
-  /patients/search:
-    get:
-      tags: [Patients]
-      summary: Search clinic patients
-      parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
-        - in: query
-          name: q
-          required: true
-          schema: { type: string, maxLength: 120 }
-      responses:
-        '200': { description: Search results restricted to the selected clinic }
-  /patients/{patientId}:
-    parameters:
-      - in: path
-        name: patientId
-        required: true
-        schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-    get:
-      tags: [Patients]
-      summary: Get patient profile
-      responses:
-        '200': { description: Patient profile; sensitive read is audited }
-        '404': { description: Patient not found in this clinic }
-    patch:
-      tags: [Patients]
-      summary: Update patient profile
-      responses:
-        '200': { description: Updated patient profile }
-        '404': { description: Patient not found in this clinic }
-  /patients/{patientId}/contacts:
-    get:
-      tags: [Patients]
-      summary: Get patient contacts
-      responses:
-        '200': { description: Contact list }
-    put:
-      tags: [Patients]
-      summary: Replace patient contacts
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { type: object, required: [contacts], properties: { contacts: { type: array, items: { type: object } } } }
-      responses:
-        '200': { description: Contacts replaced; duplicate candidates returned without merging }
-  /patients/{patientId}/addresses:
-    put:
-      tags: [Patients]
-      summary: Replace patient addresses
-      responses:
-        '200': { description: Addresses replaced }
-  /patients/{patientId}/emergency-contacts:
-    put:
-      tags: [Patients]
-      summary: Replace emergency contacts
-      responses:
-        '200': { description: Emergency contacts replaced }
-  /patients/{patientId}/tags:
-    get:
-      tags: [Patients]
-      summary: List patient tags
-      responses:
-        '200': { description: Patient tags }
-    put:
-      tags: [Patients]
-      summary: Replace patient tags
-      responses:
-        '200': { description: Patient tags replaced }
-  /patients/{patientId}/notes:
-    get:
-      tags: [Patients]
-      summary: List patient notes
-      responses:
-        '200': { description: Notes are returned only inside the selected clinic and the read is audited }
-    post:
-      tags: [Patients]
-      summary: Add patient note
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { type: object, required: [body], properties: { body: { type: string, maxLength: 4000 }, visibility: { type: string, enum: [clinical, administrative] } } }
-      responses:
-        '201': { description: Note created }
-  /patients/{patientId}/status:
-    patch:
-      tags: [Patients]
-      summary: Change patient lifecycle status
-      responses:
-        '200': { description: Status updated and history appended }
-  /patients/{patientId}/status-history:
-    get:
-      tags: [Patients]
-      summary: Get patient status history
-      responses:
-        '200': { description: Status history }
-  /patients/{patientId}/link-account:
-    post:
-      tags: [Patients]
-      summary: Link the authenticated global account to this clinic patient
-      responses:
-        '200': { description: Linked after authenticated account email matches a patient email contact }
-        '403': { description: Email verification condition not met }
-  /patients/{patientId}/unlink-account:
-    post:
-      tags: [Patients]
-      summary: Unlink the authenticated global account from this clinic patient
-      responses:
-        '200': { description: Account unlinked }
-        '403': { description: Only the linked account can unlink itself }
-components:
-  parameters:
-    TenantId:
-      in: header
-      name: X-Tenant-Id
-      required: true
-      schema: { type: string }
-    ClinicId:
-      in: header
-      name: X-Clinic-Id
-      required: true
-      schema: { type: string }
- } } }
-      responses:
-        '201': { description: Patient tag created }
+        '201': { description: Tag created }
+        '400': { description: Invalid request or clinic context }
         '409': { description: Tag name already exists in this clinic }
   /patients:
     get:
@@ -197,28 +36,47 @@ components:
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/ClinicId'
+        - in: header
+          name: X-Branch-Id
+          schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+          description: Optional branch context; results are restricted to patients assigned to that branch.
         - in: query
           name: q
           schema: { type: string, maxLength: 120 }
         - in: query
+          name: search
+          schema: { type: string, maxLength: 120 }
+        - in: query
           name: status
           schema: { type: string, enum: [lead, active, inactive, blocked, archived] }
+        - in: query
+          name: gender
+          schema: { type: string, enum: [female, male, other, undisclosed] }
         - in: query
           name: page
           schema: { type: integer, minimum: 1, default: 1 }
         - in: query
           name: perPage
           schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+        - in: query
+          name: sort
+          schema: { type: string, enum: [name, createdAt, patientNumber], default: createdAt }
+        - in: query
+          name: order
+          schema: { type: string, enum: [asc, desc], default: desc }
       responses:
-        '200': { description: Paginated clinic-scoped patients }
+        '200': { description: Paginated patients restricted to the selected clinic and optional branch }
         '400': { description: Invalid clinic context or query }
-        '403': { description: Missing patient read permission }
+        '403': { description: Missing patient read permission or branch access }
     post:
       tags: [Patients]
-      summary: Create clinic patient
+      summary: Create a clinic patient
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/ClinicId'
+        - in: header
+          name: X-Branch-Id
+          schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
       requestBody:
         required: true
         content:
@@ -227,30 +85,42 @@ components:
               type: object
               required: [firstName, lastName]
               properties:
-                firstName: { type: string, maxLength: 80 }
-                lastName: { type: string, maxLength: 80 }
+                branchIds: { type: array, maxItems: 100, items: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
+                firstName: { type: string, minLength: 1, maxLength: 80 }
+                lastName: { type: string, minLength: 1, maxLength: 80 }
                 displayName: { type: string, maxLength: 160 }
                 dateOfBirth: { type: string, format: date-time, nullable: true }
                 gender: { type: string, enum: [female, male, other, undisclosed] }
-                contacts: { type: array, maxItems: 20, items: { type: object } }
+                contacts:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: object
+                    required: [type, value]
+                    properties:
+                      type: { type: string, enum: [mobile, email, whatsapp, home, work, other] }
+                      value: { type: string, minLength: 1, maxLength: 254 }
+                      isPrimary: { type: boolean }
                 addresses: { type: array, maxItems: 20, items: { type: object } }
+                emergencyContacts: { type: array, maxItems: 10, items: { type: object } }
+                status: { type: string, enum: [lead, active, inactive] }
       responses:
-        '201': { description: Patient created; possible duplicate is returned as metadata and never merged }
-        '400': { description: Validation failure }
+        '201': { description: Patient created; duplicate candidates are returned without automatic merging }
+        '400': { description: Validation failure or invalid branch assignment }
         '403': { description: Missing patient manage permission }
+        '409': { description: Patient number conflict }
   /patients/search:
     get:
       tags: [Patients]
-      summary: Search clinic patients
+      summary: Search clinic patients using the list filters
       parameters:
         - $ref: '#/components/parameters/TenantId'
         - $ref: '#/components/parameters/ClinicId'
         - in: query
           name: q
-          required: true
           schema: { type: string, maxLength: 120 }
       responses:
-        '200': { description: Search results restricted to the selected clinic }
+        '200': { description: Search results restricted to clinic and branch context }
   /patients/{patientId}:
     parameters:
       - in: path
@@ -261,16 +131,29 @@ components:
       - $ref: '#/components/parameters/ClinicId'
     get:
       tags: [Patients]
-      summary: Get patient profile
+      summary: Get a patient profile
       responses:
-        '200': { description: Patient profile; sensitive read is audited }
-        '404': { description: Patient not found in this clinic }
+        '200': { description: Patient profile; notes and status history are exposed through separate endpoints }
+        '404': { description: Patient not found in this clinic or branch }
     patch:
       tags: [Patients]
-      summary: Update patient profile
+      summary: Update patient demographic profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                firstName: { type: string, minLength: 1, maxLength: 80 }
+                lastName: { type: string, minLength: 1, maxLength: 80 }
+                displayName: { type: string, maxLength: 160 }
+                dateOfBirth: { type: string, format: date-time, nullable: true }
+                gender: { type: string, enum: [female, male, other, undisclosed] }
       responses:
         '200': { description: Updated patient profile }
-        '404': { description: Patient not found in this clinic }
+        '404': { description: Patient not found in this clinic or branch }
   /patients/{patientId}/contacts:
     get:
       tags: [Patients]
@@ -284,78 +167,120 @@ components:
         required: true
         content:
           application/json:
-            schema: { type: object, required: [contacts], properties: { contacts: { type: array, items: { type: object } } } }
+            schema:
+              type: object
+              required: [contacts]
+              properties:
+                contacts:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: object
+                    required: [type, value]
+                    properties:
+                      type: { type: string, enum: [mobile, email, whatsapp, home, work, other] }
+                      value: { type: string, minLength: 1, maxLength: 254 }
+                      isPrimary: { type: boolean }
       responses:
-        '200': { description: Contacts replaced; duplicate candidates returned without merging }
+        '200': { description: Contacts replaced; duplicate candidates are returned without merging }
   /patients/{patientId}/addresses:
     put:
       tags: [Patients]
       summary: Replace patient addresses
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [addresses], properties: { addresses: { type: array, maxItems: 20, items: { type: object } } } }
       responses:
         '200': { description: Addresses replaced }
   /patients/{patientId}/emergency-contacts:
     put:
       tags: [Patients]
-      summary: Replace emergency contacts
+      summary: Replace patient emergency contacts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [emergencyContacts], properties: { emergencyContacts: { type: array, maxItems: 10, items: { type: object } } } }
       responses:
         '200': { description: Emergency contacts replaced }
   /patients/{patientId}/tags:
     get:
       tags: [Patients]
-      summary: List patient tags
+      summary: List patient tag references
       responses:
-        '200': { description: Patient tags }
+        '200': { description: Clinic tag objects attached to the patient }
     put:
       tags: [Patients]
       summary: Replace patient tags
-      responses:
-        '200': { description: Patient tags replaced }
-  /patients/{patientId}/notes:
-    post:
-      tags: [Patients]
-      summary: Add patient note
       requestBody:
         required: true
         content:
           application/json:
-            schema: { type: object, required: [body], properties: { body: { type: string, maxLength: 4000 }, visibility: { type: string, enum: [clinical, administrative] } } }
+            schema:
+              type: object
+              required: [tags]
+              properties:
+                tags: { type: array, maxItems: 30, items: { type: string, pattern: '^[a-fA-F0-9]{24}$' } }
+      responses:
+        '200': { description: Tags replaced }
+        '400': { description: One or more tags do not belong to the selected clinic }
+  /patients/{patientId}/notes:
+    get:
+      tags: [Patients]
+      summary: List patient notes visible to the caller
+      responses:
+        '200': { description: Administrative notes are visible to note readers; clinical notes require the separate clinical-note read permission }
+        '403': { description: Missing patient note read permission }
+    post:
+      tags: [Patients]
+      summary: Add a patient note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body: { type: string, minLength: 1, maxLength: 4000 }
+                visibility: { type: string, enum: [clinical, administrative], default: administrative }
       responses:
         '201': { description: Note created }
+        '403': { description: Clinical note creation requires the clinical note manage permission }
   /patients/{patientId}/status:
     patch:
       tags: [Patients]
       summary: Change patient lifecycle status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { type: string, enum: [lead, active, inactive, blocked, archived] }
+                reason: { type: string, maxLength: 500 }
       responses:
-        '200': { description: Status updated and history appended }
+        '200': { description: Status updated and immutable history appended }
+        '409': { description: Requested lifecycle transition is not allowed }
   /patients/{patientId}/status-history:
     get:
       tags: [Patients]
       summary: Get patient status history
       responses:
-        '200': { description: Status history }
-  /patients/{patientId}/link-account:
-    post:
-      tags: [Patients]
-      summary: Link the authenticated global account to this clinic patient
-      responses:
-        '200': { description: Linked after authenticated account email matches a patient email contact }
-        '403': { description: Email verification condition not met }
-  /patients/{patientId}/unlink-account:
-    post:
-      tags: [Patients]
-      summary: Unlink the authenticated global account from this clinic patient
-      responses:
-        '200': { description: Account unlinked }
-        '403': { description: Only the linked account can unlink itself }
+        '200': { description: Patient status and transition history }
 components:
   parameters:
     TenantId:
       in: header
       name: X-Tenant-Id
       required: true
-      schema: { type: string }
+      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
     ClinicId:
       in: header
       name: X-Clinic-Id
       required: true
-      schema: { type: string }
+      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
