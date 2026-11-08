@@ -7,11 +7,10 @@ const pagination = {
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(25),
   search: z.string().trim().max(120).optional(),
-  status: z.string().optional(),
   branchId: id.optional(),
 };
 
-export const employeeListSchema = z.object(pagination);
+export const employeeListSchema = z.object({ ...pagination, status: z.enum(['active', 'inactive']).optional() });
 export const createEmployeeSchema = z.object({
   employeeCode: optionalText(40),
   firstName: z.string().trim().min(1).max(80),
@@ -26,7 +25,7 @@ export const createEmployeeSchema = z.object({
   status: z.enum(['active', 'inactive']).default('active'),
 });
 export const updateEmployeeSchema = createEmployeeSchema.partial().extend({ branchIds: z.array(id).max(100).optional() });
-export const providerListSchema = z.object({ ...pagination, specialtyId: id.optional(), expiringWithinDays: z.coerce.number().int().min(1).max(365).optional() });
+export const providerListSchema = z.object({ ...pagination, status: z.enum(['active', 'inactive', 'suspended']).optional(), specialtyId: id.optional(), expiringWithinDays: z.coerce.number().int().min(1).max(365).optional() });
 export const createProviderSchema = z.object({
   employeeId: id,
   licenseNumber: optionalText(120),
