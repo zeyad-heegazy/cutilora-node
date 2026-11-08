@@ -11,6 +11,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { key: "branch-manager", name: "Branch Manager", description: "Manages one clinic branch", scope: branch, permissions: [{ permission: "patients.read", scope: branch, branchId: "64b000000000000000000001" }] }
             schema:
               type: object
               required: [name, scope, permissions]
@@ -69,6 +70,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { expectedVersion: 1, name: "Senior Branch Manager", description: "Updated branch manager permissions" }
             schema:
               type: object
               minProperties: 2
@@ -95,6 +97,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { key: "clinic-manager-copy", name: "Clinic Manager Copy", description: "Cloned clinic manager role", clinicId: "64b000000000000000000001" }
             schema:
               type: object
               required: [key, name]
@@ -132,6 +135,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { roleId: "64b000000000000000000020" }
             schema:
               type: object
               required: [roleId]
@@ -248,6 +252,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { email: "new.user@example.com", role: "clinic_manager", scope: clinic, clinicId: "64b000000000000000000001", channels: ["email"] }
             schema:
               type: object
               required: [email, role, scope]
@@ -327,6 +332,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { role: clinic_manager, scope: clinic, permissionOverrides: { allow: ["patients.read"], deny: [] } }
             schema:
               type: object
               properties:
