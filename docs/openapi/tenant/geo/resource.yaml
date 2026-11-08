@@ -1,0 +1,19 @@
+paths:
+  /tenant/geo/{resource}:
+    get:
+      tags: [Clinic - Geo]
+      summary: List supported geographic reference data
+      description: Returns the requested read-only geographic catalog for the authenticated tenant context. Supported resources are countries, governorates, cities, and districts.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - name: resource
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [countries, governorates, cities, districts]
+      responses:
+        "200": { description: Geographic reference entries }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
