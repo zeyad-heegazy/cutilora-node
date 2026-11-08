@@ -10,7 +10,7 @@ docs/
 └── openapi/
     ├── platform/                # Platform operator API
     │   ├── auth/
-    │   ├── geo/{countries,governorates,cities,districts}/
+    │   ├── geo/{countries,governorates,cities,districts,resource.yaml}/
     │   ├── monitoring/{logs,view}/
     │   ├── system/
     │   └── tenants/{tenant,subscriptions,payments}/
@@ -23,7 +23,7 @@ docs/
     │   ├── dashboard/
     │   ├── documents/
     │   ├── finance/
-    │   ├── geo/{countries,governorates,cities,districts}/
+    │   ├── geo/{countries,governorates,cities,districts,resource.yaml}/
     │   ├── governance/
     │   ├── integrations/
     │   ├── memberships/
