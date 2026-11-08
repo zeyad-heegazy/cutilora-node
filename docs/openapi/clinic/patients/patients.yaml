@@ -1,13 +1,13 @@
 paths:
   /patient-tags:
     parameters:
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientBranchId'
     get:
       tags: [Patients]
       summary: List tags configured for the selected clinic
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
+        - $ref: '#/components/parameters/PatientTenantId'
+        - $ref: '#/components/parameters/PatientClinicId'
       responses:
         '200': { description: Clinic-scoped tag catalog }
         '403': { description: Patient read permission required }
@@ -15,8 +15,8 @@ paths:
       tags: [Patients]
       summary: Create a clinic patient tag
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
+        - $ref: '#/components/parameters/PatientTenantId'
+        - $ref: '#/components/parameters/PatientClinicId'
       requestBody:
         required: true
         content:
@@ -36,8 +36,8 @@ paths:
       tags: [Patients]
       summary: List clinic patients
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
+        - $ref: '#/components/parameters/PatientTenantId'
+        - $ref: '#/components/parameters/PatientClinicId'
         - in: header
           name: X-Branch-Id
           schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
@@ -74,8 +74,8 @@ paths:
       tags: [Patients]
       summary: Create a clinic patient
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
+        - $ref: '#/components/parameters/PatientTenantId'
+        - $ref: '#/components/parameters/PatientClinicId'
         - in: header
           name: X-Branch-Id
           schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
@@ -113,15 +113,15 @@ paths:
         '409': { description: Patient number conflict }
   /patients/search:
     parameters:
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     get:
       tags: [Patients]
       summary: Search clinic patients using the list filters
       parameters:
-        - $ref: '#/components/parameters/TenantId'
-        - $ref: '#/components/parameters/ClinicId'
+        - $ref: '#/components/parameters/PatientTenantId'
+        - $ref: '#/components/parameters/PatientClinicId'
         - in: query
           name: q
           schema: { type: string, maxLength: 120 }
@@ -133,9 +133,9 @@ paths:
         name: patientId
         required: true
         schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     get:
       tags: [Patients]
       summary: Get a patient profile
@@ -164,9 +164,9 @@ paths:
   /patients/{patientId}/contacts:
     parameters:
       - $ref: '#/components/parameters/PatientId'
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     get:
       tags: [Patients]
       summary: Get patient contacts
@@ -198,9 +198,9 @@ paths:
   /patients/{patientId}/addresses:
     parameters:
       - $ref: '#/components/parameters/PatientId'
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     put:
       tags: [Patients]
       summary: Replace patient addresses
@@ -214,9 +214,9 @@ paths:
   /patients/{patientId}/emergency-contacts:
     parameters:
       - $ref: '#/components/parameters/PatientId'
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     put:
       tags: [Patients]
       summary: Replace patient emergency contacts
@@ -230,9 +230,9 @@ paths:
   /patients/{patientId}/tags:
     parameters:
       - $ref: '#/components/parameters/PatientId'
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     get:
       tags: [Patients]
       summary: List patient tag references
@@ -256,9 +256,9 @@ paths:
   /patients/{patientId}/notes:
     parameters:
       - $ref: '#/components/parameters/PatientId'
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     get:
       tags: [Patients]
       summary: List patient notes visible to the caller
@@ -284,9 +284,9 @@ paths:
   /patients/{patientId}/status:
     parameters:
       - $ref: '#/components/parameters/PatientId'
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     patch:
       tags: [Patients]
       summary: Change patient lifecycle status
@@ -306,9 +306,9 @@ paths:
   /patients/{patientId}/status-history:
     parameters:
       - $ref: '#/components/parameters/PatientId'
-      - $ref: '#/components/parameters/TenantId'
-      - $ref: '#/components/parameters/ClinicId'
-      - $ref: '#/components/parameters/BranchId'
+      - $ref: '#/components/parameters/PatientTenantId'
+      - $ref: '#/components/parameters/PatientClinicId'
+      - $ref: '#/components/parameters/PatientBranchId'
     get:
       tags: [Patients]
       summary: Get patient status history
@@ -321,18 +321,18 @@ components:
       name: patientId
       required: true
       schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
-    BranchId:
+    PatientBranchId:
       in: header
       name: X-Branch-Id
       required: false
       schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
       description: Required for branch-scoped memberships; when selected, patient operations are restricted to that branch.
-    TenantId:
+    PatientTenantId:
       in: header
       name: X-Tenant-Id
       required: true
       schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
-    ClinicId:
+    PatientClinicId:
       in: header
       name: X-Clinic-Id
       required: true
