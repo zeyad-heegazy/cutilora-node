@@ -897,6 +897,8 @@ components:
           schema: { $ref: "#/components/schemas/ApiError" }
 
 
+  /patient-tags:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patient-tags"
   /patients:
     $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients"
   /patients/search:
