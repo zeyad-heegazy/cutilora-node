@@ -20,3 +20,4 @@ clinicStaffRouter.get('/providers/:providerId/working-hours', requireTenantPermi
 clinicStaffRouter.put('/providers/:providerId/working-hours', requireTenantPermission('providers.manage'), c.setProviderWorkingHours);
 clinicStaffRouter.get('/specialties', requireTenantPermission('providers.read'), c.listSpecialties);
 clinicStaffRouter.post('/specialties', requireTenantPermission('specialties.manage'), c.createSpecialty);
+clinicStaffRouter.patch('/specialties/:specialtyId', requireTenantPermission('specialties.manage'), c.updateSpecialty);
