@@ -47,6 +47,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name_en: "Cairo", name_ar: "القاهرة", governorate_id: "64b000000000000000000001" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/CityInput" }
       responses:
         "201":
@@ -94,6 +95,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name_en: "New Cairo", name_ar: "القاهرة الجديدة", governorate_id: "64b000000000000000000001" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/CityUpdate" }
       responses:
         "200":
