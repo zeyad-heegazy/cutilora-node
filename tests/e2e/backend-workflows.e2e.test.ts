@@ -267,6 +267,72 @@ describe('database-backed backend workflows', () => {
     expect(historyAfter.body.data.length).toBeGreaterThanOrEqual(historyBefore.body.data.length);
   });
 
+  it('completes the clinic patient profile, tags, contacts, notes and lifecycle workflow', async () => {
+    const created = await clinicTenant().post('/api/v1/patients').send({
+      firstName: 'Sara',
+      lastName: 'Patient',
+      status: 'lead',
+      contacts: [{ type: 'email', value: 'sara.patient@cutilora.test', isPrimary: true }],
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const patientId = String(created.body.data._id ?? created.body.data.id);
+    expect(patientId).toMatch(/^[a-f0-9]{24}$/i);
+    expect(created.body.data.patientNumber).toMatch(/^P-\\d{6}$/);
+
+    const listed = await clinicTenant().get('/api/v1/patients?q=sara.patient');
+    expect(listed.status).toBe(200);
+    expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === patientId)).toBe(true);
+
+    const profile = await clinicTenant().get(`/api/v1/patients/${patientId}`);
+    expect(profile.status).toBe(200);
+    expect(profile.body.data.notes).toBeUndefined();
+    expect(profile.body.data.statusHistory).toBeUndefined();
+
+    const duplicate = await clinicTenant().post('/api/v1/patients').send({
+      firstName: 'Sara',
+      lastName: 'Duplicate',
+      contacts: [{ type: 'email', value: 'SARA.PATIENT@CUTILORA.TEST' }],
+    });
+    expect(duplicate.status).toBe(201);
+    expect(duplicate.body.meta.possibleDuplicate).toBeTruthy();
+
+    const tag = await clinicTenant().post('/api/v1/patient-tags').send({ name: 'VIP', color: '#2563eb' });
+    expect(tag.status, JSON.stringify(tag.body)).toBe(201);
+    const tagId = String(tag.body.data._id ?? tag.body.data.id);
+    const attached = await clinicTenant().put(`/api/v1/patients/${patientId}/tags`).send({ tags: [tagId] });
+    expect(attached.status).toBe(200);
+    expect(attached.body.data[0].name).toBe('vip');
+
+    const invalidTag = await clinicTenant().put(`/api/v1/patients/${patientId}/tags`).send({ tags: ['507f1f77bcf86cd799439011'] });
+    expect(invalidTag.status).toBe(400);
+
+    const contacts = await clinicTenant().put(`/api/v1/patients/${patientId}/contacts`).send({
+      contacts: [{ type: 'mobile', value: '+201000000001', isPrimary: true }],
+    });
+    expect(contacts.status).toBe(200);
+    expect(contacts.body.data[0].normalizedValue).toBeUndefined();
+
+    const note = await clinicTenant().post(`/api/v1/patients/${patientId}/notes`).send({
+      body: 'Administrative intake note',
+      visibility: 'administrative',
+    });
+    expect(note.status).toBe(201);
+    const notes = await clinicTenant().get(`/api/v1/patients/${patientId}/notes`);
+    expect(notes.status).toBe(200);
+    expect(notes.body.data.some((item: any) => item.body === 'Administrative intake note')).toBe(true);
+
+    const activated = await clinicTenant().patch(`/api/v1/patients/${patientId}/status`).send({ status: 'active', reason: 'Intake completed' });
+    expect(activated.status).toBe(200);
+    const archived = await clinicTenant().patch(`/api/v1/patients/${patientId}/status`).send({ status: 'archived', reason: 'Patient requested closure' });
+    expect(archived.status).toBe(200);
+    const invalidTransition = await clinicTenant().patch(`/api/v1/patients/${patientId}/status`).send({ status: 'active' });
+    expect(invalidTransition.status).toBe(409);
+
+    const history = await clinicTenant().get(`/api/v1/patients/${patientId}/status-history`);
+    expect(history.status).toBe(200);
+    expect(history.body.data.history.length).toBeGreaterThanOrEqual(3);
+  });
+
   it('creates, updates, lists and archives a custom tenant role', async () => {
     const created = await tenant().post('/api/v1/tenant/roles').send({
       name: 'E2E Front Desk',
