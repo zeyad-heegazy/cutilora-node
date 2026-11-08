@@ -164,22 +164,29 @@ export const tenantPrivacyService = {
     }).select('+documentSnapshot').lean() as any;
     if (!original) return null;
     if (await ConsentRecord.exists({ tenantId: input.tenantId, revokesConsentId: original._id })) return null;
-    const revoked = await ConsentRecord.create({
-      tenantId: original.tenantId,
-      clinicId: original.clinicId,
-      patientId: original.patientId,
-      consentType: original.consentType,
-      documentVersion: original.documentVersion,
-      documentHash: original.documentHash,
-      documentSnapshot: original.documentSnapshot,
-      status: 'revoked',
-      actorUserId: input.actorUserId,
-      source: 'clinic_portal',
-      signedAt: new Date(),
-      revokedAt: new Date(),
-      revocationReason: input.reason,
-      revokesConsentId: original._id,
-    });
+    let revoked;
+    try {
+      revoked = await ConsentRecord.create({
+        tenantId: original.tenantId,
+        clinicId: original.clinicId,
+        patientId: original.patientId,
+        consentType: original.consentType,
+        documentVersion: original.documentVersion,
+        documentHash: original.documentHash,
+        documentSnapshot: original.documentSnapshot,
+        status: 'revoked',
+        actorUserId: input.actorUserId,
+        source: 'clinic_portal',
+        signedAt: new Date(),
+        revokedAt: new Date(),
+        revocationReason: input.reason,
+        revokesConsentId: original._id,
+      });
+    } catch (error) {
+      // The unique partial index is the concurrency guard when two revocations race.
+      if (error && typeof error === 'object' && 'code' in error && error.code === 11000) return null;
+      throw error;
+    }
     await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: 'patient.consent.revoked', targetType: 'ConsentRecord', targetId: String(revoked._id), requestId: input.correlationId });
     return revoked;
   },
@@ -222,21 +229,23 @@ export const tenantPrivacyService = {
     tenantId: string; clinicId: string; requestId: string; actorUserId: string;
     decision: 'approved' | 'rejected'; resolutionNote?: string; correlationId?: string;
   }) {
-    const request = await PrivacyDataRequest.findOne({
+    const request = await PrivacyDataRequest.findOneAndUpdate({
       _id: input.requestId, tenantId: input.tenantId, clinicId: input.clinicId,
       status: { $in: ['submitted', 'identity_review', 'in_review'] },
       legalReviewStatus: input.decision,
       legalReviewedByUserId: { $ne: input.actorUserId },
-    });
+    }, {
+      $set: {
+        status: input.decision,
+        legalReviewRequired: true,
+        decisionByUserId: input.actorUserId,
+        decisionAt: new Date(),
+        resolutionNote: input.resolutionNote ?? '',
+      },
+    }, { new: true, runValidators: true }).lean();
     if (!request) return null;
-    request.status = input.decision;
-    request.legalReviewRequired = true;
-    request.decisionByUserId = input.actorUserId as any;
-    request.decisionAt = new Date();
-    request.resolutionNote = input.resolutionNote ?? '';
-    await request.save();
     await writePrivacyAudit({ tenantId: input.tenantId, clinicId: input.clinicId, actorUserId: input.actorUserId, action: `privacy.request.${input.decision}`, targetType: 'PrivacyDataRequest', targetId: input.requestId, requestId: input.correlationId });
-    return request.toObject();
+    return request;
   },
 
 };
