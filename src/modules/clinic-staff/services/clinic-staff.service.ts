@@ -26,7 +26,7 @@ const validateProviderBranches = async (scope: Scope, employeeId: unknown, branc
   const employee = await Employee.findOne({ _id: employeeId, tenantId: scope.tenantId, clinicId: scope.clinicId }).select('branchIds').lean() as any;
   if (!employee) throw { status: 400, code: 'EMPLOYEE_NOT_FOUND', message: 'Provider employee does not belong to this clinic.' };
   const employeeBranches = (employee.branchIds ?? []).map((id: unknown) => String(id));
-  if (employeeBranches.length && branches.some((branchId) => !employeeBranches.includes(branchId))) {
+  if (!employeeBranches.length || branches.some((branchId) => !employeeBranches.includes(branchId))) {
     throw { status: 400, code: 'EMPLOYEE_BRANCH_MISMATCH', message: 'Provider branches must be included in the employee branch assignments.' };
   }
   return branches;
@@ -76,9 +76,14 @@ export const clinicStaffService = {
   async createEmployee(scope: Scope, input: any) {
     const branches = await validateBranches(scope, input.branchIds?.length ? input.branchIds : (scope.accessScope === 'branch' && scope.branchId ? [scope.branchId] : []));
     if (input.userId && !await User.exists({ _id: input.userId, isActive: true })) throw { status: 400, code: 'LINKED_USER_NOT_FOUND', message: 'The linked login account must exist and be active.' };
-    const item = await Employee.create({ ...input, branchIds: objectIds(branches), tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
-    await audit(scope, 'employee.created', 'employee', String(item._id), { status: item.status });
-    return item;
+    try {
+      const item = await Employee.create({ ...input, branchIds: objectIds(branches), tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
+      await audit(scope, 'employee.created', 'employee', String(item._id), { status: item.status });
+      return item;
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'EMPLOYEE_UNIQUE_CONFLICT', message: 'Employee code or linked account is already used in this clinic.' };
+      throw error;
+    }
   },
   async getEmployee(scope: Scope, id: string) {
     const filter: any = { _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId };
@@ -88,9 +93,23 @@ export const clinicStaffService = {
   async updateEmployee(scope: Scope, id: string, input: any) {
     const current = await this.getEmployee(scope, id);
     if (!current) return null;
-    if (input.branchIds) input.branchIds = objectIds(await validateBranches(scope, input.branchIds.length ? input.branchIds : (scope.accessScope === 'branch' && scope.branchId ? [scope.branchId] : [])));
+    if (input.branchIds) {
+      const nextBranches = await validateBranches(scope, input.branchIds.length ? input.branchIds : (scope.accessScope === 'branch' && scope.branchId ? [scope.branchId] : []));
+      const assignedProviders = await Provider.find({ tenantId: scope.tenantId, clinicId: scope.clinicId, employeeId: id, status: { $ne: 'inactive' } }).select('branchIds').lean();
+      const nextSet = new Set(nextBranches);
+      if (assignedProviders.some((provider: any) => (provider.branchIds ?? []).some((branchId: unknown) => !nextSet.has(String(branchId))))) {
+        throw { status: 409, code: 'EMPLOYEE_BRANCH_ASSIGNMENT_IN_USE', message: 'Update or deactivate provider assignments before removing an employee branch.' };
+      }
+      input.branchIds = objectIds(nextBranches);
+    }
     const item = await Employee.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { ...input, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
-    if (item) await audit(scope, 'employee.updated', 'employee', id, { changedFields: Object.keys(input) });
+    if (item) {
+      if (input.status === 'inactive') {
+        const deactivated = await Provider.updateMany({ tenantId: scope.tenantId, clinicId: scope.clinicId, employeeId: id, status: { $ne: 'inactive' } }, { $set: { status: 'inactive', updatedBy: scope.userId } });
+        if (deactivated.modifiedCount) await audit(scope, 'provider.deactivated_by_employee', 'employee', id, { providerProfilesDeactivated: deactivated.modifiedCount });
+      }
+      await audit(scope, 'employee.updated', 'employee', id, { changedFields: Object.keys(input), status: item.status });
+    }
     return item;
   },
   async listProviders(scope: Scope, query: any) {
@@ -111,9 +130,14 @@ export const clinicStaffService = {
     if (input.status === 'active' && input.licenseExpiresAt && new Date(input.licenseExpiresAt).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'An expired license cannot be activated.' };
     const specialties = await validateSpecialties(scope, input.specialtyIds ?? []);
     validateSchedule(input.workingHours ?? []);
-    const item = await Provider.create({ ...input, branchIds: objectIds(branches), specialtyIds: objectIds(specialties), serviceIds: objectIds(input.serviceIds ?? []), tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
-    await audit(scope, 'provider.created', 'provider', String(item._id), { status: item.status, branchCount: branches.length });
-    return item;
+    try {
+      const item = await Provider.create({ ...input, branchIds: objectIds(branches), specialtyIds: objectIds(specialties), serviceIds: objectIds(input.serviceIds ?? []), tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
+      await audit(scope, 'provider.created', 'provider', String(item._id), { status: item.status, branchCount: branches.length });
+      return item;
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'PROVIDER_ALREADY_EXISTS', message: 'This employee already has a provider profile.' };
+      throw error;
+    }
   },
   async getProvider(scope: Scope, id: string) {
     const filter: any = { _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId };
@@ -141,14 +165,14 @@ export const clinicStaffService = {
     const current = await this.getProvider(scope, id);
     if (!current) return null;
     const branches = await validateProviderBranches(scope, current.employeeId?._id ?? current.employeeId, branchIds);
-    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId }, { $set: { branchIds: objectIds(branches), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
+    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { branchIds: objectIds(branches), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
     if (item) await audit(scope, 'provider.branches.updated', 'provider', id, { branchCount: branches.length });
     return item;
   },
   async replaceProviderServices(scope: Scope, id: string, serviceIds: string[]) {
     const current = await this.getProvider(scope, id);
     if (!current) return null;
-    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId }, { $set: { serviceIds: objectIds(serviceIds), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
+    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { serviceIds: objectIds(serviceIds), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
     if (item) await audit(scope, 'provider.services.updated', 'provider', id, { serviceCount: serviceIds.length });
     return item;
   },
@@ -160,7 +184,7 @@ export const clinicStaffService = {
     const current = await this.getProvider(scope, id);
     if (!current) return null;
     validateSchedule(workingHours);
-    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId }, { $set: { workingHours, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
+    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { workingHours, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
     if (item) await audit(scope, 'provider.working_hours.updated', 'provider', id, { daysConfigured: workingHours.length });
     return item;
   },
@@ -168,9 +192,14 @@ export const clinicStaffService = {
     return Specialty.find({ tenantId: scope.tenantId, clinicId: scope.clinicId, status: 'active' }).sort({ name: 1 }).lean();
   },
   async createSpecialty(scope: Scope, input: any) {
-    const item = await Specialty.create({ ...input, tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
-    await audit(scope, 'specialty.created', 'specialty', String(item._id));
-    return item;
+    try {
+      const item = await Specialty.create({ ...input, tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
+      await audit(scope, 'specialty.created', 'specialty', String(item._id));
+      return item;
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'SPECIALTY_UNIQUE_CONFLICT', message: 'A specialty with this name or code already exists in this clinic.' };
+      throw error;
+    }
   },
   async assertProviderBookable(scope: { tenantId: string; clinicId: string }, providerId: string, branchId: string, serviceId: string) {
     const provider = await Provider.findOne({ _id: providerId, tenantId: scope.tenantId, clinicId: scope.clinicId, branchIds: branchId, serviceIds: serviceId, status: 'active' }).lean();
