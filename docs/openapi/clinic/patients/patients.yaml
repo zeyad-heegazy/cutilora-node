@@ -163,6 +163,7 @@ paths:
         '404': { description: Patient not found in this clinic or branch }
   /patients/{patientId}/contacts:
     parameters:
+      - $ref: '#/components/parameters/PatientId'
       - $ref: '#/components/parameters/TenantId'
       - $ref: '#/components/parameters/ClinicId'
       - $ref: '#/components/parameters/BranchId'
@@ -196,6 +197,7 @@ paths:
         '200': { description: Contacts replaced; duplicate candidates are returned without merging }
   /patients/{patientId}/addresses:
     parameters:
+      - $ref: '#/components/parameters/PatientId'
       - $ref: '#/components/parameters/TenantId'
       - $ref: '#/components/parameters/ClinicId'
       - $ref: '#/components/parameters/BranchId'
@@ -211,6 +213,7 @@ paths:
         '200': { description: Addresses replaced }
   /patients/{patientId}/emergency-contacts:
     parameters:
+      - $ref: '#/components/parameters/PatientId'
       - $ref: '#/components/parameters/TenantId'
       - $ref: '#/components/parameters/ClinicId'
       - $ref: '#/components/parameters/BranchId'
@@ -226,6 +229,7 @@ paths:
         '200': { description: Emergency contacts replaced }
   /patients/{patientId}/tags:
     parameters:
+      - $ref: '#/components/parameters/PatientId'
       - $ref: '#/components/parameters/TenantId'
       - $ref: '#/components/parameters/ClinicId'
       - $ref: '#/components/parameters/BranchId'
@@ -251,6 +255,7 @@ paths:
         '400': { description: One or more tags do not belong to the selected clinic }
   /patients/{patientId}/notes:
     parameters:
+      - $ref: '#/components/parameters/PatientId'
       - $ref: '#/components/parameters/TenantId'
       - $ref: '#/components/parameters/ClinicId'
       - $ref: '#/components/parameters/BranchId'
@@ -278,6 +283,7 @@ paths:
         '403': { description: Clinical note creation requires the clinical note manage permission }
   /patients/{patientId}/status:
     parameters:
+      - $ref: '#/components/parameters/PatientId'
       - $ref: '#/components/parameters/TenantId'
       - $ref: '#/components/parameters/ClinicId'
       - $ref: '#/components/parameters/BranchId'
@@ -299,6 +305,7 @@ paths:
         '409': { description: Requested lifecycle transition is not allowed }
   /patients/{patientId}/status-history:
     parameters:
+      - $ref: '#/components/parameters/PatientId'
       - $ref: '#/components/parameters/TenantId'
       - $ref: '#/components/parameters/ClinicId'
       - $ref: '#/components/parameters/BranchId'
@@ -309,6 +316,37 @@ paths:
         '200': { description: Patient status and transition history }
 components:
   parameters:
+    PatientId:
+      in: path
+      name: patientId
+      required: true
+      schema: { type: string, pattern: '^[a-fA-F0-9]{24}
+      in: header
+      name: X-Branch-Id
+      required: false
+      schema: { type: string, pattern: '^[a-fA-F0-9]{24}
+      in: header
+      name: X-Tenant-Id
+      required: true
+      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+    ClinicId:
+      in: header
+      name: X-Clinic-Id
+      required: true
+      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+ }
+      description: Required for branch-scoped memberships; when selected, patient operations are restricted to that branch.
+    TenantId:
+      in: header
+      name: X-Tenant-Id
+      required: true
+      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+    ClinicId:
+      in: header
+      name: X-Clinic-Id
+      required: true
+      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+ }
     BranchId:
       in: header
       name: X-Branch-Id
