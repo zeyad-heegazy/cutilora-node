@@ -27,6 +27,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { firstName: "Mona", lastName: "Hassan", displayName: "Mona Hassan", email: "mona@example.com", phone: "+201001234567", jobTitle: "Clinic coordinator", employmentType: full_time, branchIds: ["64b000000000000000000001"], status: active }
             schema:
               type: object
               required: [firstName, lastName]
@@ -70,6 +71,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { jobTitle: "Senior clinic coordinator", phone: "+201001234567", status: active }
             schema:
               type: object
               properties:
@@ -114,6 +116,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { employeeId: "64b000000000000000000010", licenseNumber: "EG-MD-2026-001", licenseExpiresAt: "2027-12-31T00:00:00.000Z", specialtyIds: ["64b000000000000000000020"], branchIds: ["64b000000000000000000001"], serviceIds: ["laser-hair-removal"], workingHours: [{ dayOfWeek: 0, isAvailable: true, startTime: "09:00", endTime: "17:00", breaks: [{ startTime: "13:00", endTime: "13:30" }] }], status: active }
             schema:
               type: object
               required: [employeeId, branchIds]
@@ -165,6 +168,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { licenseNumber: "EG-MD-2026-001", specialtyIds: ["64b000000000000000000020"], branchIds: ["64b000000000000000000001"], serviceIds: ["laser-hair-removal"], status: active }
             schema:
               type: object
               properties:
@@ -192,6 +196,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { branchIds: ["64b000000000000000000001"] }
             schema:
               type: object
               required: [branchIds]
@@ -214,6 +219,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { serviceIds: ["laser-hair-removal", "chemical-peel"] }
             schema:
               type: object
               required: [serviceIds]
@@ -244,6 +250,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { workingHours: [{ dayOfWeek: 0, isAvailable: true, startTime: "09:00", endTime: "17:00", breaks: [{ startTime: "13:00", endTime: "13:30" }] }, { dayOfWeek: 1, isAvailable: true, startTime: "09:00", endTime: "17:00", breaks: [] }] }
             schema:
               type: object
               required: [workingHours]
@@ -273,6 +280,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Dermatology", code: "DERM", description: "Medical and aesthetic dermatology" }
             schema:
               type: object
               required: [name]
@@ -296,6 +304,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Aesthetic Dermatology", status: active }
             schema:
               type: object
               properties:
