@@ -3,7 +3,7 @@ paths:
     post:
       tags: [Tenant Access Control]
       summary: Create a tenant custom role
-      description: Creates a tenant-owned role with explicit tenant, clinic or branch permission grants. Every permission must exist in the catalog, every target must belong to the tenant, and the actor cannot grant beyond their own effective authority.
+      description: Creates a tenant-owned role with a role-level tenant, clinic, or branch scope and a list of permission keys. The actor cannot grant permissions beyond their own effective authority.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
@@ -53,7 +53,7 @@ paths:
     patch:
       tags: [Tenant Access Control]
       summary: Update a tenant custom role
-      description: Updates role grants using optimistic version checks. Every grant must be within the actor's effective authority. Permission changes are audited and increment the role version.
+      description: Updates role metadata and permission keys using the current role version. Permission changes are audited and increment the role version.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
@@ -82,8 +82,8 @@ paths:
   /tenant/roles/{roleId}/permissions:
     put:
       tags: [Tenant Access Control]
-      summary: Replace the permission grants for a tenant role
-      description: Uses optimistic concurrency. Every permission grant must reference a permission in the tenant catalog and a valid tenant, clinic, or branch scope.
+      summary: Replace the permission keys for a tenant role
+      description: Uses optimistic concurrency. Permission keys must exist in the tenant permission catalog and remain within the actor's effective authority.
       security: [{ bearerAuth: [] }]
       parameters:
         - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
