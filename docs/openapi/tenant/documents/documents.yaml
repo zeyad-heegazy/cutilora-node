@@ -23,6 +23,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Organization registration certificate", category: registration, fileBase64: "SGVsbG8=", expiresAt: "2027-12-31T00:00:00.000Z" }
             schema:
               type: object
               required: [name, category, fileBase64]
@@ -94,6 +95,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Updated organization registration certificate", fileBase64: "SGVsbG8=", expiresAt: "2028-12-31T00:00:00.000Z" }
             schema:
               type: object
               required: [fileBase64]
