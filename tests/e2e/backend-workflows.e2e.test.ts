@@ -242,7 +242,8 @@ describe('database-backed backend workflows', () => {
 
     const directory = await tenant().get('/api/v1/tenant/users?search=e2e-clinic-staff');
     expect(directory.status, JSON.stringify(directory.body)).toBe(200);
-    const userId = String(directory.body.data.items?.[0]?.userId ?? directory.body.data[0]?.userId ?? directory.body.data.items?.[0]?.id ?? directory.body.data[0]?.id);
+    const listedUser = directory.body.data.find((item: any) => item.userId?.email === invitedEmail) ?? directory.body.data[0];
+    const userId = String(listedUser?.userId?._id ?? listedUser?.userId ?? listedUser?.id ?? listedUser?._id);
     expect(userId).toMatch(/^[a-f0-9]{24}$/i);
 
     const userDetails = await tenant().get(`/api/v1/tenant/users/${userId}`);
@@ -606,7 +607,7 @@ describe('database-backed backend workflows', () => {
     const created = await platform().post('/api/v1/platform/geo/countries').send({
       name_en: 'Cutilora E2E Test Country',
       name_ar: 'اختبار',
-      code: 'E2E-X1',
+      code: 'XZ',
     });
     expect(created.status, JSON.stringify(created.body)).toBe(201);
     const countryId = String(created.body.data.id ?? created.body.data._id);
