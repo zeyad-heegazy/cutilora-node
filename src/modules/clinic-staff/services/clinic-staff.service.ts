@@ -2,6 +2,7 @@ import { Types } from 'mongoose';
 import { Employee } from '../models/employee.model.js';
 import { Provider } from '../models/provider.model.js';
 import { Specialty } from '../models/specialty.model.js';
+import { User } from '../../auth/models/user.model.js';
 import { Branch } from '../../tenancy/models/branch.model.js';
 import { TenantAuditEvent } from '../../tenancy/models/tenant-audit-event.model.js';
 
@@ -63,7 +64,8 @@ export const clinicStaffService = {
     return { items, pagination: { page: query.page, perPage: query.perPage, total, totalPages: Math.ceil(total / query.perPage) } };
   },
   async createEmployee(scope: Scope, input: any) {
-    const branches = await validateBranches(scope, input.branchIds ?? []);
+    const branches = await validateBranches(scope, input.branchIds?.length ? input.branchIds : (scope.branchId ? [scope.branchId] : []));
+    if (input.userId && !await User.exists({ _id: input.userId, isActive: true })) throw { status: 400, code: 'LINKED_USER_NOT_FOUND', message: 'The linked login account must exist and be active.' };
     const item = await Employee.create({ ...input, branchIds: objectIds(branches), tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
     await audit(scope, 'employee.created', 'employee', String(item._id), { status: item.status });
     return item;
