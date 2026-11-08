@@ -100,7 +100,7 @@ export const patientService = {
     const duplicateConditions = contacts.map(contact => ({
       contacts: { $elemMatch: { type: contact.type, normalizedValue: contact.normalizedValue } },
     }));
-    const duplicate = duplicateConditions.length
+    const duplicate: any = duplicateConditions.length
       ? await Patient.findOne({ ...filter(s), $or: duplicateConditions }).select('_id patientNumber firstName lastName').lean()
       : null;
     const patientNumber = await nextPatientNumber(s.tenantId, s.clinicId);
@@ -120,13 +120,13 @@ export const patientService = {
   },
 
   async get(s: Scope, id: string) {
-    const patient = await Patient.findOne(filter(s, id)).select('-notes -statusHistory -contacts.normalizedValue').populate('tags', 'name color').lean();
+    const patient: any = await Patient.findOne(filter(s, id)).select('-notes -statusHistory -contacts.normalizedValue').populate('tags', 'name color').lean();
     if (patient) await audit(s, 'patient.viewed', id);
     return patient;
   },
 
   async update(s: Scope, id: string, input: any) {
-    const patient = await Patient.findOneAndUpdate(filter(s, id), { $set: { ...input, updatedBy: s.userId } }, { new: true, runValidators: true })
+    const patient: any = await Patient.findOneAndUpdate(filter(s, id), { $set: { ...input, updatedBy: s.userId } }, { new: true, runValidators: true })
       .select('-notes -statusHistory -contacts.normalizedValue').populate('tags', 'name color').lean();
     if (patient) await audit(s, 'patient.updated', id, { changedFields: Object.keys(input) });
     return patient;
@@ -135,23 +135,23 @@ export const patientService = {
   async replaceContacts(s: Scope, id: string, items: any[]) {
     const contacts = normalizeContacts(items);
     const conditions = contacts.map(contact => ({ contacts: { $elemMatch: { type: contact.type, normalizedValue: contact.normalizedValue } } }));
-    const duplicate = conditions.length
+    const duplicate: any = conditions.length
       ? await Patient.findOne({ ...filter(s), _id: { $ne: new Types.ObjectId(id) }, $or: conditions }).select('_id patientNumber').lean()
       : null;
-    const patient = await Patient.findOneAndUpdate(filter(s, id), { $set: { contacts, updatedBy: s.userId } }, { new: true, runValidators: true })
+    const patient: any = await Patient.findOneAndUpdate(filter(s, id), { $set: { contacts, updatedBy: s.userId } }, { new: true, runValidators: true })
       .select('-contacts.normalizedValue').lean();
     if (patient) await audit(s, 'patient.contacts.updated', id, { contactCount: contacts.length, possibleDuplicateId: duplicate ? String(duplicate._id) : null });
     return { patient, possibleDuplicate: duplicate };
   },
 
   async replaceAddresses(s: Scope, id: string, addresses: any[]) {
-    const patient = await Patient.findOneAndUpdate(filter(s, id), { $set: { addresses, updatedBy: s.userId } }, { new: true, runValidators: true }).lean();
+    const patient: any = await Patient.findOneAndUpdate(filter(s, id), { $set: { addresses, updatedBy: s.userId } }, { new: true, runValidators: true }).lean();
     if (patient) await audit(s, 'patient.addresses.updated', id, { addressCount: addresses.length });
     return patient;
   },
 
   async replaceEmergencyContacts(s: Scope, id: string, items: any[]) {
-    const patient = await Patient.findOneAndUpdate(filter(s, id), { $set: { emergencyContacts: items, updatedBy: s.userId } }, { new: true, runValidators: true }).lean();
+    const patient: any = await Patient.findOneAndUpdate(filter(s, id), { $set: { emergencyContacts: items, updatedBy: s.userId } }, { new: true, runValidators: true }).lean();
     if (patient) await audit(s, 'patient.emergency_contacts.updated', id, { count: items.length });
     return patient;
   },
@@ -165,14 +165,14 @@ export const patientService = {
       });
       if (count !== unique.length) throw { status: 400, code: 'INVALID_PATIENT_TAG', message: 'Every tag must belong to the selected clinic.' };
     }
-    const patient = await Patient.findOneAndUpdate(filter(s, id), { $set: { tags: unique.map(tagId => new Types.ObjectId(tagId)), updatedBy: s.userId } }, { new: true, runValidators: true })
+    const patient: any = await Patient.findOneAndUpdate(filter(s, id), { $set: { tags: unique.map(tagId => new Types.ObjectId(tagId)), updatedBy: s.userId } }, { new: true, runValidators: true })
       .populate('tags', 'name color').select('tags').lean();
     if (patient) await audit(s, 'patient.tags.updated', id, { count: unique.length });
     return patient;
   },
 
   async getNotes(s: Scope, id: string) {
-    const patient = await Patient.findOne(filter(s, id)).select('notes').lean();
+    const patient: any = await Patient.findOne(filter(s, id)).select('notes').lean();
     if (!patient) return null;
     const notes = (patient.notes ?? []).filter((note: any) => note.visibility !== 'clinical' || clinicalRead(s));
     await audit(s, 'patient.notes.viewed', id, { count: notes.length });
@@ -183,7 +183,7 @@ export const patientService = {
     if (input.visibility === 'clinical' && !clinicalManage(s)) {
       throw { status: 403, code: 'CLINICAL_NOTE_PERMISSION_REQUIRED', message: 'You are not allowed to create clinical notes.' };
     }
-    const patient = await Patient.findOneAndUpdate(filter(s, id), {
+    const patient: any = await Patient.findOneAndUpdate(filter(s, id), {
       $push: { notes: { ...input, createdBy: s.userId } }, $set: { updatedBy: s.userId },
     }, { new: true }).select('notes').lean();
     if (patient) await audit(s, 'patient.note.created', id, { visibility: input.visibility });
@@ -191,13 +191,13 @@ export const patientService = {
   },
 
   async statusHistory(s: Scope, id: string) {
-    const patient = await Patient.findOne(filter(s, id)).select('status statusHistory').lean();
+    const patient: any = await Patient.findOne(filter(s, id)).select('status statusHistory').lean();
     if (patient) await audit(s, 'patient.status_history.viewed', id);
     return patient ? { status: patient.status, history: patient.statusHistory } : null;
   },
 
   async changeStatus(s: Scope, id: string, status: string, reason: string) {
-    const patient = await Patient.findOne(filter(s, id));
+    const patient: any = await Patient.findOne(filter(s, id));
     if (!patient) return null;
     if (patient.status !== status) {
       if (!allowedTransitions[patient.status]?.includes(status)) {
