@@ -10,6 +10,7 @@ import { platformGeoRouter } from '../modules/platform/geo/routes/geo-admin.rout
 import { monitoringRouter } from '../modules/platform/monitoring/routes/monitoring.routes.js';
 import { tenantRouter } from '../modules/tenancy/routes/tenancy.routes.js';
 import { clinicFinanceRouter } from '../modules/clinics/finance/routes/clinic-finance.routes.js';
+import { clinicStaffRouter } from '../modules/clinic-staff/routes/clinic-staff.routes.js';
 import { errorHandler } from '../shared/middleware/error-handler.js';
 import { requestLogger } from '../shared/middleware/request-logger.middleware.js';
 export const app = express();
@@ -45,6 +46,7 @@ app.use(`${env.API_PREFIX}/platform/monitoring`, monitoringRouter);
 app.use(`${env.API_PREFIX}/platform/tenants`, platformTenantRouter);
 app.use(`${env.API_PREFIX}/platform/geo`, platformGeoRouter);
 app.use(`${env.API_PREFIX}/tenant`, tenantRouter);
+app.use(env.API_PREFIX, clinicStaffRouter);
 app.use(`${env.API_PREFIX}/clinic/finance`, clinicFinanceRouter);
 
 app.use((_req, res) =>
