@@ -197,7 +197,7 @@ paths:
         required: true
         content:
           application/json:
-            example: { operatingHours: [{ dayOfWeek: 0, openTime: "09:00", closeTime: "17:00", breakTimes: [{ startTime: "13:00", endTime: "13:30" }] }, { dayOfWeek: 1, isClosed: true }] }
+            example: { operatingHours: [{ dayOfWeek: 0, openTime: "09:00", closeTime: "17:00", breakTimes: [{ startTime: "13:00", endTime: "13:30" }] }, { dayOfWeek: 1, openTime: "09:00", closeTime: "17:00" }, { dayOfWeek: 2, isClosed: true }, { dayOfWeek: 3, isClosed: true }, { dayOfWeek: 4, isClosed: true }, { dayOfWeek: 5, isClosed: true }, { dayOfWeek: 6, isClosed: true }] }
             schema:
               type: object
               required: [operatingHours]
