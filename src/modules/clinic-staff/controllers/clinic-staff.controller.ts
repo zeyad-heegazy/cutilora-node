@@ -4,7 +4,7 @@ import { createEmployeeSchema, updateEmployeeSchema, employeeListSchema, createP
 
 const scope = (req: Request) => {
   if (!req.tenantContext?.clinicId) throw { status: 400, code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' };
-  return { tenantId: req.tenantContext.tenantId, clinicId: req.tenantContext.clinicId, branchId: req.tenantContext.branchId, userId: req.auth!.userId };
+  return { tenantId: req.tenantContext.tenantId, clinicId: req.tenantContext.clinicId, branchId: req.tenantContext.branchId, accessScope: req.tenantContext.scope, userId: req.auth!.userId };
 };
 const notFound = (res: Response, type: string) => res.status(404).json({ success: false, error: { code: `${type.toUpperCase()}_NOT_FOUND`, message: `${type} not found in this clinic.` } });
 
