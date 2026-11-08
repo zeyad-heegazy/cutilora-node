@@ -13,6 +13,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { amount: 2500, currency: EGP, status: paid, method: bank_transfer, provider: manual, providerReference: "BANK-2026-001", invoiceNumber: "SUB-2026-001", paidAt: "2026-11-08T12:00:00.000Z" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/SubscriptionPaymentInput" }
       responses:
         "201":
