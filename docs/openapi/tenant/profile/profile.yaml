@@ -33,6 +33,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { displayName: "Cutilora Dermatology Group", description: "Updated organization profile" }
             schema: { $ref: "../../../openapi.yaml#/components/schemas/TenantUpdate" }
       responses:
         "200":
@@ -82,6 +83,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { preferences: { locale: "en", timezone: "Africa/Cairo", currency: "EGP" } }
             schema:
               type: object
               required: [preferences]
