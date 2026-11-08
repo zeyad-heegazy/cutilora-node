@@ -47,6 +47,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name_en: "Dokki", name_ar: "الدقي", city_id: "64b000000000000000000002" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/DistrictInput" }
       responses:
         "201":
@@ -94,6 +95,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name_en: "Mohandessin", name_ar: "المهندسين", city_id: "64b000000000000000000002" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/DistrictUpdate" }
       responses:
         "200":
