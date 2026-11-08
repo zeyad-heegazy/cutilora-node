@@ -22,12 +22,19 @@ const scope = (req: Request) => {
 };
 const id = (req: Request) => v.patientIdSchema.parse(req.params.patientId);
 const missing = (res: Response) => res.status(404).json({ success: false, error: { code: 'PATIENT_NOT_FOUND', message: 'Patient not found in this clinic.' } });
+const publicPatient = (patient: any) => {
+  const value = typeof patient?.toObject === 'function' ? patient.toObject() : { ...patient };
+  delete value.notes;
+  delete value.statusHistory;
+  value.contacts = (value.contacts ?? []).map((contact: any) => { const item = { ...contact }; delete item.normalizedValue; return item; });
+  return value;
+};
 const run = (fn: (req: Request, res: Response) => Promise<any>) =>
   (req: Request, res: Response, next: NextFunction) => { Promise.resolve(fn(req, res)).catch(next); };
 
 export const patientController = {
   list: run(async (req, res) => { const r = await patientService.list(scope(req), v.listPatientsSchema.parse(req.query)); res.json({ success: true, data: r.items, pagination: r.pagination }); }),
-  create: run(async (req, res) => { const r = await patientService.create(scope(req), v.createPatientSchema.parse(req.body)); res.status(201).json({ success: true, data: r.patient, meta: { possibleDuplicate: r.possibleDuplicate } }); }),
+  create: run(async (req, res) => { const r = await patientService.create(scope(req), v.createPatientSchema.parse(req.body)); res.status(201).json({ success: true, data: publicPatient(r.patient), meta: { possibleDuplicate: r.possibleDuplicate } }); }),
   get: run(async (req, res) => { const p = await patientService.get(scope(req), id(req)); if (!p) return missing(res); res.json({ success: true, data: p }); }),
   update: run(async (req, res) => { const p = await patientService.update(scope(req), id(req), v.updatePatientSchema.parse(req.body)); if (!p) return missing(res); res.json({ success: true, data: p }); }),
   contacts: run(async (req, res) => { const p = await patientService.get(scope(req), id(req)); if (!p) return missing(res); res.json({ success: true, data: p.contacts }); }),
