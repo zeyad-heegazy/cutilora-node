@@ -8,6 +8,9 @@ import { TenantAuditEvent } from '../../tenancy/models/tenant-audit-event.model.
 
 type Scope = { tenantId: string; clinicId: string; branchId?: string | null; accessScope: 'tenant' | 'clinic' | 'branch'; userId: string };
 const objectIds = (values: string[]) => [...new Set(values)].map((value) => new Types.ObjectId(value));
+const assertClinicScope = (scope: Scope) => {
+  if (scope.accessScope === 'branch') throw { status: 403, code: 'CLINIC_SCOPE_REQUIRED', message: 'This operation changes clinic-wide staff or provider data and requires clinic-level access.' };
+};
 const audit = async (scope: Scope, action: string, targetType: string, targetId: string, metadata: Record<string, unknown> = {}) => {
   try {
     await TenantAuditEvent.create({ tenantId: scope.tenantId, clinicId: scope.clinicId, branchId: scope.branchId ?? null, actorUserId: scope.userId, action, targetType, targetId, metadata });
@@ -93,6 +96,7 @@ export const clinicStaffService = {
     return Employee.findOne(filter).lean();
   },
   async updateEmployee(scope: Scope, id: string, input: any) {
+    assertClinicScope(scope);
     const current = await this.getEmployee(scope, id);
     if (!current) return null;
     if (input.branchIds) {
@@ -147,6 +151,7 @@ export const clinicStaffService = {
     return Provider.findOne(filter).populate({ path: 'employeeId', select: 'firstName lastName displayName employeeCode jobTitle status' }).lean();
   },
   async updateProvider(scope: Scope, id: string, input: any) {
+    assertClinicScope(scope);
     const current = await this.getProvider(scope, id);
     if (!current) return null;
     if (input.branchIds) input.branchIds = objectIds(await validateProviderBranches(scope, current.employeeId?._id ?? current.employeeId, input.branchIds));
@@ -164,6 +169,7 @@ export const clinicStaffService = {
     return item;
   },
   async replaceProviderBranches(scope: Scope, id: string, branchIds: string[]) {
+    assertClinicScope(scope);
     const current = await this.getProvider(scope, id);
     if (!current) return null;
     const branches = await validateProviderBranches(scope, current.employeeId?._id ?? current.employeeId, branchIds);
@@ -172,6 +178,7 @@ export const clinicStaffService = {
     return item;
   },
   async replaceProviderServices(scope: Scope, id: string, serviceIds: string[]) {
+    assertClinicScope(scope);
     const current = await this.getProvider(scope, id);
     if (!current) return null;
     const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { serviceIds: objectIds(serviceIds), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
@@ -183,6 +190,7 @@ export const clinicStaffService = {
     return provider ? provider.workingHours ?? [] : null;
   },
   async setProviderWorkingHours(scope: Scope, id: string, workingHours: any[]) {
+    assertClinicScope(scope);
     const current = await this.getProvider(scope, id);
     if (!current) return null;
     validateSchedule(workingHours);
@@ -194,6 +202,7 @@ export const clinicStaffService = {
     return Specialty.find({ tenantId: scope.tenantId, clinicId: scope.clinicId, status: 'active' }).sort({ name: 1 }).lean();
   },
   async createSpecialty(scope: Scope, input: any) {
+    assertClinicScope(scope);
     try {
       const item = await Specialty.create({ ...input, tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
       await audit(scope, 'specialty.created', 'specialty', String(item._id));
@@ -204,6 +213,7 @@ export const clinicStaffService = {
     }
   },
   async updateSpecialty(scope: Scope, id: string, input: any) {
+    assertClinicScope(scope);
     try {
       const item = await Specialty.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId }, { $set: { ...input } }, { new: true, runValidators: true }).lean();
       if (item) await audit(scope, 'specialty.updated', 'specialty', id, { changedFields: Object.keys(input), status: (item as any).status });
