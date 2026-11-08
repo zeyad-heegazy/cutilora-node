@@ -48,4 +48,5 @@ export const providerBranchSchema = z.object({ branchIds: z.array(id).min(1).max
 export const providerServicesSchema = z.object({ serviceIds: z.array(id).max(200) });
 export const providerWorkingHoursSchema = z.object({ workingHours: createProviderSchema.shape.workingHours });
 export const createSpecialtySchema = z.object({ name: z.string().trim().min(2).max(120), code: optionalText(40), description: optionalText(500) });
+export const updateSpecialtySchema = createSpecialtySchema.partial().extend({ status: z.enum(['active', 'archived']).optional() });
 export const routeIdSchema = id;
