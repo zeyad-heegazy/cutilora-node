@@ -1,0 +1,122 @@
+paths:
+  /platform/geo/{resource}:
+    parameters:
+      - name: resource
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [countries, governorates, cities, districts]
+    get:
+      tags: [Portal Platform]
+      summary: List entries in a geographic catalog
+      security: [{ platformBearerAuth: [] }]
+      parameters:
+        - { name: page, in: query, schema: { type: integer, minimum: 1, default: 1 } }
+        - { name: per_page, in: query, schema: { type: integer, minimum: 1, maximum: 100, default: 15 } }
+        - { name: search, in: query, schema: { type: string, maxLength: 100 } }
+        - { name: country_id, in: query, schema: { type: string } }
+        - { name: governorate_id, in: query, schema: { type: string } }
+        - { name: city_id, in: query, schema: { type: string } }
+      responses:
+        "200": { description: Paginated geographic catalog entries }
+        "400": { $ref: "../../../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+    post:
+      tags: [Portal Platform]
+      summary: Create an entry in a geographic catalog
+      security: [{ platformBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            examples:
+              country:
+                summary: Create a country
+                value: { name_en: "Egypt", name_ar: "مصر", code: "EG" }
+              governorate:
+                summary: Create a governorate
+                value: { name_en: "Giza", name_ar: "الجيزة", country_id: "64b000000000000000000001" }
+              city:
+                summary: Create a city
+                value: { name_en: "Cairo", name_ar: "القاهرة", governorate_id: "64b000000000000000000002" }
+              district:
+                summary: Create a district
+                value: { name_en: "Dokki", name_ar: "الدقي", city_id: "64b000000000000000000003" }
+            schema:
+              type: object
+              required: [name_en]
+              properties:
+                name_en: { type: string, minLength: 1, maxLength: 255 }
+                name_ar: { type: string, maxLength: 255, nullable: true }
+                code: { type: string, maxLength: 64, nullable: true }
+                country_id: { type: string }
+                governorate_id: { type: string }
+                city_id: { type: string }
+      responses:
+        "201": { description: Geographic entry created }
+        "400": { $ref: "../../../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+  /platform/geo/{resource}/{entry}:
+    parameters:
+      - name: resource
+        in: path
+        required: true
+        schema: { type: string, enum: [countries, governorates, cities, districts] }
+      - name: entry
+        in: path
+        required: true
+        schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
+    get:
+      tags: [Portal Platform]
+      summary: Get a geographic catalog entry
+      security: [{ platformBearerAuth: [] }]
+      responses:
+        "200": { description: Geographic entry details }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+    patch:
+      tags: [Portal Platform]
+      summary: Update a geographic catalog entry
+      security: [{ platformBearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            examples:
+              country:
+                summary: Update a country
+                value: { name_en: "Arab Republic of Egypt", name_ar: "مصر", code: "EG" }
+              governorate:
+                summary: Update a governorate
+                value: { name_en: "Giza Governorate", country_id: "64b000000000000000000001" }
+              city:
+                summary: Update a city
+                value: { name_en: "New Cairo", governorate_id: "64b000000000000000000002" }
+              district:
+                summary: Update a district
+                value: { name_en: "Mohandessin", city_id: "64b000000000000000000003" }
+            schema:
+              type: object
+              description: All fields are optional; at least one field should be supplied.
+              properties:
+                name_en: { type: string, minLength: 1, maxLength: 255 }
+                name_ar: { type: string, maxLength: 255, nullable: true }
+                code: { type: string, maxLength: 64, nullable: true }
+                country_id: { type: string }
+                governorate_id: { type: string }
+                city_id: { type: string }
+      responses:
+        "200": { description: Geographic entry updated }
+        "400": { $ref: "../../../../openapi.yaml#/components/responses/BadRequest" }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+    delete:
+      tags: [Portal Platform]
+      summary: Delete a geographic catalog entry
+      description: Deletion is rejected when dependent geographic records still reference the entry.
+      security: [{ platformBearerAuth: [] }]
+      responses:
+        "200": { description: Geographic entry deleted }
+        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { $ref: "../../../../openapi.yaml#/components/responses/Conflict" }
