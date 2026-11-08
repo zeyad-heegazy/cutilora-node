@@ -11,7 +11,9 @@ const objectIds = (values: string[]) => [...new Set(values)].map((value) => new 
 const audit = async (scope: Scope, action: string, targetType: string, targetId: string, metadata: Record<string, unknown> = {}) => {
   try {
     await TenantAuditEvent.create({ tenantId: scope.tenantId, clinicId: scope.clinicId, branchId: scope.branchId ?? null, actorUserId: scope.userId, action, targetType, targetId, metadata });
-  } catch { /* Audit persistence failure is handled by the platform audit pipeline. */ }
+  } catch (error) {
+    console.error('Clinic staff audit event persistence failed', { action, errorName: error instanceof Error ? error.name : 'UnknownError' });
+  }
 };
 const validateBranches = async (scope: Scope, ids: string[]) => {
   const unique = [...new Set(ids)];
@@ -195,6 +197,16 @@ export const clinicStaffService = {
     try {
       const item = await Specialty.create({ ...input, tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
       await audit(scope, 'specialty.created', 'specialty', String(item._id));
+      return item;
+    } catch (error: any) {
+      if (error?.code === 11000) throw { status: 409, code: 'SPECIALTY_UNIQUE_CONFLICT', message: 'A specialty with this name or code already exists in this clinic.' };
+      throw error;
+    }
+  },
+  async updateSpecialty(scope: Scope, id: string, input: any) {
+    try {
+      const item = await Specialty.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId }, { $set: { ...input } }, { new: true, runValidators: true }).lean();
+      if (item) await audit(scope, 'specialty.updated', 'specialty', id, { changedFields: Object.keys(input), status: (item as any).status });
       return item;
     } catch (error: any) {
       if (error?.code === 11000) throw { status: 409, code: 'SPECIALTY_UNIQUE_CONFLICT', message: 'A specialty with this name or code already exists in this clinic.' };
