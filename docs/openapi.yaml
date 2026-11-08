@@ -75,6 +75,8 @@ paths:
     $ref: "./openapi/tenant/geo/cities/cities.yaml#/paths/~1tenant~1geo~1cities"
   /tenant/geo/districts:
     $ref: "./openapi/tenant/geo/districts/districts.yaml#/paths/~1tenant~1geo~1districts"
+  /tenant/geo/{resource}:
+    $ref: "./openapi/tenant/geo/resource.yaml#/paths/~1tenant~1geo~1{resource}"
   /tenant/dashboard/summary:
     $ref: "./openapi/tenant/dashboard/dashboard.yaml#/paths/~1tenant~1dashboard~1summary"
   /tenant/dashboard/activity:
@@ -173,8 +175,12 @@ paths:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}"
   /tenant/roles/{roleId}/clone:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1clone"
-  /tenant/roles/{roleId}/deactivate:
-    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1deactivate"
+  /tenant/roles/{roleId}/permissions:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1permissions"
+  /tenant/roles/{roleId}/archive:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1archive"
+  /tenant/roles/{roleId}/archive:
+    $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1roles~1{roleId}~1archive"
   /tenant/memberships/{membershipId}/role:
     $ref: "./openapi/tenant/memberships/memberships.yaml#/paths/~1tenant~1memberships~1{membershipId}~1role"
   /tenant/access/me:
@@ -199,6 +205,16 @@ paths:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1preview-apply"
   /tenant/configuration/apply:
     $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1configuration~1apply"
+  /tenant/catalog-templates:
+    $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1catalog-templates"
+  /tenant/catalog-templates/{templateId}:
+    $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1catalog-templates~1{templateId}"
+  /tenant/catalog-templates/{templateId}/archive:
+    $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1catalog-templates~1{templateId}~1archive"
+  /tenant/catalog-templates/{templateId}/publish:
+    $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1catalog-templates~1{templateId}~1publish"
+  /tenant/catalog-templates/{templateId}/rollback:
+    $ref: "./openapi/tenant/configuration/configuration.yaml#/paths/~1tenant~1catalog-templates~1{templateId}~1rollback"
   /tenant/integrations/providers:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1integrations~1providers"
   /tenant/integrations:
@@ -221,6 +237,8 @@ paths:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1status"
   /tenant/webhooks/{endpointId}/deliveries:
     $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1deliveries"
+  /tenant/webhooks/{endpointId}/deliveries/{deliveryId}/retry:
+    $ref: "./openapi/tenant/integrations/integrations.yaml#/paths/~1tenant~1webhooks~1{endpointId}~1deliveries~1{deliveryId}~1retry"
   /tenant/reports/organization:
     $ref: "./openapi/tenant/reports/reports.yaml#/paths/~1tenant~1reports~1organization"
   /tenant/reports/organization/export:
@@ -268,7 +286,7 @@ paths:
   /tenant/clinics/{clinicId}/activate:
     $ref: "./openapi/tenant/clinics/lifecycle.yaml#/paths/~1tenant~1clinics~1{clinicId}~1activate"
   /tenant/clinics/{clinicId}/deactivate:
-    $ref: "./openapi/tenant/clinics/lifecycle.yaml#/paths/~1tenant~1clinics~1{clinicId}~1deactivate"
+    $ref: "./openapi/tenant/clinics/lifecycle.yaml#/paths/~1tenant~1clinics~1{clinicId}~1archive"
   /tenant/clinics/{clinicId}:
     $ref: "./openapi/tenant/clinics/clinics.yaml#/paths/~1tenant~1clinics~1{clinicId}"
   /tenant/clinics/{clinicId}/activity:
@@ -302,7 +320,7 @@ paths:
   /tenant/branches/{branchId}/activate:
     $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1activate"
   /tenant/branches/{branchId}/deactivate:
-    $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1deactivate"
+    $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1archive"
   /tenant/branches/{branchId}/temporary-close:
     $ref: "./openapi/tenant/branches/lifecycle.yaml#/paths/~1tenant~1branches~1{branchId}~1temporary-close"
   /tenant/branches/{branchId}/close:
