@@ -20,6 +20,7 @@ tags:
   - name: Clinics
   - name: Branches
   - name: Clinic - Geo
+  - name: Clinic Staff & Providers
 paths:
   /health:
     $ref: "./openapi/platform/system/health.yaml#/paths/~1health"
@@ -101,6 +102,22 @@ paths:
     $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1expense-summary"
   /tenant/finance/reports:
     $ref: "./openapi/tenant/finance/finance.yaml#/paths/~1tenant~1finance~1reports"
+  /employees:
+    $ref: "./openapi/clinic/staff/staff.yaml#/paths/~1employees"
+  /employees/{employeeId}:
+    $ref: "./openapi/clinic/staff/staff.yaml#/paths/~1employees~1{employeeId}"
+  /providers:
+    $ref: "./openapi/clinic/staff/staff.yaml#/paths/~1providers"
+  /providers/{providerId}:
+    $ref: "./openapi/clinic/staff/staff.yaml#/paths/~1providers~1{providerId}"
+  /providers/{providerId}/branches:
+    $ref: "./openapi/clinic/staff/staff.yaml#/paths/~1providers~1{providerId}~1branches"
+  /providers/{providerId}/services:
+    $ref: "./openapi/clinic/staff/staff.yaml#/paths/~1providers~1{providerId}~1services"
+  /providers/{providerId}/working-hours:
+    $ref: "./openapi/clinic/staff/staff.yaml#/paths/~1providers~1{providerId}~1working-hours"
+  /specialties:
+    $ref: "./openapi/clinic/staff/staff.yaml#/paths/~1specialties"
   /clinic/finance/invoices:
     $ref: "./openapi/clinic/finance/finance.yaml#/paths/~1clinic~1finance~1invoices"
   /clinic/finance/payments:
