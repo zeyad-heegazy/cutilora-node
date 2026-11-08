@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { updateBranchOperatingHoursSchema } from '../../src/modules/tenancy/validations/tenancy.validation.js';
+import { updateBranchOperatingHoursSchema } from '../../src/modules/tenancy/validation/tenancy.validation.js';
 
 const weeklySchedule = [
   { dayOfWeek: 0, isClosed: false, openTime: '09:00', closeTime: '18:00', breakTimes: [{ startTime: '13:00', endTime: '14:00' }] },
