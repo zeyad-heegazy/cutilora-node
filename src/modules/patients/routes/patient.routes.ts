@@ -19,6 +19,7 @@ patientRouter.put('/patients/:patientId/addresses',...auth,requireTenantPermissi
 patientRouter.put('/patients/:patientId/emergency-contacts',...auth,requireTenantPermission('patients.manage'),c.replaceEmergencyContacts);
 patientRouter.get('/patients/:patientId/tags',...auth,requireTenantPermission('patients.read'),c.tags);
 patientRouter.put('/patients/:patientId/tags',...auth,requireTenantPermission('patients.manage'),c.setTags);
+patientRouter.get('/patients/:patientId/notes',...auth,requireTenantPermission('patients.notes.manage'),c.getNotes);
 patientRouter.post('/patients/:patientId/notes',...auth,requireTenantPermission('patients.notes.manage'),c.addNote);
 patientRouter.get('/patients/:patientId/status-history',...auth,requireTenantPermission('patients.read'),c.statusHistory);
 patientRouter.patch('/patients/:patientId/status',...auth,requireTenantPermission('patients.manage'),c.changeStatus);
