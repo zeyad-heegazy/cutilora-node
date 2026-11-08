@@ -16,9 +16,10 @@ export const TENANT_PERMISSION_CATALOG = [
   { module: 'documents', actions: ['documents.manage'] },
   { module: 'staff', actions: ['staff.read', 'staff.manage'] },
   { module: 'providers', actions: ['providers.read', 'providers.manage', 'specialties.manage'] },
-  { module: 'finance', actions: ['billing.read', 'finance.read', 'finance.manage'] },
+  { module: 'finance', actions: ['billing.read', 'billing.manage', 'finance.read', 'finance.manage'] },
   { module: 'reports', actions: ['dashboard.read', 'reports.export', 'audit.read', 'audit.export'] },
   { module: 'integrations', actions: ['integrations.manage'] },
+  { module: 'privacy', actions: ['privacy.read', 'privacy.manage'] },
 ] as const;
 
 const permissionKeys = new Set(TENANT_PERMISSION_CATALOG.flatMap((item) => item.actions));
