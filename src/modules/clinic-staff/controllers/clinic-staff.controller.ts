@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express';
 import { clinicStaffService } from '../services/clinic-staff.service.js';
-import { createEmployeeSchema, updateEmployeeSchema, employeeListSchema, createProviderSchema, updateProviderSchema, providerListSchema, providerBranchSchema, providerServicesSchema, providerWorkingHoursSchema, createSpecialtySchema, routeIdSchema } from '../validation/clinic-staff.validation.js';
+import { createEmployeeSchema, updateEmployeeSchema, employeeListSchema, createProviderSchema, updateProviderSchema, providerListSchema, providerBranchSchema, providerServicesSchema, providerWorkingHoursSchema, createSpecialtySchema, updateSpecialtySchema, routeIdSchema } from '../validation/clinic-staff.validation.js';
 
 const scope = (req: Request) => {
   if (!req.tenantContext?.clinicId) throw { status: 400, code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' };
@@ -23,4 +23,5 @@ export const clinicStaffController = {
   async setProviderWorkingHours(req: Request, res: Response, next: NextFunction) { try { const input = providerWorkingHoursSchema.parse(req.body); const item = await clinicStaffService.setProviderWorkingHours(scope(req), routeIdSchema.parse(req.params.providerId), input.workingHours); if(!item) return notFound(res,'provider'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
   async listSpecialties(req: Request, res: Response, next: NextFunction) { try { res.json({ success:true,data:await clinicStaffService.listSpecialties(scope(req)) }); } catch(e) { next(e); } },
   async createSpecialty(req: Request, res: Response, next: NextFunction) { try { res.status(201).json({ success:true,data:await clinicStaffService.createSpecialty(scope(req), createSpecialtySchema.parse(req.body)) }); } catch(e) { next(e); } },
+  async updateSpecialty(req: Request, res: Response, next: NextFunction) { try { const item = await clinicStaffService.updateSpecialty(scope(req), routeIdSchema.parse(req.params.specialtyId), updateSpecialtySchema.parse(req.body)); if(!item) return notFound(res,'specialty'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
 };
