@@ -6,7 +6,7 @@ import { User } from '../../auth/models/user.model.js';
 import { Branch } from '../../tenancy/models/branch.model.js';
 import { TenantAuditEvent } from '../../tenancy/models/tenant-audit-event.model.js';
 
-type Scope = { tenantId: string; clinicId: string; branchId?: string | null; userId: string };
+type Scope = { tenantId: string; clinicId: string; branchId?: string | null; accessScope: 'tenant' | 'clinic' | 'branch'; userId: string };
 const objectIds = (values: string[]) => [...new Set(values)].map((value) => new Types.ObjectId(value));
 const audit = async (scope: Scope, action: string, targetType: string, targetId: string, metadata: Record<string, unknown> = {}) => {
   try {
@@ -15,7 +15,7 @@ const audit = async (scope: Scope, action: string, targetType: string, targetId:
 };
 const validateBranches = async (scope: Scope, ids: string[]) => {
   const unique = [...new Set(ids)];
-  if (scope.branchId && unique.some((id) => id !== scope.branchId)) throw { status: 403, code: 'BRANCH_SCOPE_VIOLATION', message: 'A branch-scoped user can only assign the active branch.' };
+  if (scope.accessScope === 'branch' && scope.branchId && unique.some((id) => id !== scope.branchId)) throw { status: 403, code: 'BRANCH_SCOPE_VIOLATION', message: 'A branch-scoped user can only assign the active branch.' };
   if (!unique.length) return [];
   const found = await Branch.find({ _id: { $in: objectIds(unique) }, tenantId: scope.tenantId, clinicId: scope.clinicId, status: 'active' }).select('_id').lean();
   if (found.length !== unique.length) throw { status: 400, code: 'INVALID_BRANCH_ASSIGNMENT', message: 'Every assigned branch must be active and belong to the selected clinic.' };
@@ -64,7 +64,7 @@ export const clinicStaffService = {
     return { items, pagination: { page: query.page, perPage: query.perPage, total, totalPages: Math.ceil(total / query.perPage) } };
   },
   async createEmployee(scope: Scope, input: any) {
-    const branches = await validateBranches(scope, input.branchIds?.length ? input.branchIds : (scope.branchId ? [scope.branchId] : []));
+    const branches = await validateBranches(scope, input.branchIds?.length ? input.branchIds : (scope.accessScope === 'branch' && scope.branchId ? [scope.branchId] : []));
     if (input.userId && !await User.exists({ _id: input.userId, isActive: true })) throw { status: 400, code: 'LINKED_USER_NOT_FOUND', message: 'The linked login account must exist and be active.' };
     const item = await Employee.create({ ...input, branchIds: objectIds(branches), tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
     await audit(scope, 'employee.created', 'employee', String(item._id), { status: item.status });
@@ -78,7 +78,7 @@ export const clinicStaffService = {
   async updateEmployee(scope: Scope, id: string, input: any) {
     const current = await this.getEmployee(scope, id);
     if (!current) return null;
-    if (input.branchIds) input.branchIds = objectIds(await validateBranches(scope, input.branchIds.length ? input.branchIds : (scope.branchId ? [scope.branchId] : [])));
+    if (input.branchIds) input.branchIds = objectIds(await validateBranches(scope, input.branchIds.length ? input.branchIds : (scope.accessScope === 'branch' && scope.branchId ? [scope.branchId] : [])));
     const item = await Employee.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { ...input, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
     if (item) await audit(scope, 'employee.updated', 'employee', id, { changedFields: Object.keys(input) });
     return item;
