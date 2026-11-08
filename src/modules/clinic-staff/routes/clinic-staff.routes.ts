@@ -1,0 +1,22 @@
+import { Router } from 'express';
+import { authenticate } from '../../auth/middleware/authenticate.js';
+import { resolveTenantContext } from '../../tenancy/middleware/tenant-context.js';
+import { requireTenantPermission } from '../../tenancy/middleware/tenant-permissions.js';
+import { clinicStaffController as c } from '../controllers/clinic-staff.controller.js';
+
+export const clinicStaffRouter = Router();
+clinicStaffRouter.use(authenticate, resolveTenantContext);
+clinicStaffRouter.get('/employees', requireTenantPermission('staff.read'), c.listEmployees);
+clinicStaffRouter.post('/employees', requireTenantPermission('staff.manage'), c.createEmployee);
+clinicStaffRouter.get('/employees/:employeeId', requireTenantPermission('staff.read'), c.getEmployee);
+clinicStaffRouter.patch('/employees/:employeeId', requireTenantPermission('staff.manage'), c.updateEmployee);
+clinicStaffRouter.get('/providers', requireTenantPermission('providers.read'), c.listProviders);
+clinicStaffRouter.post('/providers', requireTenantPermission('providers.manage'), c.createProvider);
+clinicStaffRouter.get('/providers/:providerId', requireTenantPermission('providers.read'), c.getProvider);
+clinicStaffRouter.patch('/providers/:providerId', requireTenantPermission('providers.manage'), c.updateProvider);
+clinicStaffRouter.put('/providers/:providerId/branches', requireTenantPermission('providers.manage'), c.replaceProviderBranches);
+clinicStaffRouter.put('/providers/:providerId/services', requireTenantPermission('providers.manage'), c.replaceProviderServices);
+clinicStaffRouter.get('/providers/:providerId/working-hours', requireTenantPermission('providers.read'), c.getProviderWorkingHours);
+clinicStaffRouter.put('/providers/:providerId/working-hours', requireTenantPermission('providers.manage'), c.setProviderWorkingHours);
+clinicStaffRouter.get('/specialties', requireTenantPermission('providers.read'), c.listSpecialties);
+clinicStaffRouter.post('/specialties', requireTenantPermission('specialties.manage'), c.createSpecialty);
