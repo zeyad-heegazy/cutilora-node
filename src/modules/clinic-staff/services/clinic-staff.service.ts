@@ -97,6 +97,8 @@ export const clinicStaffService = {
     if (!employee) throw { status: 400, code: 'EMPLOYEE_NOT_ELIGIBLE', message: 'Provider must reference an active employee in this clinic.' };
     if (await Provider.exists({ tenantId: scope.tenantId, clinicId: scope.clinicId, employeeId: input.employeeId })) throw { status: 409, code: 'PROVIDER_ALREADY_EXISTS', message: 'This employee already has a provider profile.' };
     const branches = await validateBranches(scope, input.branchIds);
+    const employeeBranchIds = (employee.branchIds ?? []).map((id: unknown) => String(id));
+    if (employeeBranchIds.length && branches.some((branchId) => !employeeBranchIds.includes(branchId))) throw { status: 400, code: 'EMPLOYEE_BRANCH_MISMATCH', message: 'Provider branches must be included in the employee branch assignments.' };
     if (input.status === 'active' && input.licenseExpiresAt && new Date(input.licenseExpiresAt).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'An expired license cannot be activated.' };
     const specialties = await validateSpecialties(scope, input.specialtyIds ?? []);
     validateSchedule(input.workingHours ?? []);
