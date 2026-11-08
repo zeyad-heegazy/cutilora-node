@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createTenantInvitationSchema } from '../../src/modules/tenancy/validations/tenancy.validation.js';
+import { createTenantInvitationSchema } from '../../src/modules/tenancy/validation/tenancy.validation.js';
 
 const base = {
   email: 'member@example.com',
