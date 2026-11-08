@@ -282,3 +282,28 @@ paths:
                 description: { type: string, maxLength: 500 }
       responses:
         "201": { description: Specialty created }
+
+  /specialties/{specialtyId}:
+    patch:
+      tags: [Clinic Staff & Providers]
+      summary: Update or archive a clinic specialty
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "../../../openapi.yaml#/components/parameters/TenantId" }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+        - { name: specialtyId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 2, maxLength: 120 }
+                code: { type: string, maxLength: 40 }
+                description: { type: string, maxLength: 500 }
+                status: { type: string, enum: [active, archived] }
+      responses:
+        "200": { description: Specialty updated }
+        "404": { description: Specialty not found in this clinic }
+        "409": { description: Specialty name or code already exists }
