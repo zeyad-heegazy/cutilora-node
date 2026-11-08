@@ -21,6 +21,16 @@ const validateBranches = async (scope: Scope, ids: string[]) => {
   if (found.length !== unique.length) throw { status: 400, code: 'INVALID_BRANCH_ASSIGNMENT', message: 'Every assigned branch must be active and belong to the selected clinic.' };
   return unique;
 };
+const validateProviderBranches = async (scope: Scope, employeeId: unknown, branchIds: string[]) => {
+  const branches = await validateBranches(scope, branchIds);
+  const employee = await Employee.findOne({ _id: employeeId, tenantId: scope.tenantId, clinicId: scope.clinicId }).select('branchIds').lean() as any;
+  if (!employee) throw { status: 400, code: 'EMPLOYEE_NOT_FOUND', message: 'Provider employee does not belong to this clinic.' };
+  const employeeBranches = (employee.branchIds ?? []).map((id: unknown) => String(id));
+  if (employeeBranches.length && branches.some((branchId) => !employeeBranches.includes(branchId))) {
+    throw { status: 400, code: 'EMPLOYEE_BRANCH_MISMATCH', message: 'Provider branches must be included in the employee branch assignments.' };
+  }
+  return branches;
+};
 const validateSpecialties = async (scope: Scope, ids: string[]) => {
   const unique = [...new Set(ids)];
   if (!unique.length) return [];
@@ -88,6 +98,7 @@ export const clinicStaffService = {
     if (scope.branchId || query.branchId) filter.branchIds = scope.branchId ?? query.branchId;
     if (query.status) filter.status = query.status;
     if (query.specialtyId) filter.specialtyIds = query.specialtyId;
+    if (query.search) { const term = [...query.search].map((char) => '.^$*+?()[]{}|\\\\'.includes(char) ? '\\\\' + char : char).join(''); const employeeIds = await Employee.find({ tenantId: scope.tenantId, clinicId: scope.clinicId, $or: [{ firstName: new RegExp(term, 'i') }, { lastName: new RegExp(term, 'i') }, { employeeCode: new RegExp(term, 'i') }] }).distinct('_id'); filter.employeeId = { $in: employeeIds }; }
     if (query.expiringWithinDays) filter.licenseExpiresAt = { $gte: new Date(), $lte: new Date(Date.now() + query.expiringWithinDays * 86400000) };
     const [items, total] = await Promise.all([Provider.find(filter).populate({ path: 'employeeId', select: 'firstName lastName displayName employeeCode jobTitle status' }).sort({ createdAt: -1 }).skip((query.page - 1) * query.perPage).limit(query.perPage).lean(), Provider.countDocuments(filter)]);
     return { items, pagination: { page: query.page, perPage: query.perPage, total, totalPages: Math.ceil(total / query.perPage) } };
@@ -96,9 +107,7 @@ export const clinicStaffService = {
     const employee = await Employee.findOne({ _id: input.employeeId, tenantId: scope.tenantId, clinicId: scope.clinicId, status: 'active' });
     if (!employee) throw { status: 400, code: 'EMPLOYEE_NOT_ELIGIBLE', message: 'Provider must reference an active employee in this clinic.' };
     if (await Provider.exists({ tenantId: scope.tenantId, clinicId: scope.clinicId, employeeId: input.employeeId })) throw { status: 409, code: 'PROVIDER_ALREADY_EXISTS', message: 'This employee already has a provider profile.' };
-    const branches = await validateBranches(scope, input.branchIds);
-    const employeeBranchIds = (employee.branchIds ?? []).map((id: unknown) => String(id));
-    if (employeeBranchIds.length && branches.some((branchId) => !employeeBranchIds.includes(branchId))) throw { status: 400, code: 'EMPLOYEE_BRANCH_MISMATCH', message: 'Provider branches must be included in the employee branch assignments.' };
+    const branches = await validateProviderBranches(scope, employee._id, input.branchIds);
     if (input.status === 'active' && input.licenseExpiresAt && new Date(input.licenseExpiresAt).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'An expired license cannot be activated.' };
     const specialties = await validateSpecialties(scope, input.specialtyIds ?? []);
     validateSchedule(input.workingHours ?? []);
@@ -114,7 +123,7 @@ export const clinicStaffService = {
   async updateProvider(scope: Scope, id: string, input: any) {
     const current = await this.getProvider(scope, id);
     if (!current) return null;
-    if (input.branchIds) input.branchIds = objectIds(await validateBranches(scope, input.branchIds));
+    if (input.branchIds) input.branchIds = objectIds(await validateProviderBranches(scope, current.employeeId?._id ?? current.employeeId, input.branchIds));
     if (input.specialtyIds) input.specialtyIds = objectIds(await validateSpecialties(scope, input.specialtyIds));
     if (input.serviceIds) input.serviceIds = objectIds(input.serviceIds);
     if (input.workingHours) validateSchedule(input.workingHours);
@@ -131,7 +140,7 @@ export const clinicStaffService = {
   async replaceProviderBranches(scope: Scope, id: string, branchIds: string[]) {
     const current = await this.getProvider(scope, id);
     if (!current) return null;
-    const branches = await validateBranches(scope, branchIds);
+    const branches = await validateProviderBranches(scope, current.employeeId?._id ?? current.employeeId, branchIds);
     const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId }, { $set: { branchIds: objectIds(branches), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
     if (item) await audit(scope, 'provider.branches.updated', 'provider', id, { branchCount: branches.length });
     return item;
