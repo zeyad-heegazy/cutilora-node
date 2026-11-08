@@ -3,6 +3,7 @@
 ## Domain boundaries
 - `Employee` is a clinic-owned staff profile and does not require a global `User` account.
 - `Employee.userId` is an optional link to an existing global identity; linking does not create or grant a tenant membership.
+- Branch-scoped users can read staff/provider records and create records assigned to their active branch, but cannot edit clinic-wide employee identity, provider credentials, services, schedules, branch assignments, or specialties. Those mutations require clinic-level access.
 - `Provider` is a clinical capability profile attached one-to-one to an Employee within a clinic.
 - `Specialty` is clinic-scoped and can be renamed or archived; archived specialties cannot be newly assigned to providers.
 - Provider branch assignments are validated against active branches in the same tenant and clinic, and must be a subset of the employee's branch assignments.
