@@ -29,7 +29,7 @@ vi.mock('../../src/shared/storage/private-tenant-document.storage.js', () => ({
 
 import { tenancyService } from '../../src/modules/tenancy/services/tenancy.service.js';
 import { tenancyRepository } from '../../src/modules/tenancy/repositories/tenancy.repository.js';
-import { createBranchHolidaySchema } from '../../src/modules/tenancy/validations/tenancy.validation.js';
+import { createBranchHolidaySchema } from '../../src/modules/tenancy/validation/tenancy.validation.js';
 
 const tenantId = '64b000000000000000000001';
 const clinicId = '64b000000000000000000002';
