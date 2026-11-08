@@ -26,6 +26,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { overrides: { appointmentDurationMinutes: 30, cancellationWindowHours: 24 } }
             schema:
               type: object
               required: [overrides]
