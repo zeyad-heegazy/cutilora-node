@@ -277,7 +277,7 @@ describe('database-backed backend workflows', () => {
     expect(created.status, JSON.stringify(created.body)).toBe(201);
     const patientId = String(created.body.data._id ?? created.body.data.id);
     expect(patientId).toMatch(/^[a-f0-9]{24}$/i);
-    expect(created.body.data.patientNumber).toMatch(/^P-\\d{6}$/);
+    expect(created.body.data.patientNumber).toMatch(/^P-[0-9]{6}$/);
 
     const listed = await clinicTenant().get('/api/v1/patients?q=sara.patient');
     expect(listed.status).toBe(200);
