@@ -16,6 +16,7 @@ export const patientController={
  replaceEmergencyContacts:run(async(req,res)=>{const p=await patientService.replaceEmergencyContacts(scope(req),id(req),v.emergencyContactsSchema.parse(req.body).emergencyContacts);if(!p)return missing(res);res.json({success:true,data:p.emergencyContacts});}),
  tags:run(async(req,res)=>{const p=await patientService.get(scope(req),id(req));if(!p)return missing(res);res.json({success:true,data:p.tags});}),
  setTags:run(async(req,res)=>{const p=await patientService.setTags(scope(req),id(req),v.tagsSchema.parse(req.body).tags);if(!p)return missing(res);res.json({success:true,data:p.tags});}),
+ getNotes:run(async(req,res)=>{const p=await patientService.getNotes(scope(req),id(req));if(!p)return missing(res);res.json({success:true,data:p});}),
  addNote:run(async(req,res)=>{const p=await patientService.addNote(scope(req),id(req),v.noteSchema.parse(req.body));if(!p)return missing(res);res.status(201).json({success:true,data:p});}),
  statusHistory:run(async(req,res)=>{const p=await patientService.statusHistory(scope(req),id(req));if(!p)return missing(res);res.json({success:true,data:p});}),
  changeStatus:run(async(req,res)=>{const x=v.statusSchema.parse(req.body);const p=await patientService.changeStatus(scope(req),id(req),x.status,x.reason??'');if(!p)return missing(res);res.json({success:true,data:p});}),
