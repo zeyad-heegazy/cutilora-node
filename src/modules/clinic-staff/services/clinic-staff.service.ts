@@ -59,7 +59,7 @@ export const clinicStaffService = {
     const filter: any = { tenantId: scope.tenantId, clinicId: scope.clinicId };
     if (scope.branchId || query.branchId) filter.branchIds = scope.branchId ?? query.branchId;
     if (query.status) filter.status = query.status;
-    if (query.search) { const term = query.search.replace(/[.*+?^\u0024{}()|[\\]\\\\]/g, '\\\\if (query.search) filter.$or = [{ firstName: new RegExp(query.search, 'i') }, { lastName: new RegExp(query.search, 'i') }, { employeeCode: new RegExp(query.search, 'i') }, { email: new RegExp(query.search, 'i') }];'); filter.$or = [{ firstName: new RegExp(term, 'i') }, { lastName: new RegExp(term, 'i') }, { employeeCode: new RegExp(term, 'i') }, { email: new RegExp(term, 'i') }]; }
+    if (query.search) { const term = [...query.search].map((char) => '.^$*+?()[]{}|\\\\'.includes(char) ? '\\\\' + char : char).join(''); filter.$or = [{ firstName: new RegExp(term, 'i') }, { lastName: new RegExp(term, 'i') }, { employeeCode: new RegExp(term, 'i') }, { email: new RegExp(term, 'i') }]; }
     const [items, total] = await Promise.all([Employee.find(filter).sort({ lastName: 1, firstName: 1 }).skip((query.page - 1) * query.perPage).limit(query.perPage).lean(), Employee.countDocuments(filter)]);
     return { items, pagination: { page: query.page, perPage: query.perPage, total, totalPages: Math.ceil(total / query.perPage) } };
   },
@@ -97,6 +97,7 @@ export const clinicStaffService = {
     if (!employee) throw { status: 400, code: 'EMPLOYEE_NOT_ELIGIBLE', message: 'Provider must reference an active employee in this clinic.' };
     if (await Provider.exists({ tenantId: scope.tenantId, clinicId: scope.clinicId, employeeId: input.employeeId })) throw { status: 409, code: 'PROVIDER_ALREADY_EXISTS', message: 'This employee already has a provider profile.' };
     const branches = await validateBranches(scope, input.branchIds);
+    if (input.status === 'active' && input.licenseExpiresAt && new Date(input.licenseExpiresAt).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'An expired license cannot be activated.' };
     const specialties = await validateSpecialties(scope, input.specialtyIds ?? []);
     validateSchedule(input.workingHours ?? []);
     const item = await Provider.create({ ...input, branchIds: objectIds(branches), specialtyIds: objectIds(specialties), serviceIds: objectIds(input.serviceIds ?? []), tenantId: scope.tenantId, clinicId: scope.clinicId, createdBy: scope.userId });
