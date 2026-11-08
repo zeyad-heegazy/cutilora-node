@@ -37,6 +37,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Cutilora Downtown Clinic", clinicType: dermatology, description: "Dermatology and aesthetic treatments", timezone: "Africa/Cairo" }
             schema: { $ref: "../../../openapi.yaml#/components/schemas/ClinicInput" }
       responses:
         "201":
@@ -85,6 +86,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Cutilora Downtown Clinic", description: "Updated clinic profile" }
             schema: { $ref: "../../../openapi.yaml#/components/schemas/ClinicUpdate" }
       responses:
         "200":
@@ -134,6 +136,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Clinic operating license", category: license, fileBase64: "SGVsbG8=", expiresAt: "2027-12-31T00:00:00.000Z" }
             schema:
               type: object
               required: [name, category, fileBase64]
@@ -206,6 +209,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Updated clinic operating license", fileBase64: "SGVsbG8=", expiresAt: "2028-12-31T00:00:00.000Z" }
             schema:
               type: object
               required: [fileBase64]
