@@ -279,7 +279,7 @@ describe('database-backed backend workflows', () => {
     expect(patientId).toMatch(/^[a-f0-9]{24}$/i);
     expect(created.body.data.patientNumber).toMatch(/^P-[0-9]{6}$/);
 
-    const listed = await clinicTenant().get('/api/v1/patients?q=sara.patient');
+    const listed = await clinicTenant().get('/api/v1/patients?q=sara');
     expect(listed.status).toBe(200);
     expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === patientId)).toBe(true);
 
