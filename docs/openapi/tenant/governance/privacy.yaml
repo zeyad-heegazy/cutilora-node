@@ -43,8 +43,7 @@ paths:
                 patientId: { type: string }
                 consentType: { type: string }
                 documentVersion: { type: string }
-                documentHash: { type: string, pattern: '^[a-fA-F0-9]{64}
-                documentSnapshot: { type: string }
+                documentHash: { type: string, pattern: '^[a-fA-F0-9]{64}                documentSnapshot: { type: string }
                 status: { type: string, enum: [granted, declined] }
                 source: { type: string, enum: [clinic_portal, patient_portal, import, other] }
       responses:
@@ -241,7 +240,7 @@ paths:
                 legalBasisReference: { type: string, maxLength: 200, nullable: true }
       responses:
         "201": { description: Inactive retention proposal created }
-, description: SHA-256 hex digest of documentSnapshot }
+ }
                 documentSnapshot: { type: string }
                 status: { type: string, enum: [granted, declined] }
                 source: { type: string, enum: [clinic_portal, patient_portal, import, other] }
@@ -359,14 +358,56 @@ paths:
           application/json:
             schema:
               type: object
-              required: [decision, legalReviewReference]
+              required: [decision]
               properties:
                 decision: { type: string, enum: [approved, rejected] }
-                legalReviewReference: { type: string, maxLength: 160 }
                 resolutionNote: { type: string, maxLength: 2000 }
       responses:
         "200": { description: Request decision recorded }
         "409": { description: Legal review is missing or does not match the decision }
+  /tenant/privacy/data-requests/{requestId}/fulfill:
+    post:
+      tags: [Tenant Governance]
+      summary: Mark an approved privacy request manually fulfilled
+      description: Requires an approved legal review and records a completion note. This endpoint does not itself export, correct, anonymize, or delete patient data.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: requestId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+        - { name: X-Clinic-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolutionNote]
+              properties:
+                resolutionNote: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        "200": { description: Request marked fulfilled; no automated data mutation performed }
+        "409": { description: Request is not approved for fulfillment }
+  /tenant/privacy/retention-policies/{policyId}/approve:
+    post:
+      tags: [Tenant Governance]
+      summary: Approve a retention policy proposal with a legal reference
+      description: Activates the policy record for governance tracking only. No automated archival, anonymization, or deletion worker is enabled.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { name: policyId, in: path, required: true, schema: { type: string } }
+        - { name: X-Tenant-Id, in: header, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [legalBasisReference]
+              properties:
+                legalBasisReference: { type: string, minLength: 1, maxLength: 200 }
+      responses:
+        "200": { description: Retention proposal approved but execution remains disabled }
+        "409": { description: Proposal cannot be approved }
   /tenant/privacy/retention-policies:
     get:
       tags: [Tenant Governance]
