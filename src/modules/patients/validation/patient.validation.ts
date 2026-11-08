@@ -1,0 +1,63 @@
+import { Types } from 'mongoose';
+import { z } from 'zod';
+
+const id = z.string().regex(/^[a-f\d]{24}$/i, 'Expected a valid MongoDB ObjectId').refine(value => Types.ObjectId.isValid(value));
+const contact = z.object({
+  type: z.enum(['mobile', 'email', 'whatsapp', 'home', 'work', 'other']),
+  value: z.string().trim().min(1).max(254),
+  isPrimary: z.boolean().optional(),
+});
+const address = z.object({
+  label: z.string().trim().max(60).optional(),
+  countryCode: z.string().length(2).optional(),
+  governorateId: id.nullable().optional(),
+  cityId: id.nullable().optional(),
+  districtId: id.nullable().optional(),
+  line1: z.string().trim().max(200).optional(),
+  line2: z.string().trim().max(200).optional(),
+  postalCode: z.string().trim().max(24).optional(),
+  isPrimary: z.boolean().optional(),
+});
+const emergencyContact = z.object({
+  name: z.string().trim().min(1).max(160),
+  relationship: z.string().trim().max(80).optional(),
+  phone: z.string().trim().min(3).max(40),
+});
+export const patientIdSchema = id;
+export const createPatientSchema = z.object({
+  branchIds: z.array(id).max(100).optional(),
+  firstName: z.string().trim().min(1).max(80),
+  lastName: z.string().trim().min(1).max(80),
+  displayName: z.string().trim().max(160).optional(),
+  dateOfBirth: z.coerce.date().max(new Date()).nullable().optional(),
+  gender: z.enum(['female', 'male', 'other', 'undisclosed']).optional(),
+  contacts: z.array(contact).max(20).optional(),
+  addresses: z.array(address).max(20).optional(),
+  emergencyContacts: z.array(emergencyContact).max(10).optional(),
+  status: z.enum(['lead', 'active', 'inactive']).optional(),
+});
+export const updatePatientSchema = createPatientSchema.omit({
+  contacts: true, addresses: true, emergencyContacts: true, branchIds: true, status: true,
+}).partial().refine(value => Object.keys(value).length > 0, 'At least one profile field is required');
+export const listPatientsSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  perPage: z.coerce.number().int().min(1).max(100).default(25),
+  q: z.string().trim().max(120).optional(),
+  search: z.string().trim().max(120).optional(),
+  status: z.enum(['lead', 'active', 'inactive', 'blocked', 'archived']).optional(),
+  gender: z.enum(['female', 'male', 'other', 'undisclosed']).optional(),
+  sort: z.enum(['name', 'createdAt', 'patientNumber']).default('createdAt'),
+  order: z.enum(['asc', 'desc']).default('desc'),
+});
+export const contactsSchema = z.object({ contacts: z.array(contact).max(20) });
+export const addressesSchema = z.object({ addresses: z.array(address).max(20) });
+export const emergencyContactsSchema = z.object({ emergencyContacts: z.array(emergencyContact).max(10) });
+export const tagsSchema = z.object({ tags: z.array(id).max(30) });
+export const noteSchema = z.object({
+  body: z.string().trim().min(1).max(4000),
+  visibility: z.enum(['clinical', 'administrative']).default('administrative'),
+});
+export const statusSchema = z.object({
+  status: z.enum(['lead', 'active', 'inactive', 'blocked', 'archived']),
+  reason: z.string().trim().max(500).optional(),
+});

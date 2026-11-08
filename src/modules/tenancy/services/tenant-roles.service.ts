@@ -16,6 +16,7 @@ export const TENANT_PERMISSION_CATALOG = [
   { module: 'documents', actions: ['documents.manage'] },
   { module: 'staff', actions: ['staff.read', 'staff.manage'] },
   { module: 'providers', actions: ['providers.read', 'providers.manage', 'specialties.manage'] },
+  { module: 'patients', actions: ['patients.read', 'patients.manage', 'patients.notes.read', 'patients.notes.manage', 'patients.notes.clinical.read', 'patients.notes.clinical.manage'] },
   { module: 'finance', actions: ['billing.read', 'billing.manage', 'finance.read', 'finance.manage'] },
   { module: 'reports', actions: ['dashboard.read', 'reports.export', 'audit.read', 'audit.export'] },
   { module: 'integrations', actions: ['integrations.manage'] },

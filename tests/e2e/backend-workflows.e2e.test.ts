@@ -267,6 +267,125 @@ describe('database-backed backend workflows', () => {
     expect(historyAfter.body.data.length).toBeGreaterThanOrEqual(historyBefore.body.data.length);
   });
 
+  it('completes the clinic patient profile, tags, contacts, notes and lifecycle workflow', async () => {
+    const created = await clinicTenant().post('/api/v1/patients').send({
+      firstName: 'Sara',
+      lastName: 'Patient',
+      status: 'lead',
+      contacts: [{ type: 'email', value: 'sara.patient@cutilora.test', isPrimary: true }],
+    });
+    expect(created.status, JSON.stringify(created.body)).toBe(201);
+    const patientId = String(created.body.data._id ?? created.body.data.id);
+    expect(patientId).toMatch(/^[a-f0-9]{24}$/i);
+    expect(created.body.data.patientNumber).toMatch(/^P-[0-9]{6}$/);
+
+    const listed = await clinicTenant().get('/api/v1/patients?q=sara');
+    expect(listed.status).toBe(200);
+    expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === patientId)).toBe(true);
+
+    const concurrentCreates = await Promise.all(Array.from({ length: 5 }, (_, index) =>
+      clinicTenant().post('/api/v1/patients').send({ firstName: 'Concurrent', lastName: `Patient ${index}` }),
+    ));
+    expect(concurrentCreates.every(response => response.status === 201)).toBe(true);
+    const generatedNumbers = concurrentCreates.map(response => response.body.data.patientNumber);
+    expect(new Set(generatedNumbers).size).toBe(5);
+
+    const profile = await clinicTenant().get(`/api/v1/patients/${patientId}`);
+    expect(profile.status).toBe(200);
+    expect(profile.body.data.notes).toBeUndefined();
+    expect(profile.body.data.statusHistory).toBeUndefined();
+
+    const duplicate = await clinicTenant().post('/api/v1/patients').send({
+      firstName: 'Sara',
+      lastName: 'Duplicate',
+      contacts: [{ type: 'email', value: 'SARA.PATIENT@CUTILORA.TEST' }],
+    });
+    expect(duplicate.status).toBe(201);
+    expect(duplicate.body.meta.possibleDuplicate).toBeTruthy();
+
+    const tag = await clinicTenant().post('/api/v1/patient-tags').send({ name: 'VIP', color: '#2563eb' });
+    expect(tag.status, JSON.stringify(tag.body)).toBe(201);
+    const tagId = String(tag.body.data._id ?? tag.body.data.id);
+    const attached = await clinicTenant().put(`/api/v1/patients/${patientId}/tags`).send({ tags: [tagId] });
+    expect(attached.status).toBe(200);
+    expect(attached.body.data[0].name).toBe('vip');
+
+    const invalidTag = await clinicTenant().put(`/api/v1/patients/${patientId}/tags`).send({ tags: ['507f1f77bcf86cd799439011'] });
+    expect(invalidTag.status).toBe(400);
+
+    const contacts = await clinicTenant().put(`/api/v1/patients/${patientId}/contacts`).send({
+      contacts: [{ type: 'mobile', value: '+201000000001', isPrimary: true }],
+    });
+    expect(contacts.status).toBe(200);
+    expect(contacts.body.data[0].normalizedValue).toBeUndefined();
+
+    const note = await clinicTenant().post(`/api/v1/patients/${patientId}/notes`).send({
+      body: 'Administrative intake note',
+      visibility: 'administrative',
+    });
+    expect(note.status).toBe(201);
+    const notes = await clinicTenant().get(`/api/v1/patients/${patientId}/notes`);
+    expect(notes.status).toBe(200);
+    expect(notes.body.data.some((item: any) => item.body === 'Administrative intake note')).toBe(true);
+
+    const activated = await clinicTenant().patch(`/api/v1/patients/${patientId}/status`).send({ status: 'active', reason: 'Intake completed' });
+    expect(activated.status).toBe(200);
+    const archived = await clinicTenant().patch(`/api/v1/patients/${patientId}/status`).send({ status: 'archived', reason: 'Patient requested closure' });
+    expect(archived.status).toBe(200);
+    const invalidTransition = await clinicTenant().patch(`/api/v1/patients/${patientId}/status`).send({ status: 'active' });
+    expect(invalidTransition.status).toBe(409);
+
+    const history = await clinicTenant().get(`/api/v1/patients/${patientId}/status-history`);
+    expect(history.status).toBe(200);
+    expect(history.body.data.history.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('enforces patient assignment and visibility when a branch context is selected', async () => {
+    const createBranch = async (name: string, code: string) => {
+      const response = await clinicTenant().post('/api/v1/tenant/branches').send({
+        name, code, timezone: 'Africa/Cairo', address: 'Cairo', status: 'active',
+      });
+      expect(response.status, JSON.stringify(response.body)).toBe(201);
+      return String(response.body.data._id ?? response.body.data.id);
+    };
+    const firstBranchId = await createBranch('Patient Scope Branch A', 'PATIENT-SCOPE-A');
+    const secondBranchId = await createBranch('Patient Scope Branch B', 'PATIENT-SCOPE-B');
+    const scopedRequest = (branchId: string) => ({
+      post: (path: string) => request(app).post(path)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('X-Tenant-Id', tenantId)
+        .set('X-Clinic-Id', clinicId)
+        .set('X-Branch-Id', branchId),
+      get: (path: string) => request(app).get(path)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('X-Tenant-Id', tenantId)
+        .set('X-Clinic-Id', clinicId)
+        .set('X-Branch-Id', branchId),
+    });
+
+    const first = await scopedRequest(firstBranchId).post('/api/v1/patients').send({ firstName: 'Branch', lastName: 'One', contacts: [{ type: 'email', value: 'cross-branch.patient@cutilora.test' }] });
+    expect(first.status, JSON.stringify(first.body)).toBe(201);
+    const firstPatientId = String(first.body.data._id ?? first.body.data.id);
+
+    const forbiddenAssignment = await scopedRequest(firstBranchId).post('/api/v1/patients').send({
+      firstName: 'Wrong', lastName: 'Branch', branchIds: [secondBranchId],
+    });
+    expect(forbiddenAssignment.status).toBe(403);
+
+    const second = await scopedRequest(secondBranchId).post('/api/v1/patients').send({ firstName: 'Branch', lastName: 'Two', contacts: [{ type: 'email', value: 'CROSS-BRANCH.PATIENT@CUTILORA.TEST' }] });
+    expect(second.status, JSON.stringify(second.body)).toBe(201);
+    expect(second.body.meta.possibleDuplicate?._id ?? second.body.meta.possibleDuplicate?.id).toBe(firstPatientId);
+
+    const firstBranchList = await scopedRequest(firstBranchId).get('/api/v1/patients');
+    expect(firstBranchList.status).toBe(200);
+    expect(firstBranchList.body.data.some((item: any) => String(item._id ?? item.id) === firstPatientId)).toBe(true);
+    expect(firstBranchList.body.data.some((item: any) => item.lastName === 'Two')).toBe(false);
+
+    const clinicList = await clinicTenant().get('/api/v1/patients');
+    expect(clinicList.status).toBe(200);
+    expect(clinicList.body.data.some((item: any) => String(item._id ?? item.id) === firstPatientId)).toBe(true);
+  });
+
   it('creates, updates, lists and archives a custom tenant role', async () => {
     const created = await tenant().post('/api/v1/tenant/roles').send({
       name: 'E2E Front Desk',
