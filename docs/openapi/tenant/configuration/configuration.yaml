@@ -23,6 +23,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { values: { locale: "en", currency: "EGP", timezone: "Africa/Cairo" } }
             schema:
               type: object
               required: [values]
@@ -46,6 +47,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { applyTo: all }
             schema:
               type: object
               required: [applyTo]
@@ -69,6 +71,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { applyTo: all, confirm: true }
             schema:
               type: object
               required: [applyTo, confirm]
@@ -105,6 +108,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Laser Hair Removal", key: "laser-hair-removal", type: service_treatment, description: "Laser hair removal service template", content: { durationMinutes: 30, category: laser } }
             schema:
               type: object
               required: [name, key, type, content]
@@ -136,6 +140,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { expectedVersion: 1, name: "Laser Hair Removal - Updated", description: "Updated service template" }
             schema:
               type: object
               required: [expectedVersion]
@@ -161,6 +166,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { expectedVersion: 2 }
             schema:
               type: object
               required: [expectedVersion]
@@ -182,6 +188,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { expectedVersion: 2, applyTo: none, confirm: true }
             schema:
               type: object
               required: [expectedVersion, applyTo, confirm]
@@ -208,6 +215,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { expectedVersion: 3, targetVersion: 1 }
             schema:
               type: object
               required: [expectedVersion, targetVersion]
