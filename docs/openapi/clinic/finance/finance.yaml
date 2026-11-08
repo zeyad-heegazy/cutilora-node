@@ -10,6 +10,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { clinicId: "64b000000000000000000001", branchId: "64b000000000000000000002", patientId: "64b000000000000000000003", currency: EGP, description: "Laser hair removal package", lineItems: [{ category: service, description: "Laser session", quantity: 1, unitPrice: 1500.00 }] }
             schema:
               type: object
               required: [clinicId, currency, lineItems]
@@ -43,6 +44,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { invoiceId: "64b000000000000000000010", amount: 1500.00, currency: EGP, method: card, reference: "POS-2026-001", idempotencyKey: "payment-2026-001" }
             schema:
               type: object
               required: [invoiceId, amount, currency]
@@ -65,6 +67,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { paymentId: "64b000000000000000000011", amount: 250.00, method: card, reference: "REF-2026-001", refundedAt: "2026-11-08T12:00:00.000Z" }
             schema:
               type: object
               required: [paymentId, amount]
@@ -84,6 +87,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { clinicId: "64b000000000000000000001", branchId: "64b000000000000000000002", amount: 450.00, currency: EGP, category: supplies, description: "Treatment room consumables", reference: "EXP-2026-001", method: cash, spentAt: "2026-11-08T09:30:00.000Z" }
             schema:
               type: object
               required: [clinicId, amount, currency, category]
@@ -108,6 +112,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { entryId: "64b000000000000000000012", reason: "Duplicate unpaid expense entry" }
             schema:
               type: object
               required: [entryId, reason]
@@ -144,6 +149,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { invoiceId: "64b000000000000000000010", paymentId: "64b000000000000000000011", name: "Six laser sessions", saleAmount: 9000.00, sessionsPurchased: 6, expiresAt: "2027-11-08T00:00:00.000Z" }
             schema:
               type: object
               required: [invoiceId, paymentId, name, saleAmount, sessionsPurchased]
@@ -174,6 +180,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { sessions: 1, idempotencyKey: "redeem-2026-001", reference: "VISIT-2026-001", reason: "Completed treatment session" }
             schema:
               type: object
               required: [sessions, idempotencyKey]
@@ -201,6 +208,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { reason: "Patient requested package cancellation", method: card, reference: "REF-PKG-001", refundedAt: "2026-11-08T13:00:00.000Z" }
             schema:
               type: object
               required: [reason]
@@ -250,6 +258,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { clinicId: "64b000000000000000000001", branchId: "64b000000000000000000002", businessDate: "2026-11-08", timezone: "Africa/Cairo", currency: EGP, periodStartAt: "2026-11-08T00:00:00.000+02:00", periodEndAt: "2026-11-08T23:59:59.000+02:00", openingCash: 1000.00 }
             schema:
               type: object
               required: [clinicId, businessDate, timezone, currency, periodStartAt, periodEndAt, openingCash]
@@ -281,6 +290,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { countedCash: 2450.00, varianceReason: "Cash count reconciled against receipts" }
             schema:
               type: object
               required: [countedCash]
