@@ -8,7 +8,7 @@ const emergencySchema = new Schema({ name: { type: String, required: true, trim:
 const schema = new Schema({
  tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, immutable: true },
  clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', required: true, immutable: true },
- patientNumber: { type: String, required: true, trim: true, uppercase: true, immutable: true },
+ patientNumber: { type: String, required: true, trim: true, uppercase: true, immutable: true },\n branchIds: [{ type: Schema.Types.ObjectId, ref: 'Branch', immutable: true }],
  firstName: { type: String, required: true, trim: true, maxlength: 80 }, lastName: { type: String, required: true, trim: true, maxlength: 80 }, displayName: { type: String, trim: true, maxlength: 160, default: '' },
  dateOfBirth: { type: Date, default: null }, gender: { type: String, enum: ['female','male','other','undisclosed'], default: 'undisclosed' },
  contacts: { type: [contactSchema], default: [] }, addresses: { type: [addressSchema], default: [] }, emergencyContacts: { type: [emergencySchema], default: [] },
