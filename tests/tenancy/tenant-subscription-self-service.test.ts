@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   tenantBillingProfileSchema,
   tenantSubscriptionChangeRequestSchema,
-} from '../../src/modules/tenancy/validations/tenancy.validation.js';
+} from '../../src/modules/tenancy/validation/tenancy.validation.js';
 
 describe('tenant subscription self-service validation', () => {
   it('accepts partial billing profile updates and normalizes contact values', () => {
