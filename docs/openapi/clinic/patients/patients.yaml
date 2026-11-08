@@ -236,7 +236,25 @@ paths:
         content:
           application/json:
             example: { addresses: [{ label: home, countryCode: EG, line1: "12 Nile Street", line2: "Apartment 4", postalCode: "11511", isPrimary: true }] }
-            schema: { type: object, required: [addresses], properties: { addresses: { type: array, maxItems: 20, items: { type: object } } } }
+            schema:
+              type: object
+              required: [addresses]
+              properties:
+                addresses:
+                  type: array
+                  maxItems: 20
+                  items:
+                    type: object
+                    properties:
+                      label: { type: string, maxLength: 60 }
+                      countryCode: { type: string, minLength: 2, maxLength: 2 }
+                      governorateId: { type: string, nullable: true, pattern: '^[a-fA-F0-9]{24}$' }
+                      cityId: { type: string, nullable: true, pattern: '^[a-fA-F0-9]{24}$' }
+                      districtId: { type: string, nullable: true, pattern: '^[a-fA-F0-9]{24}$' }
+                      line1: { type: string, maxLength: 200 }
+                      line2: { type: string, maxLength: 200 }
+                      postalCode: { type: string, maxLength: 24 }
+                      isPrimary: { type: boolean }
       responses:
         '200': { description: Addresses replaced }
   /patients/{patientId}/emergency-contacts:
@@ -253,7 +271,20 @@ paths:
         content:
           application/json:
             example: { emergencyContacts: [{ name: "Ahmed Hassan", relationship: spouse, phone: "+201009876543" }] }
-            schema: { type: object, required: [emergencyContacts], properties: { emergencyContacts: { type: array, maxItems: 10, items: { type: object } } } }
+            schema:
+              type: object
+              required: [emergencyContacts]
+              properties:
+                emergencyContacts:
+                  type: array
+                  maxItems: 10
+                  items:
+                    type: object
+                    required: [name, phone]
+                    properties:
+                      name: { type: string, minLength: 1, maxLength: 160 }
+                      relationship: { type: string, maxLength: 80 }
+                      phone: { type: string, minLength: 3, maxLength: 40 }
       responses:
         '200': { description: Emergency contacts replaced }
   /patients/{patientId}/tags:
