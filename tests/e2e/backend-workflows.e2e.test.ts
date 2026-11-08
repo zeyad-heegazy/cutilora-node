@@ -283,6 +283,13 @@ describe('database-backed backend workflows', () => {
     expect(listed.status).toBe(200);
     expect(listed.body.data.some((item: any) => String(item._id ?? item.id) === patientId)).toBe(true);
 
+    const concurrentCreates = await Promise.all(Array.from({ length: 5 }, (_, index) =>
+      clinicTenant().post('/api/v1/patients').send({ firstName: 'Concurrent', lastName: `Patient ${index}` }),
+    ));
+    expect(concurrentCreates.every(response => response.status === 201)).toBe(true);
+    const generatedNumbers = concurrentCreates.map(response => response.body.data.patientNumber);
+    expect(new Set(generatedNumbers).size).toBe(5);
+
     const profile = await clinicTenant().get(`/api/v1/patients/${patientId}`);
     expect(profile.status).toBe(200);
     expect(profile.body.data.notes).toBeUndefined();
