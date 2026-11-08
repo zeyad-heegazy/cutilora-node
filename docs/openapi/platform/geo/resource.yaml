@@ -20,9 +20,9 @@ paths:
         - { name: city_id, in: query, schema: { type: string } }
       responses:
         "200": { description: Paginated geographic catalog entries }
-        "400": { $ref: "../../../../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
     post:
       tags: [Portal Platform]
       summary: Create an entry in a geographic catalog
@@ -56,9 +56,9 @@ paths:
                 city_id: { type: string }
       responses:
         "201": { description: Geographic entry created }
-        "400": { $ref: "../../../../openapi.yaml#/components/responses/BadRequest" }
-        "401": { $ref: "../../../../openapi.yaml#/components/responses/Unauthorized" }
-        "403": { $ref: "../../../../openapi.yaml#/components/responses/Forbidden" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "401": { $ref: "../../../openapi.yaml#/components/responses/Unauthorized" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
   /platform/geo/{resource}/{entry}:
     parameters:
       - name: resource
@@ -75,7 +75,7 @@ paths:
       security: [{ platformBearerAuth: [] }]
       responses:
         "200": { description: Geographic entry details }
-        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     patch:
       tags: [Portal Platform]
       summary: Update a geographic catalog entry
@@ -109,8 +109,8 @@ paths:
                 city_id: { type: string }
       responses:
         "200": { description: Geographic entry updated }
-        "400": { $ref: "../../../../openapi.yaml#/components/responses/BadRequest" }
-        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
     delete:
       tags: [Portal Platform]
       summary: Delete a geographic catalog entry
@@ -118,5 +118,5 @@ paths:
       security: [{ platformBearerAuth: [] }]
       responses:
         "200": { description: Geographic entry deleted }
-        "404": { $ref: "../../../../openapi.yaml#/components/responses/NotFound" }
-        "409": { $ref: "../../../../openapi.yaml#/components/responses/Conflict" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { $ref: "../../../openapi.yaml#/components/responses/Conflict" }
