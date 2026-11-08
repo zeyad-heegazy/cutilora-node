@@ -50,7 +50,7 @@ const validateSchedule = (hours: any[] = []) => {
     days.add(day.dayOfWeek);
     if (!day.isAvailable) continue;
     if (!day.startTime || !day.endTime || day.startTime >= day.endTime) throw { status: 400, code: 'INVALID_WORKING_HOURS', message: 'Available days require a valid same-day start and end time.' };
-    const intervals = (day.breaks ?? []).map((b: any) => [b.startTime, b.endTime] as [string, string]).sort((a,b) => a[0].localeCompare(b[0]));
+    const intervals: [string, string][] = (day.breaks ?? []).map((b: any): [string, string] => [b.startTime, b.endTime]).sort((a: [string, string], b: [string, string]) => a[0].localeCompare(b[0]));
     let previousEnd = day.startTime;
     for (const [start, end] of intervals) {
       if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(start) || !/^([01]\d|2[0-3]):[0-5]\d$/.test(end) || start >= end || start < previousEnd || end > day.endTime) {
@@ -97,7 +97,7 @@ export const clinicStaffService = {
   },
   async updateEmployee(scope: Scope, id: string, input: any) {
     assertClinicScope(scope);
-    const current = await this.getEmployee(scope, id);
+    const current = await this.getEmployee(scope, id) as any;
     if (!current) return null;
     if (input.branchIds) {
       const nextBranches = await validateBranches(scope, input.branchIds.length ? input.branchIds : (scope.accessScope === 'branch' && scope.branchId ? [scope.branchId] : []));
@@ -108,7 +108,7 @@ export const clinicStaffService = {
       }
       input.branchIds = objectIds(nextBranches);
     }
-    const item = await Employee.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { ...input, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
+    const item = await Employee.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { ...input, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean() as any;
     if (item) {
       if (input.status === 'inactive') {
         const deactivated = await Provider.updateMany({ tenantId: scope.tenantId, clinicId: scope.clinicId, employeeId: id, status: { $ne: 'inactive' } }, { $set: { status: 'inactive', updatedBy: scope.userId } });
@@ -152,7 +152,7 @@ export const clinicStaffService = {
   },
   async updateProvider(scope: Scope, id: string, input: any) {
     assertClinicScope(scope);
-    const current = await this.getProvider(scope, id);
+    const current = await this.getProvider(scope, id) as any;
     if (!current) return null;
     if (input.branchIds) input.branchIds = objectIds(await validateProviderBranches(scope, current.employeeId?._id ?? current.employeeId, input.branchIds));
     if (input.specialtyIds) input.specialtyIds = objectIds(await validateSpecialties(scope, input.specialtyIds));
@@ -164,7 +164,7 @@ export const clinicStaffService = {
       const effectiveExpiry = Object.prototype.hasOwnProperty.call(input, 'licenseExpiresAt') ? input.licenseExpiresAt : current.licenseExpiresAt;
       if (effectiveExpiry && new Date(effectiveExpiry).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'An expired license cannot be activated.' };
     }
-    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { ...input, updatedBy: scope.userId } }, { new: true, runValidators: true }).populate({ path: 'employeeId', select: 'firstName lastName displayName employeeCode jobTitle status' }).lean();
+    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { ...input, updatedBy: scope.userId } }, { new: true, runValidators: true }).populate({ path: 'employeeId', select: 'firstName lastName displayName employeeCode jobTitle status' }).lean() as any;
     if (item) await audit(scope, 'provider.updated', 'provider', id, { changedFields: Object.keys(input) });
     return item;
   },
@@ -173,7 +173,7 @@ export const clinicStaffService = {
     const current = await this.getProvider(scope, id);
     if (!current) return null;
     const branches = await validateProviderBranches(scope, current.employeeId?._id ?? current.employeeId, branchIds);
-    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { branchIds: objectIds(branches), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
+    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { branchIds: objectIds(branches), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean() as any;
     if (item) await audit(scope, 'provider.branches.updated', 'provider', id, { branchCount: branches.length });
     return item;
   },
@@ -181,12 +181,12 @@ export const clinicStaffService = {
     assertClinicScope(scope);
     const current = await this.getProvider(scope, id);
     if (!current) return null;
-    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { serviceIds: objectIds(serviceIds), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
+    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { serviceIds: objectIds(serviceIds), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean() as any;
     if (item) await audit(scope, 'provider.services.updated', 'provider', id, { serviceCount: serviceIds.length });
     return item;
   },
   async getProviderWorkingHours(scope: Scope, id: string) {
-    const provider = await this.getProvider(scope, id);
+    const provider = await this.getProvider(scope, id) as any;
     return provider ? provider.workingHours ?? [] : null;
   },
   async setProviderWorkingHours(scope: Scope, id: string, workingHours: any[]) {
@@ -194,7 +194,7 @@ export const clinicStaffService = {
     const current = await this.getProvider(scope, id);
     if (!current) return null;
     validateSchedule(workingHours);
-    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { workingHours, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
+    const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { workingHours, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean() as any;
     if (item) await audit(scope, 'provider.working_hours.updated', 'provider', id, { daysConfigured: workingHours.length });
     return item;
   },
