@@ -10,6 +10,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { email: "platform.admin@example.com", password: "your-platform-password" }
             schema:
               type: object
               required: [email, password]
@@ -80,6 +81,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Platform Administrator", email: "admin@example.com", password: "ChangeThisPassword123!" }
             schema:
               type: object
               required: [name, email, password]
