@@ -35,8 +35,8 @@ const run = (fn: (req: Request, res: Response) => Promise<any>) =>
 export const patientController = {
   list: run(async (req, res) => { const r = await patientService.list(scope(req), v.listPatientsSchema.parse(req.query)); res.json({ success: true, data: r.items, pagination: r.pagination }); }),
   create: run(async (req, res) => { const r = await patientService.create(scope(req), v.createPatientSchema.parse(req.body)); res.status(201).json({ success: true, data: publicPatient(r.patient), meta: { possibleDuplicate: r.possibleDuplicate } }); }),
-  get: run(async (req, res) => { const p = await patientService.get(scope(req), id(req)); if (!p) return missing(res); res.json({ success: true, data: p }); }),
-  update: run(async (req, res) => { const p = await patientService.update(scope(req), id(req), v.updatePatientSchema.parse(req.body)); if (!p) return missing(res); res.json({ success: true, data: p }); }),
+  get: run(async (req, res) => { const p = await patientService.get(scope(req), id(req)); if (!p) return missing(res); res.json({ success: true, data: publicPatient(p) }); }),
+  update: run(async (req, res) => { const p = await patientService.update(scope(req), id(req), v.updatePatientSchema.parse(req.body)); if (!p) return missing(res); res.json({ success: true, data: publicPatient(p) }); }),
   contacts: run(async (req, res) => { const p = await patientService.get(scope(req), id(req)); if (!p) return missing(res); res.json({ success: true, data: p.contacts }); }),
   replaceContacts: run(async (req, res) => { const r = await patientService.replaceContacts(scope(req), id(req), v.contactsSchema.parse(req.body).contacts); if (!r.patient) return missing(res); res.json({ success: true, data: r.patient.contacts, meta: { possibleDuplicate: r.possibleDuplicate } }); }),
   replaceAddresses: run(async (req, res) => { const p = await patientService.replaceAddresses(scope(req), id(req), v.addressesSchema.parse(req.body).addresses); if (!p) return missing(res); res.json({ success: true, data: p.addresses }); }),
@@ -46,5 +46,5 @@ export const patientController = {
   getNotes: run(async (req, res) => { const p = await patientService.getNotes(scope(req), id(req)); if (!p) return missing(res); res.json({ success: true, data: p }); }),
   addNote: run(async (req, res) => { const p = await patientService.addNote(scope(req), id(req), v.noteSchema.parse(req.body)); if (!p) return missing(res); res.status(201).json({ success: true, data: p }); }),
   statusHistory: run(async (req, res) => { const p = await patientService.statusHistory(scope(req), id(req)); if (!p) return missing(res); res.json({ success: true, data: p }); }),
-  changeStatus: run(async (req, res) => { const x = v.statusSchema.parse(req.body); const p = await patientService.changeStatus(scope(req), id(req), x.status, x.reason ?? ''); if (!p) return missing(res); res.json({ success: true, data: p }); }),
+  changeStatus: run(async (req, res) => { const x = v.statusSchema.parse(req.body); const p = await patientService.changeStatus(scope(req), id(req), x.status, x.reason ?? ''); if (!p) return missing(res); res.json({ success: true, data: publicPatient(p) }); }),
 };
