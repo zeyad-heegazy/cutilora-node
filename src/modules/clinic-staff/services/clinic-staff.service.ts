@@ -59,7 +59,7 @@ export const clinicStaffService = {
     const filter: any = { tenantId: scope.tenantId, clinicId: scope.clinicId };
     if (scope.branchId || query.branchId) filter.branchIds = scope.branchId ?? query.branchId;
     if (query.status) filter.status = query.status;
-    if (query.search) filter.$or = [{ firstName: new RegExp(query.search, 'i') }, { lastName: new RegExp(query.search, 'i') }, { employeeCode: new RegExp(query.search, 'i') }, { email: new RegExp(query.search, 'i') }];
+    if (query.search) { const term = query.search.replace(/[.*+?^\u0024{}()|[\\]\\\\]/g, '\\\\if (query.search) filter.$or = [{ firstName: new RegExp(query.search, 'i') }, { lastName: new RegExp(query.search, 'i') }, { employeeCode: new RegExp(query.search, 'i') }, { email: new RegExp(query.search, 'i') }];'); filter.$or = [{ firstName: new RegExp(term, 'i') }, { lastName: new RegExp(term, 'i') }, { employeeCode: new RegExp(term, 'i') }, { email: new RegExp(term, 'i') }]; }
     const [items, total] = await Promise.all([Employee.find(filter).sort({ lastName: 1, firstName: 1 }).skip((query.page - 1) * query.perPage).limit(query.perPage).lean(), Employee.countDocuments(filter)]);
     return { items, pagination: { page: query.page, perPage: query.perPage, total, totalPages: Math.ceil(total / query.perPage) } };
   },
@@ -78,7 +78,7 @@ export const clinicStaffService = {
   async updateEmployee(scope: Scope, id: string, input: any) {
     const current = await this.getEmployee(scope, id);
     if (!current) return null;
-    if (input.branchIds) input.branchIds = objectIds(await validateBranches(scope, input.branchIds));
+    if (input.branchIds) input.branchIds = objectIds(await validateBranches(scope, input.branchIds.length ? input.branchIds : (scope.branchId ? [scope.branchId] : [])));
     const item = await Employee.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { ...input, updatedBy: scope.userId } }, { new: true, runValidators: true }).lean();
     if (item) await audit(scope, 'employee.updated', 'employee', id, { changedFields: Object.keys(input) });
     return item;
@@ -118,7 +118,7 @@ export const clinicStaffService = {
     if (input.status === 'active') {
       const employee = await Employee.findOne({ _id: current.employeeId?._id ?? current.employeeId, tenantId: scope.tenantId, clinicId: scope.clinicId, status: 'active' }).lean();
       if (!employee) throw { status: 409, code: 'PROVIDER_EMPLOYEE_INACTIVE', message: 'An inactive employee cannot have an active provider profile.' };
-      if (current.licenseExpiresAt && new Date(current.licenseExpiresAt).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'An expired license cannot be activated.' };
+      const effectiveExpiry = Object.prototype.hasOwnProperty.call(input, 'licenseExpiresAt') ? input.licenseExpiresAt : current.licenseExpiresAt;\n      if (effectiveExpiry && new Date(effectiveExpiry).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'An expired license cannot be activated.' };
     }
     const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { ...input, updatedBy: scope.userId } }, { new: true, runValidators: true }).populate({ path: 'employeeId', select: 'firstName lastName displayName employeeCode jobTitle status' }).lean();
     if (item) await audit(scope, 'provider.updated', 'provider', id, { changedFields: Object.keys(input) });
