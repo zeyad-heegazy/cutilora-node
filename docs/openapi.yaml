@@ -919,7 +919,3 @@ components:
     $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1status"
   /patients/{patientId}/status-history:
     $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1status-history"
-  /patients/{patientId}/link-account:
-    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1link-account"
-  /patients/{patientId}/unlink-account:
-    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1unlink-account"
