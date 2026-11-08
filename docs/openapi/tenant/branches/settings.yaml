@@ -27,6 +27,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { overrides: { appointmentBufferMinutes: 10, allowWalkIns: true } }
             schema:
               type: object
               required: [overrides]
