@@ -121,6 +121,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { legalName: "Cutilora Medical Services LLC", taxNumber: "123456789", email: "billing@example.com", phone: "+201001234567", address: "12 Nile Street", city: "Cairo", countryCode: "EG" }
             schema:
               type: object
               additionalProperties: false
@@ -157,6 +158,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { type: upgrade, targetPlanCode: "growth", targetBillingCycle: monthly, effectiveAt: immediate, reason: "Need additional clinic capacity" }
             schema:
               type: object
               required: [type]
