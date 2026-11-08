@@ -204,6 +204,7 @@ paths:
               properties:
                 operatingHours:
                   type: array
+                  minItems: 7
                   maxItems: 7
                   items: { $ref: "../../../openapi.yaml#/components/schemas/OperatingHoursDay" }
       responses:
