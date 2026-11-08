@@ -170,7 +170,7 @@ export const clinicStaffService = {
   },
   async replaceProviderBranches(scope: Scope, id: string, branchIds: string[]) {
     assertClinicScope(scope);
-    const current = await this.getProvider(scope, id);
+    const current = await this.getProvider(scope, id) as any;
     if (!current) return null;
     const branches = await validateProviderBranches(scope, current.employeeId?._id ?? current.employeeId, branchIds);
     const item = await Provider.findOneAndUpdate({ _id: id, tenantId: scope.tenantId, clinicId: scope.clinicId, ...(scope.branchId ? { branchIds: scope.branchId } : {}) }, { $set: { branchIds: objectIds(branches), updatedBy: scope.userId } }, { new: true, runValidators: true }).lean() as any;
@@ -224,7 +224,7 @@ export const clinicStaffService = {
     }
   },
   async assertProviderBookable(scope: { tenantId: string; clinicId: string }, providerId: string, branchId: string, serviceId: string) {
-    const provider = await Provider.findOne({ _id: providerId, tenantId: scope.tenantId, clinicId: scope.clinicId, branchIds: branchId, serviceIds: serviceId, status: 'active' }).lean();
+    const provider = await Provider.findOne({ _id: providerId, tenantId: scope.tenantId, clinicId: scope.clinicId, branchIds: branchId, serviceIds: serviceId, status: 'active' }).lean() as any;
     if (!provider) throw { status: 409, code: 'PROVIDER_NOT_ELIGIBLE', message: 'Provider is inactive or not assigned to this branch and service.' };
     if (provider.licenseExpiresAt && new Date(provider.licenseExpiresAt).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'Provider license has expired.' };
     const employee = await Employee.findOne({ _id: provider.employeeId, tenantId: scope.tenantId, clinicId: scope.clinicId, status: 'active' }).lean();
