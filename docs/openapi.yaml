@@ -21,6 +21,7 @@ tags:
   - name: Branches
   - name: Clinic - Geo
   - name: Clinic Staff & Providers
+  - name: Patients
 paths:
   /health:
     $ref: "./openapi/platform/system/health.yaml#/paths/~1health"
@@ -895,3 +896,28 @@ components:
         application/json:
           schema: { $ref: "#/components/schemas/ApiError" }
 
+
+  /patients:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients"
+  /patients/search:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1search"
+  /patients/{patientId}:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}"
+  /patients/{patientId}/contacts:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1contacts"
+  /patients/{patientId}/addresses:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1addresses"
+  /patients/{patientId}/emergency-contacts:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1emergency-contacts"
+  /patients/{patientId}/tags:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1tags"
+  /patients/{patientId}/notes:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1notes"
+  /patients/{patientId}/status:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1status"
+  /patients/{patientId}/status-history:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1status-history"
+  /patients/{patientId}/link-account:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1link-account"
+  /patients/{patientId}/unlink-account:
+    $ref: "./openapi/clinic/patients/patients.yaml#/paths/~1patients~1{patientId}~1unlink-account"
