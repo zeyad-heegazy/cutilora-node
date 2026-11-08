@@ -44,6 +44,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name_en: "Egypt", name_ar: "مصر", code: "EG" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/CountryInput" }
       responses:
         "201":
@@ -91,6 +92,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name_en: "Arab Republic of Egypt", name_ar: "مصر", code: "EG" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/CountryUpdate" }
       responses:
         "200":
