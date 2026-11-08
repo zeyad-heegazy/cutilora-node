@@ -44,6 +44,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Nasr City Branch", status: draft, code: "NASR-01", address: "12 Abbas El Akkad Street, Cairo", cityId: "64b000000000000000000002", postalCode: "11765", latitude: 30.061, longitude: 31.339, timezone: "Africa/Cairo", operatingHours: [{ dayOfWeek: 0, openTime: "09:00", closeTime: "17:00" }] }
             schema:
               type: object
               required: [name]
@@ -127,6 +128,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Nasr City Main Branch", address: "14 Abbas El Akkad Street, Cairo", timezone: "Africa/Cairo" }
             schema: { $ref: "../../../openapi.yaml#/components/schemas/BranchUpdate" }
       responses:
         "200":
@@ -195,6 +197,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { operatingHours: [{ dayOfWeek: 0, openTime: "09:00", closeTime: "17:00", breakTimes: [{ startTime: "13:00", endTime: "13:30" }] }, { dayOfWeek: 1, isClosed: true }] }
             schema:
               type: object
               required: [operatingHours]
