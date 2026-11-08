@@ -1,0 +1,26 @@
+import type { Request, Response, NextFunction } from 'express';
+import { clinicStaffService } from '../services/clinic-staff.service.js';
+import { createEmployeeSchema, updateEmployeeSchema, employeeListSchema, createProviderSchema, updateProviderSchema, providerListSchema, providerBranchSchema, providerServicesSchema, providerWorkingHoursSchema, createSpecialtySchema, routeIdSchema } from '../validation/clinic-staff.validation.js';
+
+const scope = (req: Request) => {
+  if (!req.tenantContext?.clinicId) throw { status: 400, code: 'CLINIC_CONTEXT_REQUIRED', message: 'Select a clinic using X-Clinic-Id.' };
+  return { tenantId: req.tenantContext.tenantId, clinicId: req.tenantContext.clinicId, branchId: req.tenantContext.branchId, userId: req.auth!.userId };
+};
+const notFound = (res: Response, type: string) => res.status(404).json({ success: false, error: { code: `${type.toUpperCase()}_NOT_FOUND`, message: `${type} not found in this clinic.` } });
+
+export const clinicStaffController = {
+  async listEmployees(req: Request, res: Response, next: NextFunction) { try { const result = await clinicStaffService.listEmployees(scope(req), employeeListSchema.parse(req.query)); res.json({ success: true, data: result.items, pagination: result.pagination }); } catch(e) { next(e); } },
+  async createEmployee(req: Request, res: Response, next: NextFunction) { try { const item = await clinicStaffService.createEmployee(scope(req), createEmployeeSchema.parse(req.body)); res.status(201).json({ success: true, data: item }); } catch(e) { next(e); } },
+  async getEmployee(req: Request, res: Response, next: NextFunction) { try { const item = await clinicStaffService.getEmployee(scope(req), routeIdSchema.parse(req.params.employeeId)); if(!item) return notFound(res,'employee'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
+  async updateEmployee(req: Request, res: Response, next: NextFunction) { try { const item = await clinicStaffService.updateEmployee(scope(req), routeIdSchema.parse(req.params.employeeId), updateEmployeeSchema.parse(req.body)); if(!item) return notFound(res,'employee'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
+  async listProviders(req: Request, res: Response, next: NextFunction) { try { const result = await clinicStaffService.listProviders(scope(req), providerListSchema.parse(req.query)); res.json({ success:true,data:result.items,pagination:result.pagination }); } catch(e) { next(e); } },
+  async createProvider(req: Request, res: Response, next: NextFunction) { try { const item = await clinicStaffService.createProvider(scope(req), createProviderSchema.parse(req.body)); res.status(201).json({ success:true,data:item }); } catch(e) { next(e); } },
+  async getProvider(req: Request, res: Response, next: NextFunction) { try { const item = await clinicStaffService.getProvider(scope(req), routeIdSchema.parse(req.params.providerId)); if(!item) return notFound(res,'provider'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
+  async updateProvider(req: Request, res: Response, next: NextFunction) { try { const item = await clinicStaffService.updateProvider(scope(req), routeIdSchema.parse(req.params.providerId), updateProviderSchema.parse(req.body)); if(!item) return notFound(res,'provider'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
+  async replaceProviderBranches(req: Request, res: Response, next: NextFunction) { try { const input = providerBranchSchema.parse(req.body); const item = await clinicStaffService.replaceProviderBranches(scope(req), routeIdSchema.parse(req.params.providerId), input.branchIds); if(!item) return notFound(res,'provider'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
+  async replaceProviderServices(req: Request, res: Response, next: NextFunction) { try { const input = providerServicesSchema.parse(req.body); const item = await clinicStaffService.replaceProviderServices(scope(req), routeIdSchema.parse(req.params.providerId), input.serviceIds); if(!item) return notFound(res,'provider'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
+  async getProviderWorkingHours(req: Request, res: Response, next: NextFunction) { try { const item = await clinicStaffService.getProviderWorkingHours(scope(req), routeIdSchema.parse(req.params.providerId)); if(!item) return notFound(res,'provider'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
+  async setProviderWorkingHours(req: Request, res: Response, next: NextFunction) { try { const input = providerWorkingHoursSchema.parse(req.body); const item = await clinicStaffService.setProviderWorkingHours(scope(req), routeIdSchema.parse(req.params.providerId), input.workingHours); if(!item) return notFound(res,'provider'); res.json({ success:true,data:item }); } catch(e) { next(e); } },
+  async listSpecialties(req: Request, res: Response, next: NextFunction) { try { res.json({ success:true,data:await clinicStaffService.listSpecialties(scope(req)) }); } catch(e) { next(e); } },
+  async createSpecialty(req: Request, res: Response, next: NextFunction) { try { res.status(201).json({ success:true,data:await clinicStaffService.createSpecialty(scope(req), createSpecialtySchema.parse(req.body)) }); } catch(e) { next(e); } },
+};
