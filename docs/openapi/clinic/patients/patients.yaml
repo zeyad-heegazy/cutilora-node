@@ -1,4 +1,190 @@
 paths:
+  /patient-tags:
+    get:
+      tags: [Patients]
+      summary: List clinic patient tags
+      responses:
+        '200': { description: Clinic-scoped patient tags }
+    post:
+      tags: [Patients]
+      summary: Create clinic patient tag
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [name], properties: { name: { type: string, maxLength: 40 }, color: { type: string, pattern: '^#[0-9a-fA-F]{6}  /patients:
+    get:
+      tags: [Patients]
+      summary: List clinic patients
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicId'
+        - in: query
+          name: q
+          schema: { type: string, maxLength: 120 }
+        - in: query
+          name: status
+          schema: { type: string, enum: [lead, active, inactive, blocked, archived] }
+        - in: query
+          name: page
+          schema: { type: integer, minimum: 1, default: 1 }
+        - in: query
+          name: perPage
+          schema: { type: integer, minimum: 1, maximum: 100, default: 25 }
+      responses:
+        '200': { description: Paginated clinic-scoped patients }
+        '400': { description: Invalid clinic context or query }
+        '403': { description: Missing patient read permission }
+    post:
+      tags: [Patients]
+      summary: Create clinic patient
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [firstName, lastName]
+              properties:
+                firstName: { type: string, maxLength: 80 }
+                lastName: { type: string, maxLength: 80 }
+                displayName: { type: string, maxLength: 160 }
+                dateOfBirth: { type: string, format: date-time, nullable: true }
+                gender: { type: string, enum: [female, male, other, undisclosed] }
+                contacts: { type: array, maxItems: 20, items: { type: object } }
+                addresses: { type: array, maxItems: 20, items: { type: object } }
+      responses:
+        '201': { description: Patient created; possible duplicate is returned as metadata and never merged }
+        '400': { description: Validation failure }
+        '403': { description: Missing patient manage permission }
+  /patients/search:
+    get:
+      tags: [Patients]
+      summary: Search clinic patients
+      parameters:
+        - $ref: '#/components/parameters/TenantId'
+        - $ref: '#/components/parameters/ClinicId'
+        - in: query
+          name: q
+          required: true
+          schema: { type: string, maxLength: 120 }
+      responses:
+        '200': { description: Search results restricted to the selected clinic }
+  /patients/{patientId}:
+    parameters:
+      - in: path
+        name: patientId
+        required: true
+        schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
+      - $ref: '#/components/parameters/TenantId'
+      - $ref: '#/components/parameters/ClinicId'
+    get:
+      tags: [Patients]
+      summary: Get patient profile
+      responses:
+        '200': { description: Patient profile; sensitive read is audited }
+        '404': { description: Patient not found in this clinic }
+    patch:
+      tags: [Patients]
+      summary: Update patient profile
+      responses:
+        '200': { description: Updated patient profile }
+        '404': { description: Patient not found in this clinic }
+  /patients/{patientId}/contacts:
+    get:
+      tags: [Patients]
+      summary: Get patient contacts
+      responses:
+        '200': { description: Contact list }
+    put:
+      tags: [Patients]
+      summary: Replace patient contacts
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [contacts], properties: { contacts: { type: array, items: { type: object } } } }
+      responses:
+        '200': { description: Contacts replaced; duplicate candidates returned without merging }
+  /patients/{patientId}/addresses:
+    put:
+      tags: [Patients]
+      summary: Replace patient addresses
+      responses:
+        '200': { description: Addresses replaced }
+  /patients/{patientId}/emergency-contacts:
+    put:
+      tags: [Patients]
+      summary: Replace emergency contacts
+      responses:
+        '200': { description: Emergency contacts replaced }
+  /patients/{patientId}/tags:
+    get:
+      tags: [Patients]
+      summary: List patient tags
+      responses:
+        '200': { description: Patient tags }
+    put:
+      tags: [Patients]
+      summary: Replace patient tags
+      responses:
+        '200': { description: Patient tags replaced }
+  /patients/{patientId}/notes:
+    post:
+      tags: [Patients]
+      summary: Add patient note
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, required: [body], properties: { body: { type: string, maxLength: 4000 }, visibility: { type: string, enum: [clinical, administrative] } } }
+      responses:
+        '201': { description: Note created }
+  /patients/{patientId}/status:
+    patch:
+      tags: [Patients]
+      summary: Change patient lifecycle status
+      responses:
+        '200': { description: Status updated and history appended }
+  /patients/{patientId}/status-history:
+    get:
+      tags: [Patients]
+      summary: Get patient status history
+      responses:
+        '200': { description: Status history }
+  /patients/{patientId}/link-account:
+    post:
+      tags: [Patients]
+      summary: Link the authenticated global account to this clinic patient
+      responses:
+        '200': { description: Linked after authenticated account email matches a patient email contact }
+        '403': { description: Email verification condition not met }
+  /patients/{patientId}/unlink-account:
+    post:
+      tags: [Patients]
+      summary: Unlink the authenticated global account from this clinic patient
+      responses:
+        '200': { description: Account unlinked }
+        '403': { description: Only the linked account can unlink itself }
+components:
+  parameters:
+    TenantId:
+      in: header
+      name: X-Tenant-Id
+      required: true
+      schema: { type: string }
+    ClinicId:
+      in: header
+      name: X-Clinic-Id
+      required: true
+      schema: { type: string }
+ } } }
+      responses:
+        '201': { description: Patient tag created }
+        '409': { description: Tag name already exists in this clinic }
   /patients:
     get:
       tags: [Patients]
