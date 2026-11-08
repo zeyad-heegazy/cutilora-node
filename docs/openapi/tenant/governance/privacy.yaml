@@ -43,7 +43,8 @@ paths:
                 patientId: { type: string }
                 consentType: { type: string }
                 documentVersion: { type: string }
-                documentHash: { type: string, pattern: '^[a-fA-F0-9]{64}                documentSnapshot: { type: string }
+                documentHash: { type: string, pattern: '^[a-fA-F0-9]{64}$' }
+                documentSnapshot: { type: string }
                 status: { type: string, enum: [granted, declined] }
                 source: { type: string, enum: [clinic_portal, patient_portal, import, other] }
       responses:
