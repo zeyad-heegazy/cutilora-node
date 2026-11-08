@@ -45,6 +45,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { reason: "Temporary closure for scheduled maintenance" }
             schema:
               type: object
               required: [reason]
@@ -71,6 +72,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { reason: "Branch permanently closed following lease termination" }
             schema:
               type: object
               required: [reason]
