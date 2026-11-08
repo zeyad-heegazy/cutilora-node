@@ -11,26 +11,18 @@ paths:
         required: true
         content:
           application/json:
-            example: { key: "branch-manager", name: "Branch Manager", description: "Manages one clinic branch", scope: branch, permissions: [{ permission: "patients.read", scope: branch, branchId: "64b000000000000000000001" }] }
+            example: { name: "Branch Manager", description: "Manages one clinic branch", scope: branch, permissions: ["patients.read", "patients.manage"] }
             schema:
               type: object
-              required: [name, scope, permissions]
+              required: [name, scope]
               properties:
-                key: { type: string, minLength: 2, maxLength: 80 }
-                name: { type: string, minLength: 2, maxLength: 120 }
+                name: { type: string, minLength: 2, maxLength: 80 }
                 description: { type: string, maxLength: 500 }
                 scope: { type: string, enum: [tenant, clinic, branch] }
                 permissions:
                   type: array
-                  maxItems: 200
-                  items:
-                    type: object
-                    required: [permission, scope]
-                    properties:
-                      permission: { type: string, maxLength: 120 }
-                      scope: { type: string, enum: [tenant, clinic, branch] }
-                      clinicId: { type: string, nullable: true }
-                      branchId: { type: string, nullable: true }
+                  maxItems: 100
+                  items: { type: string, minLength: 1, maxLength: 100 }
       responses:
         "201": { description: Tenant custom role created and audited }
         "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
@@ -70,17 +62,19 @@ paths:
         required: true
         content:
           application/json:
-            example: { expectedVersion: 1, name: "Senior Branch Manager", description: "Updated branch manager permissions" }
+            example: { version: 1, name: "Senior Branch Manager", description: "Updated branch manager permissions" }
             schema:
               type: object
               minProperties: 2
-              required: [expectedVersion]
+              required: [version]
               properties:
-                expectedVersion: { type: integer, minimum: 1 }
-                name: { type: string, minLength: 2, maxLength: 120 }
+                version: { type: integer, minimum: 1 }
+                name: { type: string, minLength: 2, maxLength: 80 }
                 description: { type: string, maxLength: 500 }
-                scope: { type: string, enum: [tenant, clinic, branch] }
-                permissions: { type: array, maxItems: 200, items: { type: object, required: [permission, scope], properties: { permission: { type: string }, scope: { type: string, enum: [tenant, clinic, branch] }, clinicId: { type: string, nullable: true }, branchId: { type: string, nullable: true } } } }
+                permissions:
+                  type: array
+                  maxItems: 100
+                  items: { type: string, minLength: 1, maxLength: 100 }
       responses:
         "200": { description: Updated role and incremented version }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
@@ -98,23 +92,19 @@ paths:
         required: true
         content:
           application/json:
-            example: { expectedVersion: 1, permissions: [{ permission: "patients.read", scope: branch, branchId: "64b000000000000000000001" }, { permission: "patients.manage", scope: branch, branchId: "64b000000000000000000001" }] }
+            example: { version: 1, permissions: ["patients.read", "patients.manage"] }
             schema:
               type: object
-              required: [expectedVersion, permissions]
+              minProperties: 2
+              required: [version]
               properties:
-                expectedVersion: { type: integer, minimum: 1 }
+                version: { type: integer, minimum: 1 }
+                name: { type: string, minLength: 2, maxLength: 80 }
+                description: { type: string, maxLength: 500 }
                 permissions:
                   type: array
-                  maxItems: 200
-                  items:
-                    type: object
-                    required: [permission, scope]
-                    properties:
-                      permission: { type: string, minLength: 3, maxLength: 120 }
-                      scope: { type: string, enum: [tenant, clinic, branch] }
-                      clinicId: { type: string, nullable: true, pattern: "^[a-fA-F0-9]{24}$" }
-                      branchId: { type: string, nullable: true, pattern: "^[a-fA-F0-9]{24}$" }
+                  maxItems: 100
+                  items: { type: string, minLength: 1, maxLength: 100 }
       responses:
         "200": { description: Role permission grants replaced and version incremented }
         "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
@@ -133,16 +123,13 @@ paths:
         required: true
         content:
           application/json:
-            example: { key: "clinic-manager-copy", name: "Clinic Manager Copy", description: "Cloned clinic manager role", clinicId: "64b000000000000000000001" }
+            example: { name: "Clinic Manager Copy", description: "Cloned clinic manager role" }
             schema:
               type: object
-              required: [key, name]
+              required: [name]
               properties:
-                key: { type: string, minLength: 2, maxLength: 80 }
-                name: { type: string, minLength: 2, maxLength: 120 }
+                name: { type: string, minLength: 2, maxLength: 80 }
                 description: { type: string, maxLength: 500 }
-                clinicId: { type: string, description: Required when cloning a clinic-scoped template }
-                branchIds: { type: array, maxItems: 20, items: { type: string }, description: Required when cloning a branch-scoped template }
       responses:
         "201": { description: Cloned tenant-owned role from a custom role or starter template }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
@@ -158,30 +145,6 @@ paths:
       responses:
         "200": { description: Role deactivated }
         "409": { description: Role is still assigned }
-  /tenant/memberships/{membershipId}/role:
-    put:
-      tags: [Tenant Access Control]
-      summary: Assign a custom role to a tenant membership
-      description: Requires a matching membership scope, prevents self-escalation, checks actor authority and protects the last active Tenant Owner.
-      security: [{ bearerAuth: [] }]
-      parameters:
-        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
-        - { name: membershipId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            example: { roleId: "64b000000000000000000020" }
-            schema:
-              type: object
-              required: [roleId]
-              properties:
-                roleId: { type: string, pattern: "^[a-fA-F0-9]{24}$" }
-      responses:
-        "200": { description: Custom role assigned }
-        "400": { $ref: "../../../openapi.yaml#/components/responses/ValidationError" }
-        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
-        "409": { description: Last Owner or role scope conflict }
   /tenant/access/me:
     get:
       tags: [Tenant Access Control]
@@ -371,17 +334,13 @@ paths:
             example: { role: clinic_manager, scope: clinic, clinicId: "64b000000000000000000001" }
             schema:
               type: object
+              minProperties: 1
               properties:
                 role: { type: string, enum: [tenant_owner, tenant_admin, billing_admin, clinic_admin, clinic_manager, branch_manager, staff, provider, receptionist, custom] }
-                customRoleId: { type: string, nullable: true }
-                permissionOverrides:
-                  type: object
-                  properties:
-                    allow: { type: array, items: { type: string } }
-                    deny: { type: array, items: { type: string } }
+                customRoleId: { type: string, nullable: true, pattern: "^[a-fA-F0-9]{24}$" }
                 scope: { type: string, enum: [tenant, clinic, branch] }
-                clinicId: { type: string, nullable: true }
-                branchIds: { type: array, items: { type: string }, maxItems: 50 }
+                clinicId: { type: string, nullable: true, pattern: "^[a-fA-F0-9]{24}$" }
+                branchIds: { type: array, maxItems: 50, items: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
                 status: { type: string, enum: [active, suspended] }
       responses:
         "200": { description: Membership updated }
