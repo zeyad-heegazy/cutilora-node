@@ -10,6 +10,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { email: "clinic.admin@example.com", password: "your-password" }
             schema:
               type: object
               required: [email, password]
@@ -49,6 +50,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { token: "0123456789abcdef0123456789abcdef", name: "New Clinic User", password: "ChangeThisPassword123!" }
             schema:
               type: object
               required: [token]
