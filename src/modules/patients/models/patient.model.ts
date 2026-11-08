@@ -41,7 +41,7 @@ const schema = new Schema({
   tenantId: { type: Schema.Types.ObjectId, ref: 'Tenant', required: true, immutable: true },
   clinicId: { type: Schema.Types.ObjectId, ref: 'Clinic', required: true, immutable: true },
   patientNumber: { type: String, required: true, trim: true, uppercase: true, immutable: true },
-  branchIds: { type: [{ type: Schema.Types.ObjectId, ref: 'Branch' }], default: [] },
+  branchIds: { type: [{ type: Schema.Types.ObjectId, ref: 'Branch' }], default: [], immutable: true },
   firstName: { type: String, required: true, trim: true, maxlength: 80 },
   lastName: { type: String, required: true, trim: true, maxlength: 80 },
   displayName: { type: String, trim: true, maxlength: 160, default: '' },
