@@ -4,7 +4,7 @@ import {
   createClinicSchema,
   updateBranchSchema,
   branchLifecycleReasonSchema,
-} from '../../src/modules/tenancy/validations/tenancy.validation.js';
+} from '../../src/modules/tenancy/validation/tenancy.validation.js';
 
 describe('tenancy request validation', () => {
   it('accepts clinic custom settings', () => {
