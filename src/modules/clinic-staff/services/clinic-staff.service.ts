@@ -163,7 +163,7 @@ export const clinicStaffService = {
     await audit(scope, 'specialty.created', 'specialty', String(item._id));
     return item;
   },
-  async assertProviderBookable(scope: Omit<Scope, 'userId'>, providerId: string, branchId: string, serviceId: string) {
+  async assertProviderBookable(scope: { tenantId: string; clinicId: string }, providerId: string, branchId: string, serviceId: string) {
     const provider = await Provider.findOne({ _id: providerId, tenantId: scope.tenantId, clinicId: scope.clinicId, branchIds: branchId, serviceIds: serviceId, status: 'active' }).lean();
     if (!provider) throw { status: 409, code: 'PROVIDER_NOT_ELIGIBLE', message: 'Provider is inactive or not assigned to this branch and service.' };
     if (provider.licenseExpiresAt && new Date(provider.licenseExpiresAt).getTime() < Date.now()) throw { status: 409, code: 'PROVIDER_LICENSE_EXPIRED', message: 'Provider license has expired.' };
