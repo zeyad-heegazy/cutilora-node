@@ -10,7 +10,7 @@ export const TENANT_ROLE_PERMISSIONS: Record<string, readonly string[]> = {
   clinic_manager: ['staff.read', 'staff.manage', 'providers.read', 'providers.manage', 'specialties.manage', 'patients.read', 'patients.manage', 'patients.notes.read', 'patients.notes.manage', 'privacy.read', 'privacy.manage', 'clinic.settings.read', 'clinic.settings.manage', 'clinic.documents.read', 'clinic.documents.manage', 'clinic.members.read', 'clinic.activity.read', 'branch.read', 'branch.manage', 'branch.update', 'branch.schedule.manage', 'branch.settings.manage', 'branch.members.read', 'branch.activity.read', 'branch.holidays.read', 'branch.holidays.manage'],
   branch_manager: ['staff.read', 'providers.read', 'patients.read', 'patients.manage', 'patients.notes.read', 'patients.notes.manage', 'privacy.read', 'privacy.manage', 'branch.read', 'branch.members.read', 'branch.activity.read', 'branch.schedule.manage', 'branch.settings.manage', 'branch.holidays.read', 'branch.holidays.manage'],
   staff: ['staff.read', 'patients.read', 'patients.manage', 'patients.notes.read', 'patients.notes.manage', 'branch.read', 'branch.holidays.read'],
-  provider: ['providers.read', 'patients.read', 'patients.manage', 'patients.notes.read', 'patients.notes.manage', 'privacy.read', 'privacy.manage', 'branch.read', 'branch.holidays.read'],
+  provider: ['providers.read', 'patients.read', 'patients.manage', 'patients.notes.read', 'patients.notes.manage', 'patients.notes.clinical.read', 'patients.notes.clinical.manage', 'privacy.read', 'privacy.manage', 'branch.read', 'branch.holidays.read'],
   receptionist: ['privacy.read', 'privacy.manage', 'branch.read', 'branch.holidays.read'],
 };
 
