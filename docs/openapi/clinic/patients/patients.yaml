@@ -320,48 +320,12 @@ components:
       in: path
       name: patientId
       required: true
-      schema: { type: string, pattern: '^[a-fA-F0-9]{24}
-      in: header
-      name: X-Branch-Id
-      required: false
-      schema: { type: string, pattern: '^[a-fA-F0-9]{24}
-      in: header
-      name: X-Tenant-Id
-      required: true
       schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
-    ClinicId:
-      in: header
-      name: X-Clinic-Id
-      required: true
-      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
- }
-      description: Required for branch-scoped memberships; when selected, patient operations are restricted to that branch.
-    TenantId:
-      in: header
-      name: X-Tenant-Id
-      required: true
-      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
-    ClinicId:
-      in: header
-      name: X-Clinic-Id
-      required: true
-      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
- }
     BranchId:
       in: header
       name: X-Branch-Id
       required: false
-      schema: { type: string, pattern: '^[a-fA-F0-9]{24}
-      in: header
-      name: X-Tenant-Id
-      required: true
       schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
-    ClinicId:
-      in: header
-      name: X-Clinic-Id
-      required: true
-      schema: { type: string, pattern: '^[a-fA-F0-9]{24}$' }
- }
       description: Required for branch-scoped memberships; when selected, patient operations are restricted to that branch.
     TenantId:
       in: header
