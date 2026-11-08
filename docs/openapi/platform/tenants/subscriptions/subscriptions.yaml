@@ -13,6 +13,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { plan: { code: "growth", name: "Growth", amount: 2500, currency: EGP, limits: { maxClinics: 3, maxBranches: 10, maxUsers: 50 }, features: ["appointments", "patients", "finance"] }, billingCycle: monthly, status: active, cancelAtPeriodEnd: false }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/SubscriptionInput" }
       responses:
         "200":
