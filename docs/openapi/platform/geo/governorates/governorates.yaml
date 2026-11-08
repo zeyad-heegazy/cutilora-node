@@ -47,6 +47,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name_en: "Giza", name_ar: "الجيزة", country_id: "64b000000000000000000001" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/GovernorateInput" }
       responses:
         "201":
@@ -94,6 +95,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name_en: "Giza Governorate", name_ar: "الجيزة", country_id: "64b000000000000000000001" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/GovernorateUpdate" }
       responses:
         "200":
