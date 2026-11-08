@@ -12,6 +12,7 @@ type Scope = {
 const normalized = (value: string) => value.trim().toLocaleLowerCase('en-US');
 const audit = async (s: Scope, action: string, id: string, metadata: Record<string, unknown> = {}) =>
   TenantAuditEvent.create({ tenantId: s.tenantId, clinicId: s.clinicId, branchId: s.branchId ?? null, actorUserId: s.userId, action, targetType: 'patient', targetId: id, metadata });
+const clinicFilter = (s: Scope) => ({ tenantId: new Types.ObjectId(s.tenantId), clinicId: new Types.ObjectId(s.clinicId) });
 const filter = (s: Scope, id?: string) => {
   if (s.accessScope === 'branch' && !s.branchId) throw { status: 403, code: 'BRANCH_CONTEXT_REQUIRED', message: 'A branch context is required.' };
   return {
@@ -101,7 +102,7 @@ export const patientService = {
       contacts: { $elemMatch: { type: contact.type, normalizedValue: contact.normalizedValue } },
     }));
     const duplicate: any = duplicateConditions.length
-      ? await Patient.findOne({ ...filter(s), $or: duplicateConditions }).select('_id patientNumber firstName lastName').lean()
+      ? await Patient.findOne({ ...clinicFilter(s), $or: duplicateConditions }).select('_id patientNumber firstName lastName').lean()
       : null;
     const patientNumber = await nextPatientNumber(s.tenantId, s.clinicId);
     try {
@@ -136,7 +137,7 @@ export const patientService = {
     const contacts = normalizeContacts(items);
     const conditions = contacts.map(contact => ({ contacts: { $elemMatch: { type: contact.type, normalizedValue: contact.normalizedValue } } }));
     const duplicate: any = conditions.length
-      ? await Patient.findOne({ ...filter(s), _id: { $ne: new Types.ObjectId(id) }, $or: conditions }).select('_id patientNumber').lean()
+      ? await Patient.findOne({ ...clinicFilter(s), _id: { $ne: new Types.ObjectId(id) }, $or: conditions }).select('_id patientNumber').lean()
       : null;
     const patient: any = await Patient.findOneAndUpdate(filter(s, id), { $set: { contacts, updatedBy: s.userId } }, { new: true, runValidators: true })
       .select('-contacts.normalizedValue').lean();
@@ -197,19 +198,23 @@ export const patientService = {
   },
 
   async changeStatus(s: Scope, id: string, status: string, reason: string) {
-    const patient: any = await Patient.findOne(filter(s, id));
-    if (!patient) return null;
-    if (patient.status !== status) {
-      if (!allowedTransitions[patient.status]?.includes(status)) {
-        throw { status: 409, code: 'INVALID_PATIENT_STATUS_TRANSITION', message: `Cannot change patient status from ${patient.status} to ${status}.` };
-      }
-      const previous = patient.status;
-      patient.statusHistory.push({ from: previous, to: status, reason, changedBy: s.userId, changedAt: new Date() });
-      patient.status = status;
-      patient.updatedBy = new Types.ObjectId(s.userId);
-      await patient.save();
-      await audit(s, 'patient.status.changed', id, { from: previous, to: status });
+    const current: any = await Patient.findOne(filter(s, id)).select('status').lean();
+    if (!current) return null;
+    if (current.status === status) return Patient.findOne(filter(s, id));
+    if (!allowedTransitions[current.status]?.includes(status)) {
+      throw { status: 409, code: 'INVALID_PATIENT_STATUS_TRANSITION', message: `Cannot change patient status from ${current.status} to ${status}.` };
     }
+    const previous = current.status;
+    const patient: any = await Patient.findOneAndUpdate(
+      { ...filter(s, id), status: previous },
+      {
+        $set: { status, updatedBy: new Types.ObjectId(s.userId) },
+        $push: { statusHistory: { from: previous, to: status, reason, changedBy: new Types.ObjectId(s.userId), changedAt: new Date() } },
+      },
+      { new: true, runValidators: true },
+    );
+    if (!patient) throw { status: 409, code: 'PATIENT_STATUS_CONFLICT', message: 'Patient status changed concurrently. Reload and retry.' };
+    await audit(s, 'patient.status.changed', id, { from: previous, to: status });
     return patient;
   },
 };
