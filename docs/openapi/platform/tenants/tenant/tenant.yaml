@@ -28,6 +28,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { name: "Cutilora Dermatology Group", displayName: "Cutilora Dermatology", businessType: single_clinic, industry: aesthetic_medicine, owner: { name: "Clinic Owner", email: "owner@example.com", password: "ChangeThisPassword123!" }, initialClinic: { name: "Cutilora Main Clinic", clinicType: dermatology, timezone: "Africa/Cairo" } }
             schema:
               type: object
               required: [name, owner]
@@ -109,6 +110,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { displayName: "Cutilora Dermatology Group", description: "Aesthetic and dermatology clinic group" }
             schema: { $ref: "../../../../openapi.yaml#/components/schemas/TenantUpdate" }
       responses:
         "200":
@@ -135,6 +137,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { status: active }
             schema:
               type: object
               required: [status]
