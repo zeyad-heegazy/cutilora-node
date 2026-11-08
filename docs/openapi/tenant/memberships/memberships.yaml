@@ -368,7 +368,7 @@ paths:
         required: true
         content:
           application/json:
-            example: { role: clinic_manager, scope: clinic, permissionOverrides: { allow: ["patients.read"], deny: [] } }
+            example: { role: clinic_manager, scope: clinic, clinicId: "64b000000000000000000001" }
             schema:
               type: object
               properties:
