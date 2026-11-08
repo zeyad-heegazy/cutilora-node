@@ -363,7 +363,7 @@ describe('database-backed backend workflows', () => {
         .set('X-Branch-Id', branchId),
     });
 
-    const first = await scopedRequest(firstBranchId).post('/api/v1/patients').send({ firstName: 'Branch', lastName: 'One' });
+    const first = await scopedRequest(firstBranchId).post('/api/v1/patients').send({ firstName: 'Branch', lastName: 'One', contacts: [{ type: 'email', value: 'cross-branch.patient@cutilora.test' }] });
     expect(first.status, JSON.stringify(first.body)).toBe(201);
     const firstPatientId = String(first.body.data._id ?? first.body.data.id);
 
@@ -372,8 +372,9 @@ describe('database-backed backend workflows', () => {
     });
     expect(forbiddenAssignment.status).toBe(403);
 
-    const second = await scopedRequest(secondBranchId).post('/api/v1/patients').send({ firstName: 'Branch', lastName: 'Two' });
+    const second = await scopedRequest(secondBranchId).post('/api/v1/patients').send({ firstName: 'Branch', lastName: 'Two', contacts: [{ type: 'email', value: 'CROSS-BRANCH.PATIENT@CUTILORA.TEST' }] });
     expect(second.status, JSON.stringify(second.body)).toBe(201);
+    expect(second.body.meta.possibleDuplicate?._id ?? second.body.meta.possibleDuplicate?.id).toBe(firstPatientId);
 
     const firstBranchList = await scopedRequest(firstBranchId).get('/api/v1/patients');
     expect(firstBranchList.status).toBe(200);
