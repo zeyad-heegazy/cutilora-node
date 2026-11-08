@@ -133,6 +133,11 @@ paths:
       responses:
         '200': { description: Patient tags replaced }
   /patients/{patientId}/notes:
+    get:
+      tags: [Patients]
+      summary: List patient notes
+      responses:
+        '200': { description: Notes are returned only inside the selected clinic and the read is audited }
     post:
       tags: [Patients]
       summary: Add patient note
