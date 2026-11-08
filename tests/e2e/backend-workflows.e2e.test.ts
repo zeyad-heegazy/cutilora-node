@@ -333,6 +333,51 @@ describe('database-backed backend workflows', () => {
     expect(history.body.data.history.length).toBeGreaterThanOrEqual(3);
   });
 
+  it('enforces patient assignment and visibility when a branch context is selected', async () => {
+    const createBranch = async (name: string, code: string) => {
+      const response = await clinicTenant().post('/api/v1/tenant/branches').send({
+        name, code, timezone: 'Africa/Cairo', address: 'Cairo', status: 'active',
+      });
+      expect(response.status, JSON.stringify(response.body)).toBe(201);
+      return String(response.body.data._id ?? response.body.data.id);
+    };
+    const firstBranchId = await createBranch('Patient Scope Branch A', 'PATIENT-SCOPE-A');
+    const secondBranchId = await createBranch('Patient Scope Branch B', 'PATIENT-SCOPE-B');
+    const scopedRequest = (branchId: string) => ({
+      post: (path: string) => request(app).post(path)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('X-Tenant-Id', tenantId)
+        .set('X-Clinic-Id', clinicId)
+        .set('X-Branch-Id', branchId),
+      get: (path: string) => request(app).get(path)
+        .set('Authorization', `Bearer ${ownerToken}`)
+        .set('X-Tenant-Id', tenantId)
+        .set('X-Clinic-Id', clinicId)
+        .set('X-Branch-Id', branchId),
+    });
+
+    const first = await scopedRequest(firstBranchId).post('/api/v1/patients').send({ firstName: 'Branch', lastName: 'One' });
+    expect(first.status, JSON.stringify(first.body)).toBe(201);
+    const firstPatientId = String(first.body.data._id ?? first.body.data.id);
+
+    const forbiddenAssignment = await scopedRequest(firstBranchId).post('/api/v1/patients').send({
+      firstName: 'Wrong', lastName: 'Branch', branchIds: [secondBranchId],
+    });
+    expect(forbiddenAssignment.status).toBe(403);
+
+    const second = await scopedRequest(secondBranchId).post('/api/v1/patients').send({ firstName: 'Branch', lastName: 'Two' });
+    expect(second.status, JSON.stringify(second.body)).toBe(201);
+
+    const firstBranchList = await scopedRequest(firstBranchId).get('/api/v1/patients');
+    expect(firstBranchList.status).toBe(200);
+    expect(firstBranchList.body.data.some((item: any) => String(item._id ?? item.id) === firstPatientId)).toBe(true);
+    expect(firstBranchList.body.data.some((item: any) => item.lastName === 'Two')).toBe(false);
+
+    const clinicList = await clinicTenant().get('/api/v1/patients');
+    expect(clinicList.status).toBe(200);
+    expect(clinicList.body.data.some((item: any) => String(item._id ?? item.id) === firstPatientId)).toBe(true);
+  });
+
   it('creates, updates, lists and archives a custom tenant role', async () => {
     const created = await tenant().post('/api/v1/tenant/roles').send({
       name: 'E2E Front Desk',
