@@ -27,6 +27,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { title: "National holiday", type: closure, startDate: "2026-11-23", endDate: "2026-11-23", isAllDay: true, reason: "Clinic closed for public holiday" }
             schema:
               type: object
               required: [title, type, startDate, endDate]
@@ -61,6 +62,7 @@ paths:
         required: true
         content:
           application/json:
+            example: { title: "Adjusted clinic hours", type: modified_hours, startDate: "2026-11-24", endDate: "2026-11-24", isAllDay: false, startTime: "10:00", endTime: "14:00", reason: "Reduced operating hours" }
             schema:
               type: object
               required: [title, type, startDate, endDate]
