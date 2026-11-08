@@ -241,12 +241,6 @@ paths:
                 legalBasisReference: { type: string, maxLength: 200, nullable: true }
       responses:
         "201": { description: Inactive retention proposal created }
- }
-                documentSnapshot: { type: string }
-                status: { type: string, enum: [granted, declined] }
-                source: { type: string, enum: [clinic_portal, patient_portal, import, other] }
-      responses:
-        "201": { description: Consent recorded }
   /tenant/consents/{consentId}:
     get:
       tags: [Tenant Governance]
