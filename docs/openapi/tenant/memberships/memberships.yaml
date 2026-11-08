@@ -85,6 +85,42 @@ paths:
         "200": { description: Updated role and incremented version }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
         "409": { description: Role version conflict }
+  /tenant/roles/{roleId}/permissions:
+    put:
+      tags: [Tenant Access Control]
+      summary: Replace the permission grants for a tenant role
+      description: Uses optimistic concurrency. Every permission grant must reference a permission in the tenant catalog and a valid tenant, clinic, or branch scope.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "../../../openapi.yaml#/components/parameters/TenantId"
+        - { name: roleId, in: path, required: true, schema: { type: string, pattern: "^[a-fA-F0-9]{24}$" } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            example: { expectedVersion: 1, permissions: [{ permission: "patients.read", scope: branch, branchId: "64b000000000000000000001" }, { permission: "patients.manage", scope: branch, branchId: "64b000000000000000000001" }] }
+            schema:
+              type: object
+              required: [expectedVersion, permissions]
+              properties:
+                expectedVersion: { type: integer, minimum: 1 }
+                permissions:
+                  type: array
+                  maxItems: 200
+                  items:
+                    type: object
+                    required: [permission, scope]
+                    properties:
+                      permission: { type: string, minLength: 3, maxLength: 120 }
+                      scope: { type: string, enum: [tenant, clinic, branch] }
+                      clinicId: { type: string, nullable: true, pattern: "^[a-fA-F0-9]{24}$" }
+                      branchId: { type: string, nullable: true, pattern: "^[a-fA-F0-9]{24}$" }
+      responses:
+        "200": { description: Role permission grants replaced and version incremented }
+        "400": { $ref: "../../../openapi.yaml#/components/responses/BadRequest" }
+        "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
+        "404": { $ref: "../../../openapi.yaml#/components/responses/NotFound" }
+        "409": { description: Role version conflict or invalid permission scope }
   /tenant/roles/{roleId}/clone:
     post:
       tags: [Tenant Access Control]
@@ -110,7 +146,7 @@ paths:
       responses:
         "201": { description: Cloned tenant-owned role from a custom role or starter template }
         "403": { $ref: "../../../openapi.yaml#/components/responses/Forbidden" }
-  /tenant/roles/{roleId}/deactivate:
+  /tenant/roles/{roleId}/archive:
     post:
       tags: [Tenant Access Control]
       summary: Deactivate an unused custom role
